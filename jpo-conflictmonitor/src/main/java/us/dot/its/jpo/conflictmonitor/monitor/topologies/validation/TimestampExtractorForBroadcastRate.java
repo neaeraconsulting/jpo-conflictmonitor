@@ -10,10 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.ProcessedMap;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.ProcessedRTCM;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 /**
- * Timestamp Extractor for Broadcast Rate monitoring for Processed Map and Spat messages.
+ * Timestamp Extractor for Broadcast Rate monitoring for Processed Map, Spat, and RTCM messages.
  * 
  * <p>Uses the ODE Received time to get an accurate rate count in case the 
  * timestamp fields embedded in the messages are missing.
@@ -39,6 +40,13 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
                 return timestamp;
             }
         }
+
+        if (value instanceof ProcessedRTCM processedRTCM) {
+            var timestamp = extractTimestamp(processedRTCM);
+            if (timestamp > -1) {
+                return timestamp;
+            }
+        }
        
         logger.warn("Failed to extract timestamp, using clock time");
         // Partition time is invalid, return current clock time
@@ -59,6 +67,17 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
     public static long extractTimestamp(ProcessedMap map) {
         try{
             ZonedDateTime zdt = map.getProperties().getOdeReceivedAt();
+            long timestamp =  zdt.toInstant().toEpochMilli();
+            return timestamp;
+        } catch (Exception e){
+            logger.error("Timestamp Parsing Failed", e);
+            return -1;
+        }
+    }
+
+    public static long extractTimestamp(ProcessedRTCM rtcm) {
+        try{
+            ZonedDateTime zdt = rtcm.getProperties().getOdeReceivedAt();
             long timestamp =  zdt.toInstant().toEpochMilli();
             return timestamp;
         } catch (Exception e){

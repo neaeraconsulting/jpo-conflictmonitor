@@ -9,7 +9,9 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.BroadcastRateEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
+import us.dot.its.jpo.geojsonconverter.partitioner.RsuStationIdKey;
 
 import java.time.Duration;
 
@@ -19,20 +21,20 @@ import java.time.Duration;
  * @param <TItem> Type of input items, ProcessedMap or ProcessedSpat
  * @param <TEvent> Type of output events
  */
-public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEvent>
-    implements Processor<RsuIntersectionKey, TItem, RsuIntersectionKey, TEvent> {
+public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEvent, TKey>
+    implements Processor<TKey, TItem, TKey, TEvent> {
 
     protected abstract Logger getLogger();
 
     protected abstract TEvent createEvent();
 
-    private KeyValueStore<RsuIntersectionKey, Long> store;
+    private KeyValueStore<TKey, Long> store;
     private final int maxAgeMillis;
     private final int checkEveryMillis;
     private final String inputTopicName;
     private final String stateStoreName;
 
-    ProcessorContext<RsuIntersectionKey, TEvent> context;
+    ProcessorContext<TKey, TEvent> context;
 
     public BaseZeroRateChecker(final int rollingPeriodSeconds, final int outputIntervalSeconds, final String inputTopicName, final String stateStoreName) {
         this.maxAgeMillis = rollingPeriodSeconds * 1000;
@@ -42,7 +44,7 @@ public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEve
     }
 
     @Override
-    public void init(ProcessorContext<RsuIntersectionKey, TEvent> context) {
+    public void init(ProcessorContext<TKey, TEvent> context) {
         this.context = context;
         this.store = context.getStateStore(stateStoreName);
         context.schedule(Duration.ofMillis(checkEveryMillis),
@@ -51,7 +53,7 @@ public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEve
     }
 
     @Override
-    public void process(Record<RsuIntersectionKey, TItem> record) {
+    public void process(Record<TKey, TItem> record) {
         store.put(record.key(), System.currentTimeMillis());
     }
 
@@ -59,8 +61,8 @@ public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEve
         // Check if any keys are older than the max age
         try (var storeIterator = store.all()) {
             while (storeIterator.hasNext()) {
-                KeyValue<RsuIntersectionKey, Long> item =storeIterator.next();
-                RsuIntersectionKey key = item.key;
+                KeyValue<TKey, Long> item =storeIterator.next();
+                TKey key = item.key;
                 Long lastTimestamp = item.value;
                 if (timestamp - lastTimestamp > maxAgeMillis) {
                     emitZeroEvent(key, timestamp);
@@ -69,12 +71,16 @@ public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEve
         }
     }
 
-    private void emitZeroEvent(RsuIntersectionKey key, long timestamp) {
+    private void emitZeroEvent(TKey key, long timestamp) {
         getLogger().info("emit zero rate event for key = {} at timestamp = {}", key, timestamp);
         TEvent event = createEvent();
         event.setSource(key.toString());
-        event.setIntersectionID(key.getIntersectionId());
-        event.setRoadRegulatorID(key.getRegion());
+        if (key instanceof RsuIntersectionKey intersectionKey) {
+            event.setIntersectionID(intersectionKey.getIntersectionId());
+            event.setRoadRegulatorID(intersectionKey.getRegion());
+        } else if (event instanceof RtcmBroadcastRateEvent rtcmEvent && key instanceof RsuStationIdKey) {
+            rtcmEvent.setStationId(rtcmEvent.getStationId());
+        }
         event.setTopicName(inputTopicName);
         ProcessingTimePeriod timePeriod = new ProcessingTimePeriod();
         timePeriod.setBeginTimestamp(timestamp - maxAgeMillis);
