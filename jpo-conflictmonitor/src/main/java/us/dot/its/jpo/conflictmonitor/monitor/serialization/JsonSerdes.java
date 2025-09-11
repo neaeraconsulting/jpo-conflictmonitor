@@ -577,4 +577,8 @@ public class JsonSerdes {
     public static Serde<RtcmBroadcastRateEvent> RtcmBroadcastRateEvent() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmBroadcastRateEvent.class));
     }
+
+    public static Serde<RtcmMinimumDataEventAggregation> RtcmMinimumDataEventAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEventAggregation.class));
+    }
 }

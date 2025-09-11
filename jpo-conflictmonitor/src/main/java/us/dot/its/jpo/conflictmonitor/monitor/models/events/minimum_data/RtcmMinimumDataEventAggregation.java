@@ -12,4 +12,5 @@ public class RtcmMinimumDataEventAggregation
     public RtcmMinimumDataEventAggregation() {
         super("RtcmMinimumDataAggregation");
     }
+    private int stationId;
 }

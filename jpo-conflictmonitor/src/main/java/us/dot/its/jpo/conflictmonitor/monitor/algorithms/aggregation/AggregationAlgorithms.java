@@ -14,6 +14,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_e
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithmFactory;
 
 
@@ -31,6 +32,13 @@ public class AggregationAlgorithms {
     FactoryBean<?> mapMinimumDataAggregationServiceLocatorFactoryBean() {
         var factoryBean = new ServiceLocatorFactoryBean();
         factoryBean.setServiceLocatorInterface(MapMinimumDataAggregationAlgorithmFactory.class);
+        return factoryBean;
+    }
+
+    @Bean
+    FactoryBean<?> rtcmMinimumDataAggregationServiceLocatorFactoryBean() {
+        var factoryBean = new ServiceLocatorFactoryBean();
+        factoryBean.setServiceLocatorInterface(RtcmMinimumDataAggregationAlgorithmFactory.class);
         return factoryBean;
     }
 

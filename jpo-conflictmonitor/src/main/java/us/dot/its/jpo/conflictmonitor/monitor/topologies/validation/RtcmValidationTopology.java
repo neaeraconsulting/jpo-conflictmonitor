@@ -11,6 +11,7 @@ import org.apache.kafka.streams.kstream.internals.TimeWindow;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
+import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationStreamsAlgorithm;
@@ -29,11 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.ValidationConstants.DEFAULT_RTCM_VALIDATION_ALGORITHM;
 
 
 /**
  * Assessments/validations for RTCM messages.
  */
+@Component(DEFAULT_RTCM_VALIDATION_ALGORITHM)
 @Slf4j
 public class RtcmValidationTopology
         extends BaseStreamsTopology<RtcmValidationParameters>
@@ -156,7 +159,7 @@ public class RtcmValidationTopology
                 })
                 .map((windowedKey, counts) -> {
                     var event = new RtcmBroadcastRateEvent();
-                    event.setSource(windowedKey.key().toString());
+                    event.setSource(windowedKey.key().getRsuId());
                     event.setStationId(windowedKey.key().getStationId());
                     event.setIntersectionID(-1);
                     event.setRoadRegulatorID(-1);
@@ -201,7 +204,7 @@ public class RtcmValidationTopology
         minDataEvent.setMissingDataElements(validationMessages);
         if (key != null) {
             minDataEvent.setStationId(key.getStationId());
-            minDataEvent.setSource(key.toString());
+            minDataEvent.setSource(key.getRsuId());
         } else {
             log.warn("Key is null");
         }
