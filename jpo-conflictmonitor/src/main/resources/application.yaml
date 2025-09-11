@@ -625,6 +625,17 @@ revocable.enabled.lane.alignment:
   notificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotification
   aggNotificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
 
-
+rtcm.validation:
+  algorithm: defaultRtcmValidationAlgorithm
+  inputTopicName: topic.ProcessedRtcm
+  broadcastRateTopicName: topic.CmRtcmBroadcastRateEvents
+  minimumDataTopicName: topic.CmRtcmMinimumDataEvents
+  rollingPeriodSeconds: 10
+  outputIntervalSeconds: 5
+  gracePeriodMilliseconds: 5000
+  lowerBound: 9
+  upperBound: 11
+  debug: true
+  aggregateMinimumDataEvents: ${ENABLE_AGGREGATE_RTCM_MINIMUM_DATA_EVENTS:false}
 
 

@@ -22,6 +22,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_e
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_event.BsmEventAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_event.BsmEventAlgorithmFactory;
@@ -85,6 +86,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.Sp
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
@@ -174,6 +178,9 @@ public class MonitorServiceController {
             
             // Spat Validation Topology
             startSpatValidationAlgorithm();
+
+            // RTCM Validation Topology
+            startRtcmValidationAlgorithm();
 
             // Spat Time Change Details Assessment
             //Sends Time Change Details Events when the time deltas in spat messages are incorrect
@@ -437,6 +444,28 @@ public class MonitorServiceController {
         spatValidationAlgo.start();
     }
 
+    private void startRtcmValidationAlgorithm() {
+        final String rtcmValidation = "rtcmValidation";
+        final RtcmValidationAlgorithmFactory algoFactory = conflictMonitorProps.getRtcmValidationAlgorithmFactory();
+        final String algo = conflictMonitorProps.getRtcmValidationAlgorithm();
+        final RtcmValidationAlgorithm rtcmValidationAlgo = algoFactory.getAlgorithm(algo);
+        final RtcmValidationParameters params = rtcmValidationAlgo.getParameters();
+        configTopology.registerConfigListeners(params);
+        if (rtcmValidationAlgo instanceof StreamsTopology streamsAlgo) {
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(rtcmValidation));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, rtcmValidation, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, rtcmValidation, healthTopic));
+            algoMap.put(rtcmValidation, streamsAlgo);
+        }
+        rtcmValidationAlgo.setParameters(params);
+        final RtcmMinimumDataAggregationAlgorithm aggAlgo = getRtcmMinimumDataAggregationAlgorithm();
+        rtcmValidationAlgo.setMinimumDataAggregationAlgorithm(aggAlgo);
+        Runtime.getRuntime().addShutdownHook(new Thread(rtcmValidationAlgo::stop));
+        rtcmValidationAlgo.start();
+    }
+
+
+
     private void startSpatTimeChangeDetailsAlgorithm() {
         final String spatTimeChangeDetails = "spatTimeChangeDetails";
         final SpatTimeChangeDetailsAlgorithmFactory spatTCDAlgoFactory = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithmFactory();
@@ -617,6 +646,15 @@ public class MonitorServiceController {
     private MapMinimumDataAggregationAlgorithm getMapMinimumDataAggregationAlgorithm() {
         final var factory = conflictMonitorProps.getMapMinimumDataAggregationAlgorithmFactory();
         final String algorithmName = conflictMonitorProps.getMapMinimumDataAggregationAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getAggregationParameters();
+        algorithm.setParameters(parameters);
+        return algorithm;
+    }
+
+    private RtcmMinimumDataAggregationAlgorithm getRtcmMinimumDataAggregationAlgorithm() {
+        final var factory = conflictMonitorProps.getRtcmMinimumDataAggregationAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRtcmMinimumDataAggregationAlgorithm();
         final var algorithm = factory.getAlgorithm(algorithmName);
         final var parameters = conflictMonitorProps.getAggregationParameters();
         algorithm.setParameters(parameters);
