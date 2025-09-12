@@ -29,6 +29,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_event.BsmEventAlgorithmFactory;
@@ -92,6 +94,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.Sp
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
@@ -142,6 +147,10 @@ public class MonitorServiceControllerTest {
     @Mock SpatValidationStreamsAlgorithm spatValidationAlgorithm;
     SpatValidationParameters spatValidationParameters = new SpatValidationParameters();
 
+    @Mock RtcmValidationAlgorithmFactory rtcmValidationStreamsAlgorithmFactory;
+    @Mock RtcmValidationStreamsAlgorithm rtcmValidationAlgorithm;
+    RtcmValidationParameters rtcmValidationParameters = new RtcmValidationParameters();
+
     @Mock SpatTimestampDeltaAlgorithmFactory spatTimestampDeltaAlgorithmFactory;
     @Mock SpatTimestampDeltaStreamsAlgorithm spatTimestampDeltaStreamsAlgorithm;
     SpatTimestampDeltaParameters spatTimestampDeltaParameters = new SpatTimestampDeltaParameters();
@@ -169,6 +178,8 @@ public class MonitorServiceControllerTest {
     @Mock BsmMessageCountProgressionAggregationAlgorithm bsmMessageCountProgressionAggregationAlgorithm;
     @Mock RevocableEnabledLaneAlignmentAggregationAlgorithmFactory revocableEnabledLaneAlignmentAggregationAlgorithmFactory;
     @Mock RevocableEnabledLaneAlignmentAggregationAlgorithm revocableEnabledLaneAlignmentAggregationAlgorithm;
+    @Mock RtcmMinimumDataAggregationAlgorithmFactory rtcmMinimumDataAggregationAlgorithmFactory;
+    @Mock RtcmMinimumDataAggregationAlgorithm rtcmMinimumDataAggregationAlgorithm;
 
 
     @Mock SpatTimeChangeDetailsAlgorithmFactory spatTimeChangeDetailsAlgorithmFactory;
@@ -282,6 +293,11 @@ public class MonitorServiceControllerTest {
         when(spatValidationStreamsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(spatValidationAlgorithm);
         when(conflictMonitorProperties.getSpatValidationParameters()).thenReturn(spatValidationParameters);
 
+        when(conflictMonitorProperties.getRtcmValidationAlgorithmFactory()).thenReturn(rtcmValidationStreamsAlgorithmFactory);
+        when(conflictMonitorProperties.getRtcmValidationAlgorithm()).thenReturn(defaultAlgo);
+        when(rtcmValidationStreamsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(rtcmValidationAlgorithm);
+
+
         when(conflictMonitorProperties.getSpatTimestampDeltaAlgorithmFactory()).thenReturn(spatTimestampDeltaAlgorithmFactory);
         when(conflictMonitorProperties.getSpatTimestampDeltaAlgorithm()).thenReturn(defaultAlgo);
         when(spatTimestampDeltaAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(spatTimestampDeltaStreamsAlgorithm);
@@ -337,6 +353,10 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithmFactory);
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithm()).thenReturn(defaultAlgo);
         when(revocableEnabledLaneAlignmentAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithm);
+
+        when(conflictMonitorProperties.getRtcmMinimumDataAggregationAlgorithmFactory()).thenReturn(rtcmMinimumDataAggregationAlgorithmFactory);
+        when(conflictMonitorProperties.getRtcmMinimumDataAggregationAlgorithm()).thenReturn(defaultAlgo);
+        when(rtcmMinimumDataAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(rtcmMinimumDataAggregationAlgorithm);
 
         when(conflictMonitorProperties.getSpatTimeChangeDetailsAlgorithmFactory()).thenReturn(spatTimeChangeDetailsAlgorithmFactory);
         when(conflictMonitorProperties.getSpatTimeChangeDetailsAlgorithm()).thenReturn(defaultAlgo);
@@ -428,6 +448,7 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getEventAlgorithm()).thenReturn(defaultAlgo);
         when(eventAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(eventAlgorithm);
         when(conflictMonitorProperties.getEventParameters()).thenReturn(eventParameters);
+
 
         var monitorServiceController = new MonitorServiceController(
                 conflictMonitorProperties,
