@@ -115,8 +115,7 @@ public class BsmEventProcessor
             if (newBsmInMap) {
                 for (IntersectionRegion ir : newIntersections) {
                     int intersectionId = ir.getIntersectionId();
-                    int region = ir.getRegion();
-                    var bsmIntersectionIdKey = new BsmIntersectionIdKey(key.getBsmId(), key.getRsuId(), intersectionId, region, key.getLogId());
+                    var bsmIntersectionIdKey = new BsmIntersectionIdKey(key.getBsmId(), key.getRsuId(), intersectionId, key.getLogId());
 
                     var intersectionRecord = inputRecord.withKey(bsmIntersectionIdKey);
                     context().forward(intersectionRecord, BsmEventTopology.PARTITIONED_BSM_SINK);
@@ -251,7 +250,7 @@ public class BsmEventProcessor
         BsmEvent event = getNewEvent(value, timestamp, true);
         event.setWktMapBoundingBox(map.getBoundingPolygonWkt());
         event.setIntersectionID(map.getIntersectionId());
-        var eventKey = new BsmIntersectionIdKey(key.getBsmId(), key.getRsuId(), map.getIntersectionId(), map.getRegion(), key.getLogId());
+        var eventKey = new BsmIntersectionIdKey(key.getBsmId(), key.getRsuId(), map.getIntersectionId(), key.getLogId());
         stateStore.put(eventKey, ValueAndTimestamp.make(event, timestamp));
     }
 
@@ -292,7 +291,9 @@ public class BsmEventProcessor
                 var offset = timestamp - itemTimestamp;
                 if (offset > fSuppressTimeoutMillis) {
                     logger.info("Ending BSM Event, Time limit reached :"+ key.getIntersectionId());
-                    context().forward(new Record<>(key, value, timestamp), BsmEventTopology.BSM_SINK);
+                    
+                    Record<BsmIntersectionIdKey, BsmEvent> rec = new Record<>(key, value, timestamp);
+                    context().forward(rec, BsmEventTopology.BSM_SINK);
                     stateStore.delete(key);
                 }
             }
