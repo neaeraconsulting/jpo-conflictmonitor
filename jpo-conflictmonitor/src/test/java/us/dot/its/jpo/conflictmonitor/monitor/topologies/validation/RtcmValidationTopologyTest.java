@@ -7,11 +7,9 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.junit.Test;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.RtcmMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
-import us.dot.its.jpo.conflictmonitor.monitor.topologies.timestamp_delta.SpatTimestampDeltaTopology;
 import us.dot.its.jpo.conflictmonitor.testutils.TopologyTestUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuStationIdKey;
 import us.dot.its.jpo.geojsonconverter.pojos.ProcessedValidationMessage;
@@ -56,8 +54,7 @@ public class RtcmValidationTopologyTest {
     final String rsuId = "127.0.0.1";
     final int stationId = 1001;
     final String source = "{ rsuId='127.0.0.1', intersectionId='11111', region='10'}";
-    final int intersectionId = 11111;
-    final int region = 10;
+
 
     @Test
     public void testRtcmValidationTopology() {
@@ -92,6 +89,7 @@ public class RtcmValidationTopologyTest {
                 var map = createRtcm(currentInstant);
                 inputTopic.pipeInput(key, map, currentInstant);
             }
+
             var minDataList = minimumDataTopic.readKeyValuesToList();
             assertThat("Should be > 1 min data events", minDataList, hasSize(greaterThan(1)));
             for (var entry : minDataList) {
@@ -105,6 +103,20 @@ public class RtcmValidationTopologyTest {
                 var msg = result.getMissingDataElements().getFirst();
                 assertThat("min data validation message match", msg, startsWith(validationMsg));
             }
+
+            var broadcastRateList = broadcastRateTopic.readKeyValuesToList();
+            assertThat("Should be 1 broadcast rate event", broadcastRateList, hasSize(1));
+            var broadcastRate = broadcastRateList.getFirst();
+            var bcKey =  broadcastRate.key;
+            assertThat("broadcast rate key rsuId", bcKey.getRsuId(), equalTo(rsuId));
+            assertThat("broadcast rate key stationId", bcKey.getStationId(), equalTo(stationId));
+            var bcValue = broadcastRate.value;
+            assertThat("broadcast rate device id", bcValue.getSource(), equalTo(source));
+            assertThat("broadcast rate stationId", bcValue.getIntersectionID(), equalTo(stationId));
+            assertThat("broadcast rate topic name", bcValue.getTopicName(), equalTo(inputTopicName));
+            assertThat("broadcast rate number of messages", bcValue.getNumberOfMessages(), equalTo(50));
+            assertThat("broadcast rate time period null", bcValue.getTimePeriod(), notNullValue());
+            assertThat("broadcast rate time period", bcValue.getTimePeriod().periodMillis(), equalTo(10000L));
 
         }
 
