@@ -32,8 +32,6 @@ public class RtcmValidationTopologyTest {
     final String inputTopicName = "topic.ProcessedRtcm";
     final String broadcastRateTopicName = "topic.CmRtcmBroadcastRateEvents";
     final String minimumDataTopicName = "topic.CmRtcmMinimumDataEvents";
-    final int retentionTimeMinutes = 60;
-    final String notificationTopicName = "topic.CmTimestampDeltaNotification";
 
     // Use a tumbling window for test (rolling period = output interval)
     // just to make it easier to design the test.
@@ -50,10 +48,9 @@ public class RtcmValidationTopologyTest {
 
     final String validationMsg = "Validation Message";
 
-
     final String rsuId = "127.0.0.1";
     final int stationId = 1001;
-    final String source = "{ rsuId='127.0.0.1', intersectionId='11111', region='10'}";
+    final String source = rsuId;
 
 
     @Test
@@ -112,7 +109,7 @@ public class RtcmValidationTopologyTest {
             assertThat("broadcast rate key stationId", bcKey.getStationId(), equalTo(stationId));
             var bcValue = broadcastRate.value;
             assertThat("broadcast rate device id", bcValue.getSource(), equalTo(source));
-            assertThat("broadcast rate stationId", bcValue.getIntersectionID(), equalTo(stationId));
+            assertThat("broadcast rate stationId", bcValue.getStationId(), equalTo(stationId));
             assertThat("broadcast rate topic name", bcValue.getTopicName(), equalTo(inputTopicName));
             assertThat("broadcast rate number of messages", bcValue.getNumberOfMessages(), equalTo(50));
             assertThat("broadcast rate time period null", bcValue.getTimePeriod(), notNullValue());
