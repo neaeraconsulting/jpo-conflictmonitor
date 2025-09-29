@@ -625,6 +625,12 @@ revocable.enabled.lane.alignment:
   notificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotification
   aggNotificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
 
+priority.preemption.request:
+  algorithm: defaultPriorityPreemptionRequestAlgorithm
+  debug: true
+  processed-srm-input-topic: topic.ProcessedSrm
+  processed-ssm-input-topic: topic.ProcessedSsm
+  output-event-topic: topic.CmPriorityPreemptionRequestEvent
 
 
 

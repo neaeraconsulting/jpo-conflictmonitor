@@ -27,13 +27,19 @@ public class PriorityPreemptionRequestParameters {
             updateType = READ_ONLY)
     private String algorithm;
 
-    @ConfigData(key = "priority.preemption.request.processedSrmInputTopic", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "priority.preemption.request.processedSrmInputTopic",
+            description = "",
+            updateType = READ_ONLY)
     private String processedSrmInputTopic;
 
-    @ConfigData(key = "priority.preemption.request.processedSsmInputTopic", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "priority.preemption.request.processedSsmInputTopic",
+            description = "",
+            updateType = READ_ONLY)
     private String processedSsmInputTopic;
 
-    @ConfigData(key = "priority.preemption.request.outputEventTopic", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "priority.preemption.request.outputEventTopic",
+            description = "",
+            updateType = READ_ONLY)
     private String outputEventTopic;
 
 }
