@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionAccessPointType;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
@@ -14,15 +15,21 @@ import lombok.Setter;
 public class PriorityPreemptionRequestEvent
     extends Event {
 
-    private String vehicleID;
-    private int requestID;
+    private String vehicleId;
+    private int requestId;
     private long requestTimestamp;
     private String priorityRequestType;
 
-    // Intersection Access Point CHOICE can be one of:
-    private Integer laneID;
-    private Integer approachID;
-    private Integer laneConnectionID;
+    // Inbound Intersection Access Point
+    // One of inbound LaneID, ApproachID, or LaneConnectionID is required
+    private Integer inboundLaneId;
+    private Integer inboundApproachId;
+    private Integer inboundLaneConnectionId;
+
+    // Outbound access point ID is optional
+    private Integer oubboundLaneId;
+    private Integer outboundApproachId;
+    private Integer outboundLaneConnectionId;
 
     private long timeOfLastResponse;
 
@@ -32,4 +39,6 @@ public class PriorityPreemptionRequestEvent
     public PriorityPreemptionRequestEvent() {
         super("PriorityPreemptionRequest");
     }
+
+
 }

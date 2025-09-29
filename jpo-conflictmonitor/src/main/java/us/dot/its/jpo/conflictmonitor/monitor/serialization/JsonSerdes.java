@@ -46,6 +46,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapBoundingBox;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimeChangeDetailAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.RsuIntersectionSignalGroupKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
@@ -570,5 +572,13 @@ public class JsonSerdes {
 
     public static Serde<RevocableEnabledLaneAlignmentNotificationAggregation> RevocableEnabledLaneAlignmentNotificationAggregation() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotificationAggregation.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestKey> IntersectionVehicleRequestKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestKey.class));
+    }
+
+    public static Serde<SrmRequest> SrmRequest() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SrmRequest.class));
     }
 }
