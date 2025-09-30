@@ -2,28 +2,34 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Repartitioned;
+import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.StateStore;
+import org.apache.kafka.streams.processor.TimestampExtractor;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.state.VersionedKeyValueStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SsmStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
+import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,13 +57,28 @@ public class PriorityPreemptionRequestTopology
     public Topology buildTopology() {
         var builder = new StreamsBuilder();
 
-        // Unwrap SRM and put each request in a KTable
+        final String requestStoreName = parameters.getSrmStoreName();
+        final Duration retentionTime = Duration.ofMinutes(parameters.getSrmStoreRetentionTimeMinutes());
+        final Duration ssmStreamGracePeriodSeconds = Duration.ofSeconds(parameters.getSsmStreamGracePeriodSeconds());
+
+
+
+
+
+        // Unwrap SRM and put each request in a KTable to store the latest request with a given
+        // intersectionId, region, vehicleId, and requestId
         KTable<IntersectionVehicleRequestKey, SrmRequest> srmRequestTable = builder
                 .stream(
                     parameters.getProcessedSrmInputTopic(),
                     Consumed.with(
-                            RsuVehicleIdKey(),
-                            ProcessedSrm()))
+                                RsuVehicleIdKey(),
+                                ProcessedSrm())
+                            .withTimestampExtractor(new TimestampExtractor() {
+                                @Override
+                                public long extract(ConsumerRecord<Object, Object> consumerRecord, long l) {
+                                    return 0;
+                                }
+                            }))
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
 
                     List<KeyValue<IntersectionVehicleRequestKey, SrmRequest>> requestList = new ArrayList<>();
@@ -97,27 +118,58 @@ public class PriorityPreemptionRequestTopology
                             new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SrmRequest>())
                 )
                 .toTable(
-                        Materialized.<IntersectionVehicleRequestKey, SrmRequest, KeyValueStore<Bytes, byte[]>>as(SRM_REQUEST_TABLE_STORE)
-                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
-                                .withValueSerde(JsonSerdes.SrmRequest())
-                                .withLoggingDisabled()
-                                .withCachingDisabled());
+                    // Use versioned state store for the SRM table to be able to deal with out-of-order messages easily
+                    // and automatically remove old entries after the retention time
+                    Materialized.<IntersectionVehicleRequestKey, SrmRequest>as(
+                        Stores.persistentVersionedKeyValueStore(
+                                requestStoreName,
+                                retentionTime))
+                            .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                            .withValueSerde(JsonSerdes.SrmRequest())
+                );
 
         // Unwrap SSM requests
-        var ssmStream = builder
+        KStream<IntersectionVehicleRequestKey, SsmStatus> ssmStatusStream = builder
                 .stream(
                     parameters.getProcessedSsmInputTopic(),
                     Consumed.with(
                             RsuIntersectionKey(),
-                            ProcessedSsm()))
-                .flatMapValues((processedSsm) -> {
-                    List<Object> responseList = new ArrayList<>();
-                    var statusList = processedSsm.getStatusList();
-                    for (var status : statusList) {
-
+                            ProcessedSsm())
+                            .withTimestampExtractor(new TimestampExtractor() {
+                                @Override
+                                public long extract(ConsumerRecord<Object, Object> consumerRecord, long l) {
+                                    return 0;
+                                }
+                            }))
+                .flatMap((rsuIntersectionKey,processedSsm) -> {
+                    final Integer intersectionId = processedSsm.getIntersectionId();
+                    final Integer region = processedSsm.getRegion();
+                    final ZonedDateTime dateTime = processedSsm.getTimeStamp();
+                    final long timestamp = dateTime.toInstant().toEpochMilli();
+                    List<KeyValue<IntersectionVehicleRequestKey, SsmStatus>> responseList = new ArrayList<>();
+                    List<ProcessedSignalStatus> statusList = processedSsm.getStatusList();
+                    for (ProcessedSignalStatus status : statusList) {
+                        var key = new IntersectionVehicleRequestKey(intersectionId, region, status);
+                        var ssmStatus = new SsmStatus(intersectionId, region, timestamp, status);
+                        responseList.add(new KeyValue<>(key, ssmStatus));
                     }
                     return responseList;
-                });
+                })
+                .repartition(
+                        // Partition by Intersection ID
+                        Repartitioned.streamPartitioner(
+                                new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SsmStatus>())
+                );
+
+        ssmStatusStream.leftJoin(srmRequestTable,
+                new ValueJoinerWithKey<IntersectionVehicleRequestKey, SsmStatus, SrmRequest, JoinedRequestStatus>() {
+                    @Override
+                    public JoinedRequestStatus apply(final IntersectionVehicleRequestKey intersectionVehicleRequestKey, SsmStatus ssmStatus, SrmRequest srmRequest) {
+                        return new JoinedRequestStatus(srmRequest, ssmStatus);
+                    }
+                },
+                Joined.as("joined-request-status").withGracePeriod());
+
 
 
 

@@ -3,12 +3,10 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_reques
 import lombok.Data;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
-import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSrm;
-import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
 
-import java.time.ZonedDateTime;
-import java.util.List;
-
+/**
+ * A flattened object with one SRM status response and key fields from the SRM that contains it.
+ */
 @Data
 public class SrmRequest {
 
@@ -31,7 +29,6 @@ public class SrmRequest {
 
     private String vehicleId;
     private long timestamp;
-
     private int intersectionId;
     private int region;
     private int requestId;

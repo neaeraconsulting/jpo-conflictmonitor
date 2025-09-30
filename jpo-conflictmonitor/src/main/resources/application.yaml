@@ -631,6 +631,9 @@ priority.preemption.request:
   processed-srm-input-topic: topic.ProcessedSrm
   processed-ssm-input-topic: topic.ProcessedSsm
   output-event-topic: topic.CmPriorityPreemptionRequestEvent
+  srm-store-name: srm-request-store
+  srm-store-retention-time-minutes: 10
+  ssm-stream-grace-period-milliseconds: 5000
 
 
 

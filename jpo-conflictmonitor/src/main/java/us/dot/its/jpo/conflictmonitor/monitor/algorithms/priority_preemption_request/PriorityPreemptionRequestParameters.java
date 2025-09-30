@@ -42,4 +42,19 @@ public class PriorityPreemptionRequestParameters {
             updateType = READ_ONLY)
     private String outputEventTopic;
 
+    @ConfigData(key = "priority.preemption.request.srmStoreName",
+            description = "Name of the state store to hold SRM Requests",
+            updateType = READ_ONLY)
+    private String srmStoreName;
+
+    @ConfigData(key = "priority.preemption.request.srmStoreRetentionTimeMinutes",
+            description = "Retention time of the SRM Versioned store",
+            updateType = READ_ONLY)
+    private int srmStoreRetentionTimeMinutes;
+
+    @ConfigData(key = "priority.preemption.request.ssmStreamGracePeriodMilliseconds",
+            description = "Grace period for buffering and sorting out-of-order SSM messages",
+            updateType = READ_ONLY)
+    private int ssmStreamGracePeriodMilliseconds;
+
 }
