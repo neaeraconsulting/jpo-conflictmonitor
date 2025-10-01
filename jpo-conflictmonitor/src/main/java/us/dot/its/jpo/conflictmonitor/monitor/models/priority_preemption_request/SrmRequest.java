@@ -1,6 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request;
 
 import lombok.Data;
+import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
 
@@ -12,7 +13,8 @@ public class SrmRequest {
 
     public SrmRequest() {}
 
-    public SrmRequest(final String vehicleId, final long timestamp, final ProcessedSignalRequest request) {
+    public SrmRequest(final String vehicleId, final ProcessedBasicVehicleRole vehicleType,
+                      final long timestamp, final ProcessedSignalRequest request) {
         this.vehicleId = vehicleId;
         this.timestamp = timestamp;
         intersectionId = request.getIntersectionId();
@@ -28,6 +30,7 @@ public class SrmRequest {
     }
 
     private String vehicleId;
+    private ProcessedBasicVehicleRole vehicleType;
     private long timestamp;
     private int intersectionId;
     private int region;

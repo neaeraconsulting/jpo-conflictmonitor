@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class JoinedRequestStatus {
     private SrmRequest srmRequest;
-    private SsmStatus smsStatus;
+    private SsmStatus ssmStatus;
 }

@@ -1,9 +1,14 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request;
 
+import com.google.common.collect.Sets;
 import lombok.Data;
+import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
+import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.*;
+
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus;
-import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
+
+import java.util.Set;
 
 /**
  * A flattened object with one SSM status and key fields from the SSM that contains it.
@@ -18,6 +23,7 @@ public class SsmStatus {
         this.region = region;
         this.timestamp = timestamp;
         vehicleId = signalStatus.getVehicleID();
+        vehicleType = signalStatus.getRequesterRole();
         requestId = signalStatus.getRequestID();
         inboundLaneId = signalStatus.getInboundOnLaneID();
         inboundApproachId = signalStatus.getInboundOnApproachID();
@@ -29,6 +35,7 @@ public class SsmStatus {
     }
 
     private String vehicleId;
+    private ProcessedBasicVehicleRole vehicleType;
     private String vehicleRole;
     private long timestamp;
     private int intersectionId;
@@ -41,5 +48,12 @@ public class SsmStatus {
     private Integer outboundApproachId;
     private Integer outboundLaneConnectionId;
     private ProcessedPrioritizationResponseStatus status;
+
+    public static final Set<ProcessedPrioritizationResponseStatus> finalStatuses
+            = Sets.newHashSet(GRANTED, REJECTED, MAXPRESENCE, RESERVICELOCKED);
+
+    public boolean isFinalStatus() {
+        return finalStatuses.contains(status);
+    }
 
 }

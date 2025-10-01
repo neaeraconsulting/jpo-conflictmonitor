@@ -55,6 +55,6 @@ public class PriorityPreemptionRequestParameters {
     @ConfigData(key = "priority.preemption.request.ssmStreamGracePeriodMilliseconds",
             description = "Grace period for buffering and sorting out-of-order SSM messages",
             updateType = READ_ONLY)
-    private int ssmStreamGracePeriodMilliseconds;
+    private long ssmStreamGracePeriodMilliseconds;
 
 }

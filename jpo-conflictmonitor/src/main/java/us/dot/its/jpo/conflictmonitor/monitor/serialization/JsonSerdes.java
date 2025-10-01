@@ -581,4 +581,8 @@ public class JsonSerdes {
     public static Serde<SrmRequest> SrmRequest() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SrmRequest.class));
     }
+
+    public static Serde<PriorityPreemptionRequestEvent>  PriorityPreemptionRequestEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+    }
 }
