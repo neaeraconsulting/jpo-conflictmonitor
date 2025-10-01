@@ -76,6 +76,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageI
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithmFactory;
@@ -223,6 +225,10 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private RevocableEnabledLaneAlignmentAlgorithmFactory revocableEnabledLaneAlignmentAlgorithmFactory;
    private String revocableEnabledLaneAlignmentAlgorithm;
    private RevocableEnabledLaneAlignmentParameters revocableEnabledLaneAlignmentParameters;
+
+   private PriorityPreemptionRequestAlgorithmFactory priorityPreemptionRequestAlgorithmFactory;
+   private String priorityPreemptionRequestAlgorithm;
+   private PriorityPreemptionRequestParameters priorityPreemptionRequestParameters;
 
    private NotificationAlgorithmFactory notificationAlgorithmFactory;
    private String notificationAlgorithm;
@@ -436,9 +442,22 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
    @Autowired
+   public void setPriorityPreemptionRequestParameters(PriorityPreemptionRequestParameters priorityPreemptionRequestParameters) {
+      this.priorityPreemptionRequestParameters = priorityPreemptionRequestParameters;
+      this.priorityPreemptionRequestAlgorithm = priorityPreemptionRequestParameters.getAlgorithm();
+   }
+
+   @Autowired
    public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
       this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
    }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setPriorityPreemptionRequestAlgorithmFactory(PriorityPreemptionRequestAlgorithmFactory factory) {
+      this.priorityPreemptionRequestAlgorithmFactory = factory;
+   }
+
 
    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired

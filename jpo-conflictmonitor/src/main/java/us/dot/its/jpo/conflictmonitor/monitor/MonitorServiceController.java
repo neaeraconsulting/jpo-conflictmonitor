@@ -55,6 +55,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.Notificati
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
@@ -355,7 +358,10 @@ public class MonitorServiceController {
             startSpatMessageCountProgressionAlgorithm();
             
             //Bsm Message Count Progression Topology
-            startBsmMessageCountProgressionAlgorithm(); 
+            startBsmMessageCountProgressionAlgorithm();
+
+            // Priority/Preemption Request Topology
+            startPriorityPreemptionRequestTopology();
 
             // Combined Event Topology
             final String event = "event";
@@ -585,6 +591,24 @@ public class MonitorServiceController {
 
         Runtime.getRuntime().addShutdownHook(new Thread(bsmMessageCountProgressionAlgo::stop));
         bsmMessageCountProgressionAlgo.start();
+    }
+
+    private void startPriorityPreemptionRequestTopology() {
+        final String name = "priorityPreemptionRequest";
+        final PriorityPreemptionRequestAlgorithmFactory factory = conflictMonitorProps.getPriorityPreemptionRequestAlgorithmFactory();
+        final PriorityPreemptionRequestParameters params = conflictMonitorProps.getPriorityPreemptionRequestParameters();
+        final String algorithmName = conflictMonitorProps.getPriorityPreemptionRequestAlgorithm();
+        final PriorityPreemptionRequestAlgorithm algorithm = factory.getAlgorithm(algorithmName);
+        configTopology.registerConfigListeners(params);
+        if (algorithm instanceof StreamsTopology streamsAlgo) {
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
+            algoMap.put(name, streamsAlgo);
+        }
+        algorithm.setParameters(params);
+        Runtime.getRuntime().addShutdownHook(Thread.ofVirtual().unstarted(algorithm::stop));
+        algorithm.start();
     }
 
     private MapTimestampDeltaAlgorithm getMapTimestampDeltaAlgorithm() {
