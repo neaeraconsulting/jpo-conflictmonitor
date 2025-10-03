@@ -1,4 +1,12 @@
 ## JPO Conflict Monitor Release Notes
+
+## Version 3.3.2
+The 2025 Q3 Release of the Conflict Monitor Platform
+- Updated conflict monitor for compatibility with new Processed Msg Formats
+- Added Javadocs for Event and Assessment Definitions
+- Misc bug fixes
+
+
 ## Version 2.1.0
 
 ### **Summary**
