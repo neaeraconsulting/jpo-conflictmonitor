@@ -11,7 +11,7 @@ public class PriorityRequestMetrics
         extends Metrics<IntersectionVehicleTypeKey> {
 
     /**
-     * The number of distinct request IDs in valid SRMs for one intersection and vehicle type
+     * The number distinct request IDs in valid SRMs for one intersection and vehicle type
      * during the time period. Typically, vehicles send multiple SRMs before receiving an SSM response.
      * Distinct SRM Request IDs are only counted once.
      */

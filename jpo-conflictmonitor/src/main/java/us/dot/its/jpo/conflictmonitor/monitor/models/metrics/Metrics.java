@@ -29,7 +29,7 @@ public abstract class Metrics<TKey> {
     protected final long metricGeneratedAt;
     protected ProcessingTimePeriod timePeriod;
 
-    public Metrics(String name) {
+    protected Metrics(String name) {
         this.name = name;
         this.metricGeneratedAt = System.currentTimeMillis();
     }
