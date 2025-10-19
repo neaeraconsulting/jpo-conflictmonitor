@@ -1,6 +1,12 @@
 package us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics;
 
+import lombok.Data;
+import lombok.Generated;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
+import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.TimePeriodCalculator;
 
@@ -13,29 +19,35 @@ import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.RE
  * Common parameters for all metrics to specify the interval to aggregate
  * metrics over.
  */
-public class MetricsParameters {
+@Data
+@Generated
+@Component
+@ConfigurationProperties(prefix = "metrics.common")
+@ConfigDataClass
+@Slf4j
+public class CommonMetricsParameters {
 
-    @ConfigData(key = "metrics.debug",
+    @ConfigData(key = "metrics.common.debug",
             description = "Whether to log diagnostic information for debugging",
             updateType = DEFAULT)
     private volatile boolean debug;
 
-    @ConfigData(key = "metrics.interval",
+    @ConfigData(key = "metrics.common.interval",
             description = "The time interval over which to aggregate metrics",
             updateType = READ_ONLY)
     private int interval;
 
-    @ConfigData(key = "metrics.interval.units",
+    @ConfigData(key = "metrics.common.interval.units",
             description = "The time units of the metrics aggregation interval",
             updateType = READ_ONLY)
     private ChronoUnit intervalUnits;
 
-    @ConfigData(key = "metrics.punctuator.interval.ms",
+    @ConfigData(key = "metrics.common.punctuator.interval.ms",
             description = "How often to run the process to check whether to emit metrics",
             updateType = READ_ONLY)
     private long checkIntervalMs;
 
-    @ConfigData(key = "metrics.grace.period.ms",
+    @ConfigData(key = "metrics.common.grace.period.ms",
             description = "Grace period for receiving out-of-order events to be used in calculating the metric",
             updateType = READ_ONLY)
     private long gracePeriodMs;

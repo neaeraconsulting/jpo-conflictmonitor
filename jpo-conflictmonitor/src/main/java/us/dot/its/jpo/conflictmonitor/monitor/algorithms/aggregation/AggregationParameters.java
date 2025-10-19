@@ -1,6 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation;
 
-import com.google.common.collect.ImmutableSet;
 import lombok.Data;
 import lombok.Generated;
 import lombok.extern.slf4j.Slf4j;
@@ -12,14 +11,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod
 import us.dot.its.jpo.conflictmonitor.monitor.utils.TimePeriodCalculator;
 
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Set;
 
-import static java.time.temporal.ChronoUnit.*;
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.DEFAULT;
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.READ_ONLY;
 
