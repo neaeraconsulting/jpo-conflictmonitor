@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.TimePeriodCalculator;
 
 
 import java.time.Duration;
@@ -68,23 +69,14 @@ public class AggregationParameters {
         updateType = READ_ONLY)
     EventAlgorithmMap eventAlgorithmMap;
 
-    public Duration aggInterval() {
-        return Duration.of(interval, intervalUnits);
-    }
 
-    /**
-     * @return Aggregation interval in epoch milliseconds
-     */
-    public long aggIntervalMs() {
-        return aggInterval().toMillis();
-    }
 
     /**
      * @return Aggregated event state store retention time in milliseconds, calculated to include 2 aggregation
      * intervals and grace periods.
      */
     public long retentionTimeMs() {
-        return 2 * (aggIntervalMs() + gracePeriodMs);
+        return TimePeriodCalculator.retentionTimeMs(interval, intervalUnits, gracePeriodMs);
     }
 
     /**
@@ -95,41 +87,8 @@ public class AggregationParameters {
      * @return A midnight aligned time period (begin and end time) containing the timestamp.
      */
     public ProcessingTimePeriod aggTimePeriod(final long timestampMs) {
-        validateInterval();
-        final var timestamp = Instant.ofEpochMilli(timestampMs);
-        final var zdt = ZonedDateTime.ofInstant(timestamp, ZoneOffset.UTC);
-        return switch (intervalUnits) {
-            case HOURS -> {
-                final Instant startOfDay = ZonedDateTime.of(zdt.getYear(), zdt.getMonthValue(), zdt.getDayOfMonth(),
-                        0, 0, 0, 0, ZoneOffset.UTC).toInstant();
-                final int numHours = zdt.getHour();
-                yield alignedTimePeriod(startOfDay, numHours);
-            }
-            case MINUTES -> {
-                final Instant startOfHour = ZonedDateTime.of(zdt.getYear(), zdt.getMonthValue(), zdt.getDayOfMonth(),
-                        zdt.getHour(), 0, 0, 0, ZoneOffset.UTC).toInstant();
-                final int numMinutes = zdt.getMinute();
-                yield alignedTimePeriod(startOfHour, numMinutes);
-            }
-            case SECONDS -> {
-                final Instant startOfMinute = ZonedDateTime.of(zdt.getYear(), zdt.getMonthValue(), zdt.getDayOfMonth(),
-                        zdt.getHour(), zdt.getMinute(), 0, 0, ZoneOffset.UTC).toInstant();
-                final int numSeconds = zdt.getSecond();
-                yield alignedTimePeriod(startOfMinute, numSeconds);
-            }
-            default -> throw new RuntimeException("Invalid interval units");
-        };
+        return TimePeriodCalculator.aggTimePeriod(timestampMs, interval, intervalUnits);
 
-    }
-
-    private ProcessingTimePeriod alignedTimePeriod(final Instant startOfUnits, final int numUnits) {
-        final var numberOfIntervals = numUnits / interval;
-        final var startOfInterval = startOfUnits.plus((long) numberOfIntervals * interval, intervalUnits);
-        final var endOfInterval = startOfInterval.plus(interval, intervalUnits);
-        final var period = new ProcessingTimePeriod();
-        period.setBeginTimestamp(startOfInterval.toEpochMilli());
-        period.setEndTimestamp(endOfInterval.toEpochMilli());
-        return period;
     }
 
 
@@ -147,32 +106,11 @@ public class AggregationParameters {
      * @return valid or not
      */
     public boolean validateInterval() {
-        if (!allowedIntervalUnits.contains(intervalUnits)) {
-            log.error("Invalid interval units: {}, allowed values are: {}", intervalUnits, allowedIntervalUnits);
-            return false;
-        }
-
-        if (intervalUnits.equals(HOURS)) {
-            if (interval < 0 || 24 % interval != 0) {
-                log.error("Invalid time interval: {}, allowed values are: 1, 2, 3, 4, 6, 8, 24 hours", interval);
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        // SECONDS or MINUTES
-        if (interval < 0 || 60 % interval != 0) {
-            log.error("Invalid time interval: {}, allowed values are: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60 {}", interval, intervalUnits);
-            return false;
-        } else {
-            return true;
-        }
+        return TimePeriodCalculator.validateInterval(interval, intervalUnits);
     }
 
 
-    private static final Set<ChronoUnit> allowedIntervalUnits
-            = ImmutableSet.of(SECONDS, MINUTES, HOURS);
+
 
 
 }
