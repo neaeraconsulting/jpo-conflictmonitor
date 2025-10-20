@@ -47,6 +47,7 @@ public class CommonMetricsParameters {
             updateType = READ_ONLY)
     private long gracePeriodMs;
 
+
     /**
      * @return Aggregated event state store retention time in milliseconds, calculated to include 2 aggregation
      * intervals and grace periods.

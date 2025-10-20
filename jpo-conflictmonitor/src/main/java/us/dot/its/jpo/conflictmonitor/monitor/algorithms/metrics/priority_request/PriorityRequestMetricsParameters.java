@@ -17,6 +17,11 @@ import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.RE
 @ConfigDataClass
 public class PriorityRequestMetricsParameters {
 
+    @ConfigData(key = "metrics.priority.request.algorithm",
+            description = "Name of the algorithm to use",
+            updateType = READ_ONLY)
+    private String algorithm;
+
     @ConfigData(key = "metrics.priority.request.debug",
             description = "Whether to log diagnostic information for debugging",
             updateType = DEFAULT)
@@ -40,6 +45,6 @@ public class PriorityRequestMetricsParameters {
     @ConfigData(key = "metrics.priority.request.outputTopic",
             description = "Output topic for metrics",
             updateType = READ_ONLY)
-    private String outputTopic;
+    private String outputMetricTopic;
 
 }

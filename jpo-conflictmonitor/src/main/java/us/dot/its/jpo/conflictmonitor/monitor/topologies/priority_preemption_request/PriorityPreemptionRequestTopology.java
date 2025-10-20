@@ -241,6 +241,11 @@ public class PriorityPreemptionRequestTopology
                     JsonSerdes.PriorityPreemptionRequestEvent(),
                     new IntersectionIdPartitioner<>()));
 
+        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
+                Produced.with(
+                        JsonSerdes.IntersectionVehicleTypeKey(),
+                        JsonSerdes.PriorityRequestMetrics(),
+                        new IntersectionIdPartitioner<>()));
 
         return builder.build();
     }
