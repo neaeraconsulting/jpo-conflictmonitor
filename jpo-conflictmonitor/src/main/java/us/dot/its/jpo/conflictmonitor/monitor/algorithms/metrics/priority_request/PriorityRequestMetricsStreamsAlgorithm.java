@@ -4,11 +4,13 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.MetricsStreamsA
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 
 public interface PriorityRequestMetricsStreamsAlgorithm
     extends PriorityRequestMetricsAlgorithm,
         MetricsStreamsAlgorithmInterface<
-            IntersectionVehicleTypeKey,
-            PriorityPreemptionRequestEvent,
-            PriorityRequestMetrics> {
+                IntersectionVehicleRequestKey,
+                IntersectionVehicleTypeKey,
+                PriorityPreemptionRequestEvent,
+                PriorityRequestMetrics> {
 }

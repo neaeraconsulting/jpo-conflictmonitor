@@ -1,4 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request;
 
 public interface PriorityRequestMetricsAlgorithmFactory {
+    PriorityRequestMetricsAlgorithm getAlgorithm(String algorithmName);
 }

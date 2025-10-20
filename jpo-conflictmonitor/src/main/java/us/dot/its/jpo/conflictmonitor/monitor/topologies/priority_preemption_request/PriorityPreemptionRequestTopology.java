@@ -12,9 +12,13 @@ import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
@@ -44,6 +48,8 @@ public class PriorityPreemptionRequestTopology
     implements PriorityPreemptionRequestStreamsAlgorithm {
 
     private static final String SRM_REQUEST_TABLE_STORE = "srm-table-store";
+
+    private PriorityRequestMetricsStreamsAlgorithm priorityRequestMetricsStreamsAlgorithm;
 
     @Override
     protected Logger getLogger() {
@@ -113,7 +119,8 @@ public class PriorityPreemptionRequestTopology
                             new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SrmRequest>())
                 );
 
-        // TODO: Count SRM requests with distinct RequestID
+        // TODO: Plug in Priority Request Metrics Subtopology
+
 
         // Put each SRM request in a KTable to store the latest request with a given
         // intersectionId, region, vehicleId, and requestId
@@ -162,9 +169,9 @@ public class PriorityPreemptionRequestTopology
                                 new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SsmStatus>())
                 );
 
-        // TODO: Count SSM Responses with granted status
 
-        ssmStatusStream
+
+        KStream<IntersectionVehicleRequestKey, PriorityPreemptionRequestEvent> eventStream = ssmStatusStream
             .leftJoin(
                 srmRequestTable,
                 // ValueJoiner
@@ -221,14 +228,36 @@ public class PriorityPreemptionRequestTopology
                 return event;
             })
             // Filter out non-final status
-            .filter((key, value) -> value.isFinalStatus())
-            // Write to event topic
-            .to(parameters.getOutputEventTopic(),
-                Produced.with(
-                        JsonSerdes.IntersectionVehicleRequestKey(),
-                        JsonSerdes.PriorityPreemptionRequestEvent(),
-                        new IntersectionIdPartitioner<>()));
+            .filter((key, value) -> value.isFinalStatus());
+
+        // Count SSM Responses with granted status for fulfillment metric
+        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
+            priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+
+        // Write to event topic
+        eventStream.to(parameters.getOutputEventTopic(),
+            Produced.with(
+                    JsonSerdes.IntersectionVehicleRequestKey(),
+                    JsonSerdes.PriorityPreemptionRequestEvent(),
+                    new IntersectionIdPartitioner<>()));
+
 
         return builder.build();
+    }
+
+    @Override
+    public PriorityRequestMetricsAlgorithm getPriorityRequestMetricsAlgorithm() {
+        return priorityRequestMetricsStreamsAlgorithm;
+    }
+
+    @Override
+    public void setPriorityRequestMetricsAlgorithm(PriorityRequestMetricsAlgorithm priorityRequestMetricsAlgorithm) {
+        if (priorityRequestMetricsAlgorithm instanceof PriorityRequestMetricsStreamsAlgorithm streamsAlgorithm) {
+            this.priorityRequestMetricsStreamsAlgorithm = streamsAlgorithm;
+        } else {
+            String errMsg = String.format("%s is not an instance of PriorityRequestMetricsStreamsAlgorithm", priorityRequestMetricsAlgorithm);
+            log.error(errMsg);
+            throw new RuntimeException(errMsg);
+        }
     }
 }

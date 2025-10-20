@@ -27,11 +27,6 @@ import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.RE
 @Slf4j
 public class CommonMetricsParameters {
 
-    @ConfigData(key = "metrics.common.debug",
-            description = "Whether to log diagnostic information for debugging",
-            updateType = DEFAULT)
-    private volatile boolean debug;
-
     @ConfigData(key = "metrics.common.interval",
             description = "The time interval over which to aggregate metrics",
             updateType = READ_ONLY)
