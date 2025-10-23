@@ -105,7 +105,7 @@ public class PriorityRequestMetricsTopology
                             metrics.setKey(key);
                             metrics.setNumberOfDistinctSrmRequests(metrics.getNumberOfDistinctSrmRequests() + 1);
                             if (GRANTED.getName().equals(status)) {
-                                metrics.setNumberOfGrantedSSMResponses(metrics.getNumberOfGrantedSSMResponses() + 1);
+                                metrics.setNumberOfGrantedSsmResponses(metrics.getNumberOfGrantedSsmResponses() + 1);
                             }
                             return metrics;
                         })

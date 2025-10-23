@@ -251,4 +251,18 @@ public class PriorityPreemptionRequestTopology
             throw new RuntimeException(errMsg);
         }
     }
+
+    @Override
+    protected void validate() {
+        super.validate();
+        if (priorityRequestMetricsStreamsAlgorithm == null) {
+            throw new IllegalStateException("PriorityRequestMetricsStreamsAlgorithm has not been set");
+        }
+        if (priorityRequestMetricsStreamsAlgorithm.getParameters() != null) {
+            throw new IllegalStateException("PriorityRequestMetricsParameters not set");
+        }
+        if (priorityRequestMetricsStreamsAlgorithm.getCommonParameters() != null) {
+            throw new IllegalStateException("Metrics algorithm Common Parameters not set");
+        }
+    }
 }

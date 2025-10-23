@@ -21,10 +21,10 @@ public class PriorityRequestMetrics
      * The number of SSM "granted" responses for the intersection and vehicle type during the
      * time period.
      */
-    private long numberOfGrantedSSMResponses;
+    private long numberOfGrantedSsmResponses;
 
     private double getFulfillmentRate() {
-        return (double)numberOfGrantedSSMResponses / (double)numberOfDistinctSrmRequests;
+        return (double) numberOfGrantedSsmResponses / (double)numberOfDistinctSrmRequests;
     }
 
     public PriorityRequestMetrics() {

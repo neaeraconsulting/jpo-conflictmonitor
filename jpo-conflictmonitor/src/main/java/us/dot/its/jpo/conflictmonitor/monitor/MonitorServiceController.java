@@ -51,6 +51,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
@@ -607,8 +608,21 @@ public class MonitorServiceController {
             algoMap.put(name, streamsAlgo);
         }
         algorithm.setParameters(params);
+        final PriorityRequestMetricsAlgorithm metricsAlgorithm = getPriorityRequestMetricsAlgorithm();
+        algorithm.setPriorityRequestMetricsAlgorithm(metricsAlgorithm);
         Runtime.getRuntime().addShutdownHook(Thread.ofVirtual().unstarted(algorithm::stop));
         algorithm.start();
+    }
+
+    private PriorityRequestMetricsAlgorithm getPriorityRequestMetricsAlgorithm() {
+        final var factory = conflictMonitorProps.getPriorityRequestMetricsAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getPriorityRequestMetricsAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getPriorityRequestMetricsParameters();
+        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
+        algorithm.setParameters(parameters);
+        algorithm.setCommonParameters(commonParameters);
+        return algorithm;
     }
 
     private MapTimestampDeltaAlgorithm getMapTimestampDeltaAlgorithm() {

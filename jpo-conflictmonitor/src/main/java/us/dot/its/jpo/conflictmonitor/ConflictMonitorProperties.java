@@ -70,6 +70,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.lane_direction_of_trave
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.lane_direction_of_travel_assessment.LaneDirectionOfTravelAssessmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
@@ -229,6 +232,11 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private PriorityPreemptionRequestAlgorithmFactory priorityPreemptionRequestAlgorithmFactory;
    private String priorityPreemptionRequestAlgorithm;
    private PriorityPreemptionRequestParameters priorityPreemptionRequestParameters;
+
+   private CommonMetricsParameters commonMetricsParameters;
+   private PriorityRequestMetricsAlgorithmFactory priorityRequestMetricsAlgorithmFactory;
+   private String priorityRequestMetricsAlgorithm;
+   private PriorityRequestMetricsParameters priorityRequestMetricsParameters;
 
    private NotificationAlgorithmFactory notificationAlgorithmFactory;
    private String notificationAlgorithm;
@@ -448,6 +456,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
    @Autowired
+   public void setPriorityRequestMetricsParameters(PriorityRequestMetricsParameters priorityRequestMetricsParameters) {
+      this.priorityRequestMetricsParameters = priorityRequestMetricsParameters;
+      this.priorityRequestMetricsAlgorithm = priorityRequestMetricsParameters.getAlgorithm();
+   }
+
+   @Autowired
    public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
       this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
    }
@@ -456,6 +470,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Autowired
    public void setPriorityPreemptionRequestAlgorithmFactory(PriorityPreemptionRequestAlgorithmFactory factory) {
       this.priorityPreemptionRequestAlgorithmFactory = factory;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setPriorityRequestMetricsAlgorithmFactory(PriorityRequestMetricsAlgorithmFactory factory) {
+      this.priorityRequestMetricsAlgorithmFactory = factory;
    }
 
 
