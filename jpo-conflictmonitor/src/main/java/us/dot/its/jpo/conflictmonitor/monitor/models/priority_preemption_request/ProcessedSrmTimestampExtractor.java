@@ -10,8 +10,7 @@ import java.time.ZonedDateTime;
 public class ProcessedSrmTimestampExtractor implements TimestampExtractor {
     @Override
     public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
-        ProcessedSrm processedSrm = (ProcessedSrm) record.value();
-        if (processedSrm != null) {
+        if (record.value() != null && record.value() instanceof ProcessedSrm processedSrm) {
             Long timestamp = getSrmTimestamp(processedSrm);
             if (timestamp != null) {
                 return timestamp;

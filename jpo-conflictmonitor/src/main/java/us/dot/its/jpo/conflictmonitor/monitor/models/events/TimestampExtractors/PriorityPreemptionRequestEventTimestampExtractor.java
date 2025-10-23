@@ -10,7 +10,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRe
 public class PriorityPreemptionRequestEventTimestampExtractor implements TimestampExtractor {
     @Override
     public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
-        if (record.value() instanceof PriorityPreemptionRequestEvent event) {
+        if (record.value() != null && record.value() instanceof PriorityPreemptionRequestEvent event) {
             if (event.getTimeOfLastResponse() > 0) {
                 // Use time of last response if there was a response
                 return event.getTimeOfLastResponse();

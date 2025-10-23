@@ -19,10 +19,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_req
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SsmStatus;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
@@ -47,8 +44,6 @@ public class PriorityPreemptionRequestTopology
     extends BaseStreamsTopology<PriorityPreemptionRequestParameters>
     implements PriorityPreemptionRequestStreamsAlgorithm {
 
-    private static final String SRM_REQUEST_TABLE_STORE = "srm-table-store";
-
     private PriorityRequestMetricsStreamsAlgorithm priorityRequestMetricsStreamsAlgorithm;
 
     @Override
@@ -72,12 +67,7 @@ public class PriorityPreemptionRequestTopology
                     Consumed.with(
                                 RsuVehicleIdKey(),
                                 ProcessedSrm())
-                            .withTimestampExtractor(new TimestampExtractor() {
-                                @Override
-                                public long extract(ConsumerRecord<Object, Object> consumerRecord, long l) {
-                                    return 0;
-                                }
-                            }))
+                            .withTimestampExtractor(new ProcessedSrmTimestampExtractor()))
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
 
                     List<KeyValue<IntersectionVehicleRequestKey, SrmRequest>> requestList = new ArrayList<>();
@@ -119,7 +109,7 @@ public class PriorityPreemptionRequestTopology
                             new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SrmRequest>())
                 );
 
-        // TODO: Plug in Priority Request Metrics Subtopology
+
 
 
         // Put each SRM request in a KTable to store the latest request with a given
@@ -143,12 +133,7 @@ public class PriorityPreemptionRequestTopology
                     Consumed.with(
                             RsuIntersectionKey(),
                             ProcessedSsm())
-                            .withTimestampExtractor(new TimestampExtractor() {
-                                @Override
-                                public long extract(ConsumerRecord<Object, Object> consumerRecord, long l) {
-                                    return 0;
-                                }
-                            }))
+                            .withTimestampExtractor(new ProcessedSsmTimestampExtractor()))
                 .flatMap((rsuIntersectionKey,processedSsm) -> {
                     final Integer intersectionId = processedSsm.getIntersectionId();
                     final Integer region = processedSsm.getRegion();
@@ -241,6 +226,7 @@ public class PriorityPreemptionRequestTopology
                     JsonSerdes.PriorityPreemptionRequestEvent(),
                     new IntersectionIdPartitioner<>()));
 
+        // Write to metrics topic
         metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
                 Produced.with(
                         JsonSerdes.IntersectionVehicleTypeKey(),
