@@ -635,5 +635,16 @@ priority.preemption.request:
   srm-store-retention-time-minutes: 10
   ssm-stream-grace-period-milliseconds: 5000
 
+metrics:
+  common:
+    interval: 1
+    interval-units: MINUTES
+    grace-period-ms: 5000
+  priority.request:
+    algorithm: defaultPriorityRequestMetricsAlgorithm
+    debug: true
+    input-event-topic: topic.CmPriorityPreemptionRequestEvent
+    output-metric-topic: topic.CmPriorityRequestMetrics
+
 
 

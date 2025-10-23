@@ -32,16 +32,6 @@ public class PriorityRequestMetricsParameters {
             updateType = READ_ONLY)
     private String inputEventTopic;
 
-    @ConfigData(key = "metrics.priority.request.inputSrmTopic",
-            description = "Input topic with ProcessedSrms",
-            updateType = READ_ONLY)
-    private String inputSrmTopic;
-
-    @ConfigData(key = "metrics.priority.request.inputSsmTopic",
-            description = "Input topic with ProcessedSsms",
-            updateType = READ_ONLY)
-    private String inputSsmTopic;
-
     @ConfigData(key = "metrics.priority.request.outputTopic",
             description = "Output topic for metrics",
             updateType = READ_ONLY)
