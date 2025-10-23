@@ -2,12 +2,9 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_re
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.state.Stores;
-import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsBuilder;
@@ -15,18 +12,16 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsPa
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.TimestampExtractors.PriorityPreemptionRequestEventTimestampExtractor;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
-import us.dot.its.jpo.conflictmonitor.monitor.utils.TimePeriodCalculator;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
-import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus;
 
 import java.time.Duration;
 
-import static org.apache.kafka.streams.kstream.Suppressed.BufferConfig.unbounded;
-import static org.apache.kafka.streams.kstream.Suppressed.untilWindowCloses;
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsConstants.DEFAULT_PRIORITY_REQUEST_METRICS_ALGORITHM;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.UNKNOWN;
@@ -66,21 +61,15 @@ public class PriorityRequestMetricsTopology
         final Duration tumblingWindowDuration = Duration.of(interval, intervalUnits);
         final var gracePeriodMs = commonParameters.getGracePeriodMs();
         final Duration gracePeriodDuration = Duration.ofMillis(gracePeriodMs);
-//        final long retentionTimeMillis = TimePeriodCalculator.retentionTimeMs(interval, intervalUnits, gracePeriodMs);
-//        log.info("Event store retention time: {}", retentionTimeMillis);
-//        final Duration retentionTime = Duration.ofMillis(retentionTimeMillis);
-//        final String eventStoreName = "PriorityPreemptionEventStore";
-//        final String keyStoreName = "PriorityPreemptionKeyStore";
-
-
-
         final var eventTopic = parameters.getInputEventTopic();
 
-        var allStatuses = builder
+        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream = builder
                 .stream(eventTopic,
                     Consumed.with(
-                            JsonSerdes.IntersectionVehicleRequestKey(),
-                            JsonSerdes.PriorityPreemptionRequestEvent()))
+                                JsonSerdes.IntersectionVehicleRequestKey(),
+                                JsonSerdes.PriorityPreemptionRequestEvent())
+                            .withTimestampExtractor(
+                                new PriorityPreemptionRequestEventTimestampExtractor()))
                 .filter((key, value) -> value != null)  // Remove any tombstones
                 .map((key, value) -> {
                     // Re-key: use Intersection and Vehicle type
@@ -92,51 +81,47 @@ public class PriorityRequestMetricsTopology
                     return new KeyValue<>(newKey, status);
                 })
 
-                // Make sure remains partitioned by intersection
-                .repartition(Repartitioned.streamPartitioner(new IntersectionIdPartitioner<>()));
+                // Make sure stream remains partitioned by intersection after rekey
+                .repartition(Repartitioned.streamPartitioner(new IntersectionIdPartitioner<>()))
 
-        // Count all
-        KTable<Windowed<IntersectionVehicleTypeKey>, Long> allStatusCounts = allStatuses
+                // Group by key for aggregation
                 .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
+
+                // Tumbling window
                 .windowedBy(
-                        // TumblingWindow
-                        TimeWindows.ofSizeAndGrace(tumblingWindowDuration, gracePeriodDuration)
-                                .advanceBy(tumblingWindowDuration))
-                .count(
-                        Materialized.<IntersectionVehicleTypeKey, Long, WindowStore<Bytes, byte[]>>as("granted-counts")
-                                .withKeySerde(JsonSerdes.IntersectionVehicleTypeKey())
-                                .withValueSerde(Serdes.Long()))
-                .suppress(untilWindowCloses(unbounded()));
+                        TimeWindows.ofSizeAndGrace(tumblingWindowDuration, gracePeriodDuration).advanceBy(tumblingWindowDuration))
 
-        // Count granted statuses
-        KTable<Windowed<IntersectionVehicleTypeKey>, Long> grantedCounts = allStatuses
-                .filter((key, value) -> GRANTED.getName().equals(value))
-                .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
-                .windowedBy(
-                        // TumblingWindow
-                        TimeWindows.ofSizeAndGrace(tumblingWindowDuration, gracePeriodDuration)
-                                .advanceBy(tumblingWindowDuration))
-                .count(
-                        Materialized.<IntersectionVehicleTypeKey, Long, WindowStore<Bytes, byte[]>>as("granted-counts")
-                                .withKeySerde(JsonSerdes.IntersectionVehicleTypeKey())
-                                .withValueSerde(Serdes.Long()))
-                .suppress(untilWindowCloses(unbounded()));
+                // Emit only when window closes
+                // Ref on "TimeWindowedKStream.emitStrategy()" vs "KTable.suppress()":
+                // https://lists.apache.org/thread/7jr91pvnyb9kn6nws1csbnfo483cw3kt
+                .emitStrategy(EmitStrategy.onWindowClose())
 
+                // Aggregate granted and other status events into a metric
+                .aggregate(
+                        // Initializer
+                        PriorityRequestMetrics::new,
+                        // Aggregator
+                        (key, status, metrics) -> {
+                            metrics.setKey(key);
+                            metrics.setNumberOfDistinctSrmRequests(metrics.getNumberOfDistinctSrmRequests() + 1);
+                            if (GRANTED.getName().equals(status)) {
+                                metrics.setNumberOfGrantedSSMResponses(metrics.getNumberOfGrantedSSMResponses() + 1);
+                            }
+                            return metrics;
+                        })
+                .toStream()
 
+                // Get the time period from the window bounds and rekey to normal key, remove window
+                .map((windowedKey, value) -> {
+                    IntersectionVehicleTypeKey key = windowedKey.key();
+                    long startTime = windowedKey.window().start();
+                    long endTime = windowedKey.window().end();
+                    value.setKey(key);
+                    ProcessingTimePeriod period = new ProcessingTimePeriod(startTime, endTime);
+                    value.setTimePeriod(period);
+                    return new KeyValue<>(key, value);
+                });
 
-
-
-
-
-
-
-
-        // Aggregate using a tumbling window with no grace period to avoid double counting
-
-
-
-
-
-        final var metricTopic = parameters.getOutputMetricTopic();
+        return metricsStream;
     }
 }

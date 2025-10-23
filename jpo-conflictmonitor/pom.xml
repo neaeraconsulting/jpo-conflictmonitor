@@ -104,7 +104,7 @@
     <dependency>
       <groupId>usdot.jpo.ode</groupId>
       <artifactId>jpo-geojsonconverter</artifactId>
-      <version>3.0.6</version>
+      <version>3.2.0</version>
       <!-- Allow using newer streams version than geojsonconverter -->
       <exclusions>
         <exclusion>
