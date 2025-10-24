@@ -10,6 +10,10 @@ import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
 
+import java.util.Set;
+
+import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.*;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @Setter
@@ -38,16 +42,26 @@ public class PriorityPreemptionRequestEvent
     private long timeOfLastResponse;
 
     private ProcessedPrioritizationResponseStatus status;
-    private ProcessedPrioritizationResponseStatus finalStatus;
+
+    public ProcessedPrioritizationResponseStatus getFinalStatus() {
+        if (isFinalStatus()) {
+            return status;
+        } else {
+            return null;
+        }
+    }
 
     public PriorityPreemptionRequestEvent() {
         super("PriorityPreemptionRequest");
     }
 
-    @JsonIgnore
     public boolean isFinalStatus() {
-        return finalStatus != null;
+        return status != null & FINAL_STATUSES.contains(status);
     }
+
+    public final static Set<ProcessedPrioritizationResponseStatus> FINAL_STATUSES =
+            Set.of(GRANTED, REJECTED, MAXPRESENCE, RESERVICELOCKED);
+
 
 
 }

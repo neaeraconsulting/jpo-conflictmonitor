@@ -36,7 +36,6 @@ public class SsmStatus {
 
     private String vehicleId;
     private ProcessedBasicVehicleRole vehicleType;
-    private String vehicleRole;
     private long timestamp;
     private int intersectionId;
     private int region;

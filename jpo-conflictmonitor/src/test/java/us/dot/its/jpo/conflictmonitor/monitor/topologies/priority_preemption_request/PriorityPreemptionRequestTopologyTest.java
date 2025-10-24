@@ -12,8 +12,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
+
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
@@ -34,6 +33,8 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSrm;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSsm;
+import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
+import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -113,19 +114,20 @@ public class PriorityPreemptionRequestTopologyTest {
             inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, nowPlus1.toInstant());
 
             var eventList = outputEventTopic.readKeyValuesToList();
-//            assertThat(eventList, hasSize(1));
-//            var keyEvent = eventList.getFirst();
-//            var resultKey = keyEvent.key;
-//            assertThat(resultKey, notNullValue());
-//            assertThat(resultKey.getRequestId(), equalTo(requestId));
-//            assertThat(resultKey.getIntersectionId(), equalTo(intersectionId));
-//            assertThat(resultKey.getRegion(), equalTo(roadRegulatorId));
-//            assertThat(resultKey.getVehicleId(), equalTo(vehicleId));
-//            var resultValue = keyEvent.value;
-//            assertThat(resultValue, notNullValue());
-//            assertThat(resultValue.getRequestId(), equalTo(requestId));
-//            assertThat(resultValue.getPriorityRequestType(), equalTo(requestType));
-//            assertThat(resultValue.getFinalStatus(), equalTo(ProcessedPrioritizationResponseStatus.GRANTED));
+            assertThat(eventList, hasSize(1));
+            var keyEvent = eventList.getFirst();
+            var resultKey = keyEvent.key;
+            assertThat(resultKey, notNullValue());
+            assertThat(resultKey.getRequestId(), equalTo(requestId));
+            assertThat(resultKey.getIntersectionId(), equalTo(intersectionId));
+            assertThat(resultKey.getRegion(), equalTo(roadRegulatorId));
+            assertThat(resultKey.getVehicleId(), equalTo(vehicleId));
+            var resultValue = keyEvent.value;
+            assertThat(resultValue, notNullValue());
+            assertThat(resultValue.getRequestId(), equalTo(requestId));
+            assertThat(resultValue.getPriorityRequestType(), equalTo(requestType));
+            assertThat(resultValue.isFinalStatus(), equalTo(true));
+            assertThat(resultValue.getFinalStatus(), equalTo(ProcessedPrioritizationResponseStatus.GRANTED));
             // TODO...
         }
     }

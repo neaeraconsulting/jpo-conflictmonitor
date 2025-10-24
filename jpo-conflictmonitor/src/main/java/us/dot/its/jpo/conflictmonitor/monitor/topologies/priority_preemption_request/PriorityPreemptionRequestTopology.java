@@ -69,7 +69,7 @@ public class PriorityPreemptionRequestTopology
                                 ProcessedSrm())
                             .withTimestampExtractor(new ProcessedSrmTimestampExtractor()))
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
-                    log.info("received SRM: {}", processedSrm);
+                    log.info("received SRM: {}, {}", rsuVehicleIdKey, processedSrm);
                     List<KeyValue<IntersectionVehicleRequestKey, SrmRequest>> requestList = new ArrayList<>();
 
                     SrmProperties properties = processedSrm.getProperties();
@@ -109,7 +109,10 @@ public class PriorityPreemptionRequestTopology
                                 .streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SrmRequest>())
                                 .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
                                 .withValueSerde(JsonSerdes.SrmRequest())
-                );
+                )
+                .peek((key, value) -> {
+                    log.info("SrmRequest: {}, {}", key, value);
+                });
 
 
 
@@ -128,6 +131,10 @@ public class PriorityPreemptionRequestTopology
                             .withValueSerde(JsonSerdes.SrmRequest())
                 );
 
+        srmRequestTable.toStream().peek((key, value) -> {
+           log.info("srmRequestTable: {}, {}", key, value);
+        });
+
         // Unwrap SSM requests
         KStream<IntersectionVehicleRequestKey, SsmStatus> ssmStatusStream = builder
                 .stream(
@@ -137,7 +144,7 @@ public class PriorityPreemptionRequestTopology
                             ProcessedSsm())
                             .withTimestampExtractor(new ProcessedSsmTimestampExtractor()))
                 .flatMap((rsuIntersectionKey,processedSsm) -> {
-                    log.info("received SSM: {}", processedSsm);
+                    log.info("received SSM: {}, {}", rsuIntersectionKey, processedSsm);
                     final Integer intersectionId = processedSsm.getIntersectionId();
                     final Integer region = processedSsm.getRegion();
                     final ZonedDateTime dateTime = processedSsm.getTimeStamp();
@@ -156,7 +163,10 @@ public class PriorityPreemptionRequestTopology
                         Repartitioned.streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SsmStatus>())
                                 .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
                                 .withValueSerde(JsonSerdes.SsmStatus())
-                );
+                )
+                .peek((key, value) -> {
+                    log.info("SsmStatus: {}, {}", key, value);
+                });
 
 
 
@@ -165,17 +175,25 @@ public class PriorityPreemptionRequestTopology
                 srmRequestTable,
 
                 // ValueJoiner
-                (ssmStatus, srmRequest) -> new JoinedRequestStatus(srmRequest, ssmStatus),
+                (ssmStatus, srmRequest) -> {
+                    log.info("Joining: {}, {}", ssmStatus, srmRequest);
+                    JoinedRequestStatus joined = new JoinedRequestStatus(srmRequest, ssmStatus);
+                    log.info("JoinedRequestStatus: {}", joined);
+                    return joined;
+                    },
                 // Join with grace period to handle late and out-of order messages
                 // The minimum Kafka Streams version for this join with grace period and version store to play well with
                 // TopologyTestDriver is 3.9.1.  The test for this does not pass with 3.7 or 3.8
                 Joined.<IntersectionVehicleRequestKey, SsmStatus, SrmRequest>as("joined-request-status")
                         .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
                         .withValueSerde(JsonSerdes.SsmStatus())
-                        .withOtherValueSerde(JsonSerdes.SrmRequest())
-                        .withGracePeriod(ssmStreamGracePeriod))
+                        .withOtherValueSerde(JsonSerdes.SrmRequest()))
+//                        .withGracePeriod(ssmStreamGracePeriod))
+            .peek((key, value) -> {
+                log.info("peek JoinedRequestStatus: {}, {}", key, value);
+            })
             .filter((key, value) -> {
-
+                log.info("Filtering: {}, {}", key, value);
                 // Filter out SSMs that weren't joined with an SRM, but log as a warning
                 if (value.getSrmRequest() == null) {
                     if (parameters.isDebug()) {
@@ -215,9 +233,6 @@ public class PriorityPreemptionRequestTopology
                 event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
                 event.setTimeOfLastResponse(status.getTimestamp());
                 event.setStatus(status.getStatus());
-                if (status.isFinalStatus()) {
-                    event.setFinalStatus(status.getStatus());
-                }
                 if (parameters.isDebug()) {
                     log.info("SSM/SRM Event: {}, has final status: {}", event, status.isFinalStatus());
                 }

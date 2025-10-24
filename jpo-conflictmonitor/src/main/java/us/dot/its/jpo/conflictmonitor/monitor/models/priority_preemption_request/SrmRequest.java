@@ -17,6 +17,7 @@ public class SrmRequest {
                       final long timestamp, final ProcessedSignalRequest request) {
         this.vehicleId = vehicleId;
         this.timestamp = timestamp;
+        this.vehicleType = vehicleType;
         intersectionId = request.getIntersectionId();
         region = request.getRegion();
         requestId = request.getRequestID();
