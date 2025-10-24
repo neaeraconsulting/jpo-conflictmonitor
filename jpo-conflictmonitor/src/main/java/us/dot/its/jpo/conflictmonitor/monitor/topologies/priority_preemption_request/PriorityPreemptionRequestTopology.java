@@ -20,6 +20,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRe
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
@@ -116,9 +117,7 @@ public class PriorityPreemptionRequestTopology
                 );
 
         if (parameters.isDebug()) {
-            srmRequestStream.peek((key, value) -> {
-                log.info("SrmRequest stream: key: {}, value: {}", key, value);
-            });
+            srmRequestStream.process(() -> new DiagnosticProcessor<>("SrmRequest Stream", log));
         }
 
         // Put each SRM request in a KTable to store the latest request with a given
@@ -136,9 +135,7 @@ public class PriorityPreemptionRequestTopology
                 );
 
         if (parameters.isDebug()) {
-            srmRequestTable.toStream().peek((key, value) -> {
-                log.info("peek SsmRequest Table: key: {}, value: {}", key, value);
-            });
+            srmRequestTable.toStream().process(() -> new DiagnosticProcessor<>("SrmRequest Versioned KTable", log));
         }
 
         // Unwrap SSM requests
@@ -174,9 +171,7 @@ public class PriorityPreemptionRequestTopology
                 );
 
         if (parameters.isDebug()) {
-            ssmStatusStream.peek((key, value) -> {
-                log.info("SsmStatus stream: key: {}, value: {}", key, value);
-            });
+            ssmStatusStream.process(() -> new DiagnosticProcessor<>("SsmStatus Stream", log));
         }
 
         var ssmStatusTable =
@@ -190,64 +185,63 @@ public class PriorityPreemptionRequestTopology
                 );
 
         if (parameters.isDebug()) {
-            ssmStatusTable.toStream().peek((key, value) -> {
-                log.info("peek SsmStatus Table: {}, {}", key, value);
-            });
+            ssmStatusTable.toStream().process(() -> new DiagnosticProcessor<>("SsmStatus Versioned KTable", log));
         }
 
 
-        var joinedStream = ssmStatusTable
+        var joinedTable = ssmStatusTable
                 .outerJoin(
                         srmRequestTable,
                         // ValueJoiner
                         (ssmStatus, srmRequest) -> {
                             JoinedRequestStatus joined = new JoinedRequestStatus(srmRequest, ssmStatus);
-                            if (parameters.isDebug()) {
-                                log.info("JoinedRequestStatus: {}", joined);
-                            }
                             return joined;
                         },
                         Named.as("ssm-srm-join")
                 );
 
-
+        // Diagnostic logging of the joined table
         if (parameters.isDebug()) {
-            joinedStream.toStream().peek((key, value) -> {
-                log.info("peek JoinedRequestStatus table: {}, {}", key, value);
-            });
+            joinedTable.toStream().peek((key, value) -> {
+                if (value.getSsmStatus() == null) {
+                    log.info("SRM received, SSM is null: key: {}, {}", key, value);
+                    return;
+                }
+
+                if (value.getSrmRequest() == null) {
+                    log.warn("No SRM request found to match SSM Status: key: {}, value: {}", key, value);
+                    return;
+                }
+
+                if (!value.getSsmStatus().isFinalStatus()) {
+                    log.info("SSM status is not final: key: {}, value: {}", key, value);
+                    return;
+                }
+
+                log.info("SSM and SRM matched and SSM status is final: key: {}, value: {}", key, value);
+
+            }).process(() -> new DiagnosticProcessor<>("JoinedRequestStatus KTable", log));
         }
 
-        var eventStream = joinedStream
+        var eventStream = joinedTable
                 .filter((key, value) -> {
-
-                    // Filter out SSMs that weren't joined with an SRM, but log as a warning
-                    if (value.getSrmRequest() == null) {
-                        if (parameters.isDebug()) {
-                            log.warn("No SRM request found to match SSM Status: {}", value);
-                        }
-                        return false;
-                    }
 
                     // Filter null SSMs
                     if (value.getSsmStatus() == null) {
-                        if (parameters.isDebug()) {
-                            log.info("SRM received, SSM is null: {}", value);
-                        }
+                        return false;
+                    }
+
+                    // Filter out SSMs that weren't joined with an SRM, but log as a warning
+                    if (value.getSrmRequest() == null) {
                         return false;
                     }
 
                     // Filter out SSM responses that don't have a final status
                     if (!value.getSsmStatus().isFinalStatus()) {
-                        if (parameters.isDebug()) {
-                            log.info("SSM status is not final: {}", value.getSsmStatus());
-                        }
                         return false;
                     }
 
-                    if (parameters.isDebug()) {
-                        log.info("SSM and SRM matched and SSM status is final: {}", value);
-                    }
-
+                    // Nothing missing: produce an event
                     return true;
                 })
 
