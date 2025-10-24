@@ -50,7 +50,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestConstants.DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM;
 
-//@RunWith(MockitoJUnitRunner.class)
+@RunWith(MockitoJUnitRunner.class)
 public class PriorityPreemptionRequestTopologyTest {
 
     private static final String inputSrmTopicName = "topic.ProcessedSrm";
@@ -72,8 +72,8 @@ public class PriorityPreemptionRequestTopologyTest {
     private static final ProcessedPriorityRequestType requestType = ProcessedPriorityRequestType.PRIORITYREQUEST;
 
     // Mock the metrics subtopology
-//    @Mock PriorityRequestMetricsTopology mockMetricsTopology;
-//    @Mock KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> mockMetricsStream;
+    @Mock PriorityRequestMetricsTopology mockMetricsTopology;
+    @Mock KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> mockMetricsStream;
 
 
     /**
@@ -82,37 +82,37 @@ public class PriorityPreemptionRequestTopologyTest {
     @Test
     public void testPriorityPreemptionRequestEvent() {
         Topology topology = createTopology();
-//        Properties streamsConfig = createStreamsConfig();
+
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-//            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
-//                    new JsonSerializer<RsuVehicleIdKey>(),
-//                    new JsonSerializer<ProcessedSrm>());
-//
-//            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
-//                    new JsonSerializer<RsuIntersectionKey>(),
-//                    new JsonSerializer<ProcessedSsm>());
-//
-//            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
-//                    new JsonDeserializer<>(IntersectionVehicleRequestKey.class),
-//                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
 
-//            var outputMetricTopic = driver.createOutputTopic(outputEventTopicName,
-//                    new JsonDeserializer<>(IntersectionVehicleTypeKey.class),
-//                    new JsonDeserializer<>(PriorityRequestMetrics.class));
+            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
+                    new JsonSerializer<RsuIntersectionKey>(),
+                    new JsonSerializer<ProcessedSsm>());
 
-//            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
-//            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
-//            final ZonedDateTime now = ZonedDateTime.of(2025, 9, 30, 9, 46,
-//                    55, 0, ZoneOffset.UTC);
-//            final ZonedDateTime nowPlus1 = now.plusSeconds(1);
-//            final ProcessedSrm processedSrm = createSrm(now);
-//            final ProcessedSsm processedSsm = createSsm(nowPlus1, ProcessedPrioritizationResponseStatus.GRANTED);
-//
-//            inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
-//            inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, nowPlus1.toInstant());
-//
-//            var eventList = outputEventTopic.readKeyValuesToList();
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            var outputMetricTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleTypeKey.class),
+                    new JsonDeserializer<>(PriorityRequestMetrics.class));
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
+            final ZonedDateTime now = ZonedDateTime.of(2025, 9, 30, 9, 46,
+                    55, 0, ZoneOffset.UTC);
+            final ZonedDateTime nowPlus1 = now.plusSeconds(1);
+            final ProcessedSrm processedSrm = createSrm(now);
+            final ProcessedSsm processedSsm = createSsm(nowPlus1, ProcessedPrioritizationResponseStatus.GRANTED);
+
+            inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
+            inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, nowPlus1.toInstant());
+
+            var eventList = outputEventTopic.readKeyValuesToList();
 //            assertThat(eventList, hasSize(1));
 //            var keyEvent = eventList.getFirst();
 //            var resultKey = keyEvent.key;
@@ -126,7 +126,7 @@ public class PriorityPreemptionRequestTopologyTest {
 //            assertThat(resultValue.getRequestId(), equalTo(requestId));
 //            assertThat(resultValue.getPriorityRequestType(), equalTo(requestType));
 //            assertThat(resultValue.getFinalStatus(), equalTo(ProcessedPrioritizationResponseStatus.GRANTED));
-//            // TODO...
+            // TODO...
         }
     }
 
@@ -207,10 +207,5 @@ public class PriorityPreemptionRequestTopologyTest {
         return ssm;
     }
 
-    private Properties createStreamsConfig() {
-        Properties streamsConfig = new Properties();
-        streamsConfig.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, IntersectionVehicleRequestKeySerde.class);
-//        streamsConfig.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        return streamsConfig;
-    }
+
 }
