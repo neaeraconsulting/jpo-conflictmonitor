@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.3.2</version>
+    <version>3.3.10</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>usdot.jpo.ode</groupId>
@@ -34,7 +34,7 @@
     <sonar.language>java</sonar.language>
     <!-- Allow override of github organization when publishing artifacts to github -->
     <github_organization>usdot-jpo-ode</github_organization>
-    <kafka.streams.version>3.7.2</kafka.streams.version>
+    <kafka.streams.version>3.8.1</kafka.streams.version>
   </properties>
   <dependencies>
     <!-- Spring Boot Dependencies -->
