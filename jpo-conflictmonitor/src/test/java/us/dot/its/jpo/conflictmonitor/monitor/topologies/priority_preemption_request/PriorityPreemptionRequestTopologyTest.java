@@ -82,8 +82,8 @@ public class PriorityPreemptionRequestTopologyTest {
     @Test
     public void testPriorityPreemptionRequestEvent() {
         Topology topology = createTopology();
-        Properties streamsConfig = createStreamsConfig();
-        try (TopologyTestDriver driver = new TopologyTestDriver(topology, streamsConfig)) {
+//        Properties streamsConfig = createStreamsConfig();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
 //            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
 //                    new JsonSerializer<RsuVehicleIdKey>(),

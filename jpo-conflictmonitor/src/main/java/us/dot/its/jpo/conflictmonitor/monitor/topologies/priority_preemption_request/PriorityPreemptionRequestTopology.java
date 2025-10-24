@@ -168,8 +168,8 @@ public class PriorityPreemptionRequestTopology
                 Joined.<IntersectionVehicleRequestKey, SsmStatus, SrmRequest>as("joined-request-status")
                         .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
                         .withValueSerde(JsonSerdes.SsmStatus())
-                        .withOtherValueSerde(JsonSerdes.SrmRequest())
-                        .withGracePeriod(ssmStreamGracePeriod));
+                        .withOtherValueSerde(JsonSerdes.SrmRequest()));
+//                        .withGracePeriod(ssmStreamGracePeriod));
 //                        (
 //                        JsonSerdes.IntersectionVehicleRequestKey(), // Key Serdes
 //                        JsonSerdes.SsmStatus(), // Left value serdes

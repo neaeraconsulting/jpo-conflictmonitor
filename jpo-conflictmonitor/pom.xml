@@ -34,7 +34,7 @@
     <sonar.language>java</sonar.language>
     <!-- Allow override of github organization when publishing artifacts to github -->
     <github_organization>usdot-jpo-ode</github_organization>
-
+    <kafka.streams.version>3.7.2</kafka.streams.version>
   </properties>
   <dependencies>
     <!-- Spring Boot Dependencies -->
@@ -115,18 +115,27 @@
           <groupId>org.apache.kafka</groupId>
           <artifactId>kafka-streams-test-utils</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka-clients</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-streams-test-utils</artifactId>
-      <version>3.7.2</version>
+      <version>${kafka.streams.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-streams</artifactId>
-      <version>3.7.2</version>
+      <version>${kafka.streams.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>${kafka.streams.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

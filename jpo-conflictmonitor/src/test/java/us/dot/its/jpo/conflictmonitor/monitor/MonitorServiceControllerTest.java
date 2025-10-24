@@ -58,6 +58,10 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationStreamsAlgorithm;
@@ -177,6 +181,12 @@ public class MonitorServiceControllerTest {
     @Mock PriorityPreemptionRequestAlgorithm priorityPreemptionRequestAlgorithm;
     PriorityPreemptionRequestParameters priorityPreemptionRequestParameters = new PriorityPreemptionRequestParameters();
 
+    @Mock
+    PriorityRequestMetricsAlgorithmFactory priorityRequestMetricsAlgorithmFactory;
+    @Mock
+    PriorityRequestMetricsAlgorithm priorityRequestMetricsAlgorithm;
+    PriorityRequestMetricsParameters priorityRequestMetricsParameters = new PriorityRequestMetricsParameters();
+    CommonMetricsParameters commonMetricsParameters = new CommonMetricsParameters();
 
     @Mock SpatTimeChangeDetailsAlgorithmFactory spatTimeChangeDetailsAlgorithmFactory;
     @Mock SpatTimeChangeDetailsStreamsAlgorithm spatTimeChangeDetailsAlgorithm;
@@ -345,6 +355,12 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getPriorityPreemptionRequestAlgorithm()).thenReturn(defaultAlgo);
         when(priorityPreemptionRequestAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(priorityPreemptionRequestAlgorithm);
         when(conflictMonitorProperties.getPriorityPreemptionRequestParameters()).thenReturn(priorityPreemptionRequestParameters);
+
+        when(conflictMonitorProperties.getPriorityRequestMetricsAlgorithmFactory()).thenReturn(priorityRequestMetricsAlgorithmFactory);
+        when(conflictMonitorProperties.getPriorityRequestMetricsAlgorithm()).thenReturn(defaultAlgo);
+        when(conflictMonitorProperties.getPriorityRequestMetricsParameters()).thenReturn(priorityRequestMetricsParameters);
+        when(conflictMonitorProperties.getCommonMetricsParameters()).thenReturn(commonMetricsParameters);
+        when(priorityRequestMetricsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(priorityRequestMetricsAlgorithm);
 
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithmFactory);
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithm()).thenReturn(defaultAlgo);
