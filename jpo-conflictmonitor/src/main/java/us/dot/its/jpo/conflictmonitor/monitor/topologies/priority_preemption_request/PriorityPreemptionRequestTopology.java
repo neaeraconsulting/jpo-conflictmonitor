@@ -63,17 +63,20 @@ public class PriorityPreemptionRequestTopology
 
 
         // Unwrap SRM Requests
-        KStream<IntersectionVehicleRequestKey, SrmRequest> srmRequestStream = builder
+        var processedSrmStream = builder
                 .stream(
                         parameters.getProcessedSrmInputTopic(),
                         Consumed.with(
                                         RsuVehicleIdKey(),
                                         ProcessedSrm())
-                                .withTimestampExtractor(new ProcessedSrmTimestampExtractor()))
+                                .withTimestampExtractor(new ProcessedSrmTimestampExtractor()));
+
+        if (parameters.isDebug()) {
+            processedSrmStream.process(() -> new DiagnosticProcessor<>("ProcessedSrm Stream", log));
+        }
+
+        var srmRequestStream = processedSrmStream
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
-                    if (parameters.isDebug()) {
-                        log.info("received SRM: key {}, value: {}", rsuVehicleIdKey, processedSrm);
-                    }
 
                     List<KeyValue<IntersectionVehicleRequestKey, SrmRequest>> requestList = new ArrayList<>();
 
@@ -139,13 +142,19 @@ public class PriorityPreemptionRequestTopology
         }
 
         // Unwrap SSM requests
-        KStream<IntersectionVehicleRequestKey, SsmStatus> ssmStatusStream = builder
+        var processedSsmStream = builder
                 .stream(
                         parameters.getProcessedSsmInputTopic(),
                         Consumed.with(
                                         RsuIntersectionKey(),
                                         ProcessedSsm())
-                                .withTimestampExtractor(new ProcessedSsmTimestampExtractor()))
+                                .withTimestampExtractor(new ProcessedSsmTimestampExtractor()));
+
+        if (parameters.isDebug()) {
+            processedSsmStream.process(() -> new DiagnosticProcessor<>("ProcessedSsm Stream", log));
+        }
+
+        var ssmStatusStream = processedSsmStream
                 .flatMap((rsuIntersectionKey, processedSsm) -> {
                     if (parameters.isDebug()) {
                         log.info("received SSM: key: {}, value: {}", rsuIntersectionKey, processedSsm);
@@ -204,21 +213,21 @@ public class PriorityPreemptionRequestTopology
         if (parameters.isDebug()) {
             joinedTable.toStream().peek((key, value) -> {
                 if (value.getSsmStatus() == null) {
-                    log.info("SRM received, SSM is null: key: {}, {}", key, value);
+                    log.info("JoinedRequestStatus KTable: SRM received, SSM is null");
                     return;
                 }
 
                 if (value.getSrmRequest() == null) {
-                    log.warn("No SRM request found to match SSM Status: key: {}, value: {}", key, value);
+                    log.warn("JoinedRequestStatus KTable: No SRM request found to match SSM Status");
                     return;
                 }
 
                 if (!value.getSsmStatus().isFinalStatus()) {
-                    log.info("SSM status is not final: key: {}, value: {}", key, value);
+                    log.info("JoinedRequestStatus KTable: SSM status is not final");
                     return;
                 }
 
-                log.info("SSM and SRM matched and SSM status is final: key: {}, value: {}", key, value);
+                log.info("JoinedRequestStatus KTable: SSM and SRM matched and SSM status is final");
 
             }).process(() -> new DiagnosticProcessor<>("JoinedRequestStatus KTable", log));
         }
