@@ -282,9 +282,13 @@ public class PriorityPreemptionRequestTopology
                 })
                 .toStream();
 
-//        // Count SSM Responses with granted status for fulfillment metric
-//        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
-//            priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+        // Count SSM Responses with granted status for fulfillment metric
+        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
+            priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+
+        if (parameters.isDebug()) {
+            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
+        }
 
         // Write to event topic
         eventStream.to(parameters.getOutputEventTopic(),
@@ -293,12 +297,12 @@ public class PriorityPreemptionRequestTopology
                         JsonSerdes.PriorityPreemptionRequestEvent(),
                         new IntersectionIdPartitioner<>()));
 
-//        // Write to metrics topic
-//        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
-//                Produced.with(
-//                        JsonSerdes.IntersectionVehicleTypeKey(),
-//                        JsonSerdes.PriorityRequestMetrics(),
-//                        new IntersectionIdPartitioner<>()));
+        // Write to metrics topic
+        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
+                Produced.with(
+                        JsonSerdes.IntersectionVehicleTypeKey(),
+                        JsonSerdes.PriorityRequestMetrics(),
+                        new IntersectionIdPartitioner<>()));
 
         return builder.build();
     }
