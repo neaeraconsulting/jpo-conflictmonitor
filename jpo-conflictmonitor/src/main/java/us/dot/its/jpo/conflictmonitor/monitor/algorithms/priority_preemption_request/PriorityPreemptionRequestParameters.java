@@ -19,8 +19,8 @@ public class PriorityPreemptionRequestParameters {
 
     @ConfigData(key = "priority.preemption.request.debug",
             description = "Whether to log diagnostic information for debugging",
-            updateType = DEFAULT)
-    private volatile boolean debug;
+            updateType = READ_ONLY)
+    private boolean debug;
 
     @ConfigData(key = "priority.preemption.request.algorithm",
             description = "",

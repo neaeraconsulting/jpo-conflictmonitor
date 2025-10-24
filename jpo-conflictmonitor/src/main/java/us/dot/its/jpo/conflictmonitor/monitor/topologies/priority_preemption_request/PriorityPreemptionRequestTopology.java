@@ -41,8 +41,8 @@ import static us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.Processed
 @Slf4j
 @Component(DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM)
 public class PriorityPreemptionRequestTopology
-    extends BaseStreamsTopology<PriorityPreemptionRequestParameters>
-    implements PriorityPreemptionRequestStreamsAlgorithm {
+        extends BaseStreamsTopology<PriorityPreemptionRequestParameters>
+        implements PriorityPreemptionRequestStreamsAlgorithm {
 
     private PriorityRequestMetricsStreamsAlgorithm priorityRequestMetricsStreamsAlgorithm;
 
@@ -64,13 +64,16 @@ public class PriorityPreemptionRequestTopology
         // Unwrap SRM Requests
         KStream<IntersectionVehicleRequestKey, SrmRequest> srmRequestStream = builder
                 .stream(
-                    parameters.getProcessedSrmInputTopic(),
-                    Consumed.with(
-                                RsuVehicleIdKey(),
-                                ProcessedSrm())
-                            .withTimestampExtractor(new ProcessedSrmTimestampExtractor()))
+                        parameters.getProcessedSrmInputTopic(),
+                        Consumed.with(
+                                        RsuVehicleIdKey(),
+                                        ProcessedSrm())
+                                .withTimestampExtractor(new ProcessedSrmTimestampExtractor()))
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
-                    log.info("received SRM: {}, {}", rsuVehicleIdKey, processedSrm);
+                    if (parameters.isDebug()) {
+                        log.info("received SRM: key {}, value: {}", rsuVehicleIdKey, processedSrm);
+                    }
+
                     List<KeyValue<IntersectionVehicleRequestKey, SrmRequest>> requestList = new ArrayList<>();
 
                     SrmProperties properties = processedSrm.getProperties();
@@ -110,42 +113,46 @@ public class PriorityPreemptionRequestTopology
                                 .streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SrmRequest>())
                                 .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
                                 .withValueSerde(JsonSerdes.SrmRequest())
-                )
-                .peek((key, value) -> {
-                    log.info("SrmRequest: {}, {}", key, value);
-                });
+                );
 
-
-
+        if (parameters.isDebug()) {
+            srmRequestStream.peek((key, value) -> {
+                log.info("SrmRequest stream: key: {}, value: {}", key, value);
+            });
+        }
 
         // Put each SRM request in a KTable to store the latest request with a given
         // intersectionId, region, vehicleId, and requestId
         KTable<IntersectionVehicleRequestKey, SrmRequest> srmRequestTable =
                 srmRequestStream.toTable(
-                    // Use versioned state store for the SRM table to be able to deal with out-of-order messages easily
-                    // and automatically remove old entries after the retention time
-                    Materialized.<IntersectionVehicleRequestKey, SrmRequest>as(
-                        Stores.persistentVersionedKeyValueStore(
-                                requestStoreName,
-                                retentionTime))
-                            .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
-                            .withValueSerde(JsonSerdes.SrmRequest())
+                        // Use versioned state store for the SRM table to be able to deal with out-of-order messages easily
+                        // and automatically remove old entries after the retention time
+                        Materialized.<IntersectionVehicleRequestKey, SrmRequest>as(
+                                        Stores.persistentVersionedKeyValueStore(
+                                                requestStoreName,
+                                                retentionTime))
+                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                                .withValueSerde(JsonSerdes.SrmRequest())
                 );
 
-        srmRequestTable.toStream().peek((key, value) -> {
-           log.info("srmRequestTable: {}, {}", key, value);
-        });
+        if (parameters.isDebug()) {
+            srmRequestTable.toStream().peek((key, value) -> {
+                log.info("peek SsmRequest Table: key: {}, value: {}", key, value);
+            });
+        }
 
         // Unwrap SSM requests
         KStream<IntersectionVehicleRequestKey, SsmStatus> ssmStatusStream = builder
                 .stream(
-                    parameters.getProcessedSsmInputTopic(),
-                    Consumed.with(
-                            RsuIntersectionKey(),
-                            ProcessedSsm())
-                            .withTimestampExtractor(new ProcessedSsmTimestampExtractor()))
-                .flatMap((rsuIntersectionKey,processedSsm) -> {
-                    log.info("received SSM: {}, {}", rsuIntersectionKey, processedSsm);
+                        parameters.getProcessedSsmInputTopic(),
+                        Consumed.with(
+                                        RsuIntersectionKey(),
+                                        ProcessedSsm())
+                                .withTimestampExtractor(new ProcessedSsmTimestampExtractor()))
+                .flatMap((rsuIntersectionKey, processedSsm) -> {
+                    if (parameters.isDebug()) {
+                        log.info("received SSM: key: {}, value: {}", rsuIntersectionKey, processedSsm);
+                    }
                     final Integer intersectionId = processedSsm.getIntersectionId();
                     final Integer region = processedSsm.getRegion();
                     final ZonedDateTime dateTime = processedSsm.getTimeStamp();
@@ -164,116 +171,113 @@ public class PriorityPreemptionRequestTopology
                         Repartitioned.streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SsmStatus>())
                                 .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
                                 .withValueSerde(JsonSerdes.SsmStatus())
-                )
-                .peek((key, value) -> {
-                    log.info("SsmStatus: {}, {}", key, value);
-                });
+                );
+
+        if (parameters.isDebug()) {
+            ssmStatusStream.peek((key, value) -> {
+                log.info("SsmStatus stream: key: {}, value: {}", key, value);
+            });
+        }
 
         var ssmStatusTable =
                 ssmStatusStream.toTable(
-                  Materialized.<IntersectionVehicleRequestKey, SsmStatus>as(
-                          Stores.persistentVersionedKeyValueStore(
-                                  statusStoreName,
-                                  retentionTime))
-                          .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
-                          .withValueSerde(JsonSerdes.SsmStatus())
+                        Materialized.<IntersectionVehicleRequestKey, SsmStatus>as(
+                                        Stores.persistentVersionedKeyValueStore(
+                                                statusStoreName,
+                                                retentionTime))
+                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                                .withValueSerde(JsonSerdes.SsmStatus())
                 );
 
-        ssmStatusTable.toStream().peek((key, value) -> {
-            log.info("SsmStatusTable: {}, {}", key, value);
-        });
+        if (parameters.isDebug()) {
+            ssmStatusTable.toStream().peek((key, value) -> {
+                log.info("peek SsmStatus Table: {}, {}", key, value);
+            });
+        }
 
 
-        var eventStream = ssmStatusTable
-            .outerJoin(
-                srmRequestTable,
+        var joinedStream = ssmStatusTable
+                .outerJoin(
+                        srmRequestTable,
+                        // ValueJoiner
+                        (ssmStatus, srmRequest) -> {
+                            JoinedRequestStatus joined = new JoinedRequestStatus(srmRequest, ssmStatus);
+                            if (parameters.isDebug()) {
+                                log.info("JoinedRequestStatus: {}", joined);
+                            }
+                            return joined;
+                        },
+                        Named.as("ssm-srm-join")
+                );
 
-                // ValueJoiner
-                (ssmStatus, srmRequest) -> {
-                    log.info("Joining: {}, {}", ssmStatus, srmRequest);
-                    JoinedRequestStatus joined = new JoinedRequestStatus(srmRequest, ssmStatus);
-                    log.info("JoinedRequestStatus: {}", joined);
-                    return joined;
+
+        if (parameters.isDebug()) {
+            joinedStream.toStream().peek((key, value) -> {
+                log.info("peek JoinedRequestStatus table: {}, {}", key, value);
+            });
+        }
+
+        var eventStream = joinedStream
+                .filter((key, value) -> {
+
+                    // Filter out SSMs that weren't joined with an SRM, but log as a warning
+                    if (value.getSrmRequest() == null) {
+                        if (parameters.isDebug()) {
+                            log.warn("No SRM request found to match SSM Status: {}", value);
+                        }
+                        return false;
                     }
-                    ,
-                    Named.as("ssm-srm-join")
-            )
-//                    ,
-//                // Join with grace period to handle late and out-of order messages
-//                // The minimum Kafka Streams version for this join with grace period and version store to play well with
-//                // TopologyTestDriver is 3.9.1.  The test for this does not pass with 3.7 or 3.8
-//                Joined.<IntersectionVehicleRequestKey, SsmStatus, SrmRequest>as("joined-request-status")
-//                        .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
-//                        .withValueSerde(JsonSerdes.SsmStatus())
-//                        .withOtherValueSerde(JsonSerdes.SrmRequest()))
-//                        .withGracePeriod(ssmStreamGracePeriod))
-                .toStream()
-            .peek((key, value) -> {
-                log.info("peek JoinedRequestStatus: {}, {}", key, value);
-            })
-            .filter((key, value) -> {
-                log.info("Filtering: {}, {}", key, value);
 
-                // Filter out SSMs that weren't joined with an SRM, but log as a warning
-                if (value.getSrmRequest() == null) {
+                    // Filter null SSMs
+                    if (value.getSsmStatus() == null) {
+                        if (parameters.isDebug()) {
+                            log.info("SRM received, SSM is null: {}", value);
+                        }
+                        return false;
+                    }
+
+                    // Filter out SSM responses that don't have a final status
+                    if (!value.getSsmStatus().isFinalStatus()) {
+                        if (parameters.isDebug()) {
+                            log.info("SSM status is not final: {}", value.getSsmStatus());
+                        }
+                        return false;
+                    }
+
                     if (parameters.isDebug()) {
-                        log.warn("No SRM request found to match SSM Status: {}", value);
+                        log.info("SSM and SRM matched and SSM status is final: {}", value);
                     }
-                    return false;
-                }
 
-                // Filter null SSMs
-                if (value.getSsmStatus() == null) {
+                    return true;
+                })
+
+                // Produce Event
+                .mapValues(value -> {
+                    var event = new PriorityPreemptionRequestEvent();
+                    var request = value.getSrmRequest();
+                    var status = value.getSsmStatus();
+                    event.setIntersectionID(request.getIntersectionId());
+                    event.setRoadRegulatorID(request.getRegion());
+                    event.setVehicleId(request.getVehicleId());
+                    event.setRequestId(status.getRequestId());
+                    event.setRequestTimestamp(request.getTimestamp());
+                    event.setPriorityRequestType(request.getRequestType());
+                    event.setVehicleType(request.getVehicleType());
+                    event.setPriorityRequestType(request.getRequestType());
+                    event.setInboundLaneId(request.getInboundLaneId());
+                    event.setInboundApproachId(request.getInboundApproachId());
+                    event.setInboundLaneConnectionId(request.getInboundLaneConnectionId());
+                    event.setOutboundLaneId(request.getOutboundLaneId());
+                    event.setOutboundApproachId(request.getOutboundApproachId());
+                    event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
+                    event.setTimeOfLastResponse(status.getTimestamp());
+                    event.setStatus(status.getStatus());
                     if (parameters.isDebug()) {
-                        log.debug("SRM received, SSM is null: {}", value);
+                        log.info("SSM/SRM Event: {}", event);
                     }
-                    return false;
-                }
-
-                // Filter out SSM responses that don't have a final status
-                if (!value.getSsmStatus().isFinalStatus()) {
-                    if (parameters.isDebug()) {
-                        log.debug("SSM status is not final: {}", value.getSsmStatus());
-                    }
-                }
-
-
-                if (parameters.isDebug()) {
-                    log.info("Joined SSM Status with SRM Request: {}", value);
-                }
-
-                return true;
-            })
-
-            // Produce Event
-            .mapValues(value -> {
-                var event = new PriorityPreemptionRequestEvent();
-                var request = value.getSrmRequest();
-                var status = value.getSsmStatus();
-                event.setIntersectionID(request.getIntersectionId());
-                event.setRoadRegulatorID(request.getRegion());
-                event.setVehicleId(request.getVehicleId());
-                event.setRequestId(status.getRequestId());
-                event.setRequestTimestamp(request.getTimestamp());
-                event.setPriorityRequestType(request.getRequestType());
-                event.setVehicleType(request.getVehicleType());
-                event.setPriorityRequestType(request.getRequestType());
-                event.setInboundLaneId(request.getInboundLaneId());
-                event.setInboundApproachId(request.getInboundApproachId());
-                event.setInboundLaneConnectionId(request.getInboundLaneConnectionId());
-                event.setOutboundLaneId(request.getOutboundLaneId());
-                event.setOutboundApproachId(request.getOutboundApproachId());
-                event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
-                event.setTimeOfLastResponse(status.getTimestamp());
-                event.setStatus(status.getStatus());
-                if (parameters.isDebug()) {
-                    log.info("SSM/SRM Event: {}, has final status: {}", event, status.isFinalStatus());
-                }
-                return event;
-            })
-
-            // Filter out non-final status
-            .filter((key, value) -> value.isFinalStatus());
+                    return event;
+                })
+                .toStream();
 
 //        // Count SSM Responses with granted status for fulfillment metric
 //        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
@@ -281,10 +285,10 @@ public class PriorityPreemptionRequestTopology
 
         // Write to event topic
         eventStream.to(parameters.getOutputEventTopic(),
-            Produced.with(
-                    JsonSerdes.IntersectionVehicleRequestKey(),
-                    JsonSerdes.PriorityPreemptionRequestEvent(),
-                    new IntersectionIdPartitioner<>()));
+                Produced.with(
+                        JsonSerdes.IntersectionVehicleRequestKey(),
+                        JsonSerdes.PriorityPreemptionRequestEvent(),
+                        new IntersectionIdPartitioner<>()));
 
 //        // Write to metrics topic
 //        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),

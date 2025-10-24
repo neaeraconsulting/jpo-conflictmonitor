@@ -42,14 +42,13 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestConstants.DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM;
+import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PriorityPreemptionRequestTopologyTest {
@@ -106,9 +105,11 @@ public class PriorityPreemptionRequestTopologyTest {
             final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
             final ZonedDateTime now = ZonedDateTime.of(2025, 9, 30, 9, 46,
                     55, 0, ZoneOffset.UTC);
+            final long srmTimestamp = now.toInstant().toEpochMilli();
             final ZonedDateTime nowPlus1 = now.plusSeconds(1);
+            final long ssmTimestamp = nowPlus1.toInstant().toEpochMilli();
             final ProcessedSrm processedSrm = createSrm(now);
-            final ProcessedSsm processedSsm = createSsm(nowPlus1, ProcessedPrioritizationResponseStatus.GRANTED);
+            final ProcessedSsm processedSsm = createSsm(nowPlus1, GRANTED);
 
             inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
             inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, nowPlus1.toInstant());
@@ -116,19 +117,31 @@ public class PriorityPreemptionRequestTopologyTest {
             var eventList = outputEventTopic.readKeyValuesToList();
             assertThat(eventList, hasSize(1));
             var keyEvent = eventList.getFirst();
+
             var resultKey = keyEvent.key;
             assertThat(resultKey, notNullValue());
             assertThat(resultKey.getRequestId(), equalTo(requestId));
             assertThat(resultKey.getIntersectionId(), equalTo(intersectionId));
             assertThat(resultKey.getRegion(), equalTo(roadRegulatorId));
             assertThat(resultKey.getVehicleId(), equalTo(vehicleId));
+
             var resultValue = keyEvent.value;
             assertThat(resultValue, notNullValue());
             assertThat(resultValue.getRequestId(), equalTo(requestId));
             assertThat(resultValue.getPriorityRequestType(), equalTo(requestType));
+            assertThat(resultValue.getEventGeneratedAt(), greaterThan(0L));
+            assertThat(resultValue.getRequestTimestamp(), equalTo(srmTimestamp));
+            assertThat(resultValue.getTimeOfLastResponse(), equalTo(ssmTimestamp));
+            assertThat(resultValue.getInboundLaneId(), equalTo(inboundLaneId));
+            assertThat(resultValue.getOutboundLaneId(), equalTo(outboundLaneId));
+            assertThat(resultValue.getVehicleId(), equalTo(vehicleId));
+            assertThat(resultValue.getVehicleType(), equalTo(vehicleType));
+            assertThat(resultValue.getIntersectionID(), equalTo(intersectionId));
+            assertThat(resultValue.getRoadRegulatorID(), equalTo(roadRegulatorId));
+            assertThat(resultValue.getStatus(), equalTo(GRANTED));
             assertThat(resultValue.isFinalStatus(), equalTo(true));
-            assertThat(resultValue.getFinalStatus(), equalTo(ProcessedPrioritizationResponseStatus.GRANTED));
-            // TODO...
+            assertThat(resultValue.getFinalStatus(), equalTo(GRANTED));
+
         }
     }
 
