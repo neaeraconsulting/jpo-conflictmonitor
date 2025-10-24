@@ -56,6 +56,7 @@ public class PriorityPreemptionRequestTopology
         var builder = new StreamsBuilder();
 
         final String requestStoreName = parameters.getSrmStoreName();
+        final String statusStoreName = "status-store";
         final Duration retentionTime = Duration.ofMinutes(parameters.getSrmStoreRetentionTimeMinutes());
         final Duration ssmStreamGracePeriod = Duration.ofMillis(parameters.getSsmStreamGracePeriodMilliseconds());
 
@@ -168,10 +169,23 @@ public class PriorityPreemptionRequestTopology
                     log.info("SsmStatus: {}, {}", key, value);
                 });
 
+        var ssmStatusTable =
+                ssmStatusStream.toTable(
+                  Materialized.<IntersectionVehicleRequestKey, SsmStatus>as(
+                          Stores.persistentVersionedKeyValueStore(
+                                  statusStoreName,
+                                  retentionTime))
+                          .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                          .withValueSerde(JsonSerdes.SsmStatus())
+                );
+
+        ssmStatusTable.toStream().peek((key, value) -> {
+            log.info("SsmStatusTable: {}, {}", key, value);
+        });
 
 
-        var eventStream = ssmStatusStream
-            .leftJoin(
+        var eventStream = ssmStatusTable
+            .outerJoin(
                 srmRequestTable,
 
                 // ValueJoiner
@@ -180,30 +194,49 @@ public class PriorityPreemptionRequestTopology
                     JoinedRequestStatus joined = new JoinedRequestStatus(srmRequest, ssmStatus);
                     log.info("JoinedRequestStatus: {}", joined);
                     return joined;
-                    },
-                // Join with grace period to handle late and out-of order messages
-                // The minimum Kafka Streams version for this join with grace period and version store to play well with
-                // TopologyTestDriver is 3.9.1.  The test for this does not pass with 3.7 or 3.8
-                Joined.<IntersectionVehicleRequestKey, SsmStatus, SrmRequest>as("joined-request-status")
-                        .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
-                        .withValueSerde(JsonSerdes.SsmStatus())
-                        .withOtherValueSerde(JsonSerdes.SrmRequest()))
+                    }
+                    ,
+                    Named.as("ssm-srm-join")
+            )
+//                    ,
+//                // Join with grace period to handle late and out-of order messages
+//                // The minimum Kafka Streams version for this join with grace period and version store to play well with
+//                // TopologyTestDriver is 3.9.1.  The test for this does not pass with 3.7 or 3.8
+//                Joined.<IntersectionVehicleRequestKey, SsmStatus, SrmRequest>as("joined-request-status")
+//                        .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+//                        .withValueSerde(JsonSerdes.SsmStatus())
+//                        .withOtherValueSerde(JsonSerdes.SrmRequest()))
 //                        .withGracePeriod(ssmStreamGracePeriod))
+                .toStream()
             .peek((key, value) -> {
                 log.info("peek JoinedRequestStatus: {}, {}", key, value);
             })
             .filter((key, value) -> {
                 log.info("Filtering: {}, {}", key, value);
+
                 // Filter out SSMs that weren't joined with an SRM, but log as a warning
                 if (value.getSrmRequest() == null) {
                     if (parameters.isDebug()) {
-                        log.warn("No SRM request found to match SSM Status: {}", value.getSsmStatus());
+                        log.warn("No SRM request found to match SSM Status: {}", value);
+                    }
+                    return false;
+                }
+
+                // Filter null SSMs
+                if (value.getSsmStatus() == null) {
+                    if (parameters.isDebug()) {
+                        log.debug("SRM received, SSM is null: {}", value);
                     }
                     return false;
                 }
 
                 // Filter out SSM responses that don't have a final status
-                SsmStatus ssmStatus = value.getSsmStatus();
+                if (!value.getSsmStatus().isFinalStatus()) {
+                    if (parameters.isDebug()) {
+                        log.debug("SSM status is not final: {}", value.getSsmStatus());
+                    }
+                }
+
 
                 if (parameters.isDebug()) {
                     log.info("Joined SSM Status with SRM Request: {}", value);
