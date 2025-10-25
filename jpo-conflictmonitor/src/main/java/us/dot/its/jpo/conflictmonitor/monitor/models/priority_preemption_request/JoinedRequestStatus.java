@@ -14,23 +14,27 @@ public class JoinedRequestStatus {
     public PriorityPreemptionRequestEvent toEvent() {
         var event = new PriorityPreemptionRequestEvent();
         var request = getSrmRequest();
+        if (request != null) {
+            event.setIntersectionID(request.getIntersectionId());
+            event.setRoadRegulatorID(request.getRegion());
+            event.setVehicleId(request.getVehicleId());
+            event.setRequestTimestamp(request.getTimestamp());
+            event.setPriorityRequestType(request.getRequestType());
+            event.setVehicleType(request.getVehicleType());
+            event.setPriorityRequestType(request.getRequestType());
+            event.setInboundLaneId(request.getInboundLaneId());
+            event.setInboundApproachId(request.getInboundApproachId());
+            event.setInboundLaneConnectionId(request.getInboundLaneConnectionId());
+            event.setOutboundLaneId(request.getOutboundLaneId());
+            event.setOutboundApproachId(request.getOutboundApproachId());
+            event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
+        }
         var status = getSsmStatus();
-        event.setIntersectionID(request.getIntersectionId());
-        event.setRoadRegulatorID(request.getRegion());
-        event.setVehicleId(request.getVehicleId());
-        event.setRequestId(status.getRequestId());
-        event.setRequestTimestamp(request.getTimestamp());
-        event.setPriorityRequestType(request.getRequestType());
-        event.setVehicleType(request.getVehicleType());
-        event.setPriorityRequestType(request.getRequestType());
-        event.setInboundLaneId(request.getInboundLaneId());
-        event.setInboundApproachId(request.getInboundApproachId());
-        event.setInboundLaneConnectionId(request.getInboundLaneConnectionId());
-        event.setOutboundLaneId(request.getOutboundLaneId());
-        event.setOutboundApproachId(request.getOutboundApproachId());
-        event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
-        event.setTimeOfLastResponse(status.getTimestamp());
-        event.setStatus(status.getStatus());
+        if (status != null) {
+            event.setRequestId(status.getRequestId());
+            event.setTimeOfLastResponse(status.getTimestamp());
+            event.setStatus(status.getStatus());
+        }
         return event;
     }
 }

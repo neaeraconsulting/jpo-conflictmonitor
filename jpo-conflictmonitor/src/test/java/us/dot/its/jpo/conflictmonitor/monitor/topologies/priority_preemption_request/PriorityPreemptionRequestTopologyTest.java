@@ -1,9 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_request;
 
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.raft.internals.StringSerde;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.KStream;
@@ -20,8 +17,6 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRe
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
-import us.dot.its.jpo.conflictmonitor.monitor.serialization.IntersectionVehicleRequestKeySerde;
-import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuVehicleIdKey;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
@@ -41,7 +36,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Properties;
 
 import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -75,6 +69,10 @@ public class PriorityPreemptionRequestTopologyTest {
     private static final ProcessedBasicVehicleRole vehicleType = ProcessedBasicVehicleRole.PUBLICTRANSPORT;
     private static final ProcessedPriorityRequestType requestType = ProcessedPriorityRequestType.PRIORITYREQUEST;
     private static final int maxSecondsBetweenSrms = 30;
+    private static final int storeRetentionTime = 10;
+    private static final String srmStoreName = "srm-request-store";
+    private static final String ssmStoreName = "ssm-status-store";
+    private static final String joinedStoreName = "joined-store";
 
     // Mock the metrics subtopology
     @Mock PriorityRequestMetricsTopology mockMetricsTopology;
@@ -141,7 +139,7 @@ public class PriorityPreemptionRequestTopologyTest {
             assertThat(resultValue.getIntersectionID(), equalTo(intersectionId));
             assertThat(resultValue.getRoadRegulatorID(), equalTo(roadRegulatorId));
             assertThat(resultValue.getStatus(), equalTo(GRANTED));
-            assertThat(resultValue.isFinalStatus(), equalTo(true));
+            assertThat(resultValue.hasFinalStatus(), equalTo(true));
             assertThat(resultValue.getFinalStatus(), equalTo(GRANTED));
 
         }
@@ -218,9 +216,10 @@ public class PriorityPreemptionRequestTopologyTest {
         parameters.setAlgorithm(DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM);
         parameters.setDebug(true);
         parameters.setOutputEventTopic(outputEventTopicName);
-        parameters.setSrmStoreName("srm-store");
-        parameters.setSsmStoreName("ssm-store");
-        parameters.setStoreRetentionTime(10);
+        parameters.setSrmStoreName(srmStoreName);
+        parameters.setSsmStoreName(ssmStoreName);
+        parameters.setJoinedStoreName(joinedStoreName);
+        parameters.setStoreRetentionTime(storeRetentionTime);
         parameters.setRetentionTimeUnits(MINUTES);
         parameters.setMaxTimeBetweenSrms(maxSecondsBetweenSrms);
         parameters.setMaxTimeBetweenSrmsUnits(SECONDS);

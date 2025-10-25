@@ -1,7 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.events;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Generated;
 import lombok.Getter;
@@ -43,20 +43,17 @@ public class PriorityPreemptionRequestEvent
 
     private ProcessedPrioritizationResponseStatus status;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public ProcessedPrioritizationResponseStatus getFinalStatus() {
-        if (isFinalStatus()) {
-            return status;
-        } else {
-            return null;
-        }
+        return hasFinalStatus() ? status : null;
     }
 
     public PriorityPreemptionRequestEvent() {
         super("PriorityPreemptionRequest");
     }
 
-    public boolean isFinalStatus() {
-        return status != null & FINAL_STATUSES.contains(status);
+    public boolean hasFinalStatus() {
+        return status != null && FINAL_STATUSES.contains(status);
     }
 
     public final static Set<ProcessedPrioritizationResponseStatus> FINAL_STATUSES =
