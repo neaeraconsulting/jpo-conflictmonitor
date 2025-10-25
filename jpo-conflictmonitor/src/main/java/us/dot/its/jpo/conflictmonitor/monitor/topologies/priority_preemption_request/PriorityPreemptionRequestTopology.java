@@ -8,6 +8,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.TimestampExtractor;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -21,12 +22,14 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicle
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.PriorityPreemptionRequestTimeoutProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
+import org.apache.kafka.common.utils.Bytes;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -61,11 +64,22 @@ public class PriorityPreemptionRequestTopology
         final Duration retentionTime = Duration.of(
                 parameters.getStoreRetentionTime(),
                 parameters.getRetentionTimeUnits());
+        final Duration maxTimeBetweenSrms = Duration.of(
+                parameters.getMaxTimeBetweenSrms(),
+                parameters.getMaxTimeBetweenSrmsUnits());
+
+        // State store for joined SRM/SSM processor
+        final String joinedStoreName = parameters.getJoinedStoreName();
+        var joinedStoreBuilder =
+                Stores.keyValueStoreBuilder(
+                        Stores.persistentKeyValueStore(joinedStoreName),
+                        JsonSerdes.IntersectionVehicleRequestKey(),
+                        JsonSerdes.JoinedRequestStatus()
+                );
+        builder.addStateStore(joinedStoreBuilder);
 
 
-
-
-        // Unwrap SRM Requests
+        // Read ProcessedSrms
         var processedSrmStream = builder
                 .stream(
                         parameters.getProcessedSrmInputTopic(),
@@ -78,6 +92,7 @@ public class PriorityPreemptionRequestTopology
             processedSrmStream.process(() -> new DiagnosticProcessor<>("ProcessedSrm Stream", log));
         }
 
+        // Unwrap SRM Requests
         var srmRequestStream = processedSrmStream
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
 
@@ -144,19 +159,17 @@ public class PriorityPreemptionRequestTopology
             srmRequestTable.toStream().process(() -> new DiagnosticProcessor<>("SrmRequest Versioned KTable", log));
         }
 
-        // Unwrap SSM requests
+        // Read ProcessedSsms
         var processedSsmStream = builder
-                .stream(
-                        parameters.getProcessedSsmInputTopic(),
-                        Consumed.with(
-                                        RsuIntersectionKey(),
-                                        ProcessedSsm())
+                .stream(parameters.getProcessedSsmInputTopic(),
+                        Consumed.with(RsuIntersectionKey(), ProcessedSsm())
                                 .withTimestampExtractor(new ProcessedSsmTimestampExtractor()));
 
         if (parameters.isDebug()) {
             processedSsmStream.process(() -> new DiagnosticProcessor<>("ProcessedSsm Stream", log));
         }
 
+        // Unwrap SSM requests
         var ssmStatusStream = processedSsmStream
                 .flatMap((rsuIntersectionKey, processedSsm) -> {
                     if (parameters.isDebug()) {
@@ -204,12 +217,16 @@ public class PriorityPreemptionRequestTopology
         var joinedTable = ssmStatusTable
                 .outerJoin(
                         srmRequestTable,
+
                         // ValueJoiner
-                        (ssmStatus, srmRequest) -> new JoinedRequestStatus(srmRequest, ssmStatus));
+                        (ssmStatus, srmRequest) -> new JoinedRequestStatus(srmRequest, ssmStatus)
+                );
+
+        var joinedStream = joinedTable.toStream();
 
         // Diagnostic logging of the joined table
         if (parameters.isDebug()) {
-            joinedTable.toStream().peek((key, value) -> {
+            joinedStream.peek((key, value) -> {
                 if (value.getSsmStatus() == null) {
                     log.info("JoinedRequestStatus KTable: SRM received, SSM is null");
                     return;
@@ -230,7 +247,8 @@ public class PriorityPreemptionRequestTopology
             }).process(() -> new DiagnosticProcessor<>("JoinedRequestStatus KTable", log));
         }
 
-        var eventStream = joinedTable
+        // Check for events from joined stream
+        var eventStream = joinedStream
                 .filter((key, value) -> {
 
                     // Filter null SSMs
@@ -254,46 +272,37 @@ public class PriorityPreemptionRequestTopology
 
                 // Produce Event
                 .mapValues(value -> {
-                    var event = new PriorityPreemptionRequestEvent();
-                    var request = value.getSrmRequest();
-                    var status = value.getSsmStatus();
-                    event.setIntersectionID(request.getIntersectionId());
-                    event.setRoadRegulatorID(request.getRegion());
-                    event.setVehicleId(request.getVehicleId());
-                    event.setRequestId(status.getRequestId());
-                    event.setRequestTimestamp(request.getTimestamp());
-                    event.setPriorityRequestType(request.getRequestType());
-                    event.setVehicleType(request.getVehicleType());
-                    event.setPriorityRequestType(request.getRequestType());
-                    event.setInboundLaneId(request.getInboundLaneId());
-                    event.setInboundApproachId(request.getInboundApproachId());
-                    event.setInboundLaneConnectionId(request.getInboundLaneConnectionId());
-                    event.setOutboundLaneId(request.getOutboundLaneId());
-                    event.setOutboundApproachId(request.getOutboundApproachId());
-                    event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
-                    event.setTimeOfLastResponse(status.getTimestamp());
-                    event.setStatus(status.getStatus());
+                    var event = value.toEvent();
                     if (parameters.isDebug()) {
                         log.info("SSM/SRM Event: {}", event);
                     }
                     return event;
-                })
-                .toStream();
+                });
 
-        // Count SSM Responses with granted status for fulfillment metric
-        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
-            priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
-
-        if (parameters.isDebug()) {
-            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
-        }
+        // Check for SRMs that time out without receiving an SSM or with a final status, merge with the
+        // stream of events with final status
+        var mergedEventStream = joinedStream
+                .process(() -> new PriorityPreemptionRequestTimeoutProcessor(
+                                maxTimeBetweenSrms,
+                                parameters.isDebug(),
+                                joinedStoreName),
+                        joinedStoreName)
+                .merge(eventStream);
 
         // Write to event topic
-        eventStream.to(parameters.getOutputEventTopic(),
+        mergedEventStream.to(parameters.getOutputEventTopic(),
                 Produced.with(
                         JsonSerdes.IntersectionVehicleRequestKey(),
                         JsonSerdes.PriorityPreemptionRequestEvent(),
                         new IntersectionIdPartitioner<>()));
+
+        // Count SSM Responses with granted status for fulfillment metric
+        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
+                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+
+        if (parameters.isDebug()) {
+            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
+        }
 
         // Write to metrics topic
         metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),

@@ -78,4 +78,9 @@ public class PriorityPreemptionRequestParameters {
             updateType = READ_ONLY)
     private ChronoUnit maxTimeBetweenSrmsUnits;
 
+    @ConfigData(key = "priority.preemption.request.joinedStoreName", 
+            description = "Name of the state store for the SRM/SSM join",
+            updateType = READ_ONLY)
+    private String joinedStoreName;
+
 }
