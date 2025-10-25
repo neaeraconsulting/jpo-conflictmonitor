@@ -49,27 +49,22 @@ public class PriorityPreemptionRequestParameters {
             updateType = READ_ONLY)
     private String srmStoreName;
 
-    @ConfigData(key = "priority.preemption.request.srmStoreRetentionTimeMinutes",
-            description = "Retention time of the SRM versioned store",
-            updateType = READ_ONLY)
-    private int srmStoreRetentionTime;
-
     @ConfigData(key = "priority.preemption.request.ssmStoreName",
             description = "Name of the versioned state store to hold SSM responses",
             updateType = READ_ONLY)
     private String ssmStoreName;
 
-    @ConfigData(key = "priority.preemption.request.ssmStoreRetentionTimeMinutes",
-            description = "Retention time of the SSM versioned store",
+    @ConfigData(key = "priority.preemption.request.storeRetentionTime",
+            description = "Retention time of the versioned store stores",
             updateType = READ_ONLY)
-    private int ssmStoreRetentionTime;
+    private int storeRetentionTime;
 
     @ConfigData(key = "priority.preemption.request.retentionTimeUnits",
             description = "Time units of the SSM and SRM store retention time parameters",
             updateType = READ_ONLY)
     private ChronoUnit retentionTimeUnits;
 
-    @ConfigData(key = "priority.preemption.request.maxTimeBetweenSrm",
+    @ConfigData(key = "priority.preemption.request.maxTimeBetweenSrms",
             description = """
                 The maximum time between SRM messages with the same IntersectionVehcleRequestKey for them to be
                 considered part of the same request. If an SRM with the given key is not received for longer than this
@@ -77,5 +72,10 @@ public class PriorityPreemptionRequestParameters {
                 emitted indicating the SRM did not receive a matching SSM.""",
             updateType = READ_ONLY)
     private int maxTimeBetweenSrms;
+
+    @ConfigData(key = "priority.preemption.request.maxTimeBetweenSrmsUnits",
+            description = "Time units of the max time between SRMs parameter",
+            updateType = READ_ONLY)
+    private ChronoUnit maxTimeBetweenSrmsUnits;
 
 }

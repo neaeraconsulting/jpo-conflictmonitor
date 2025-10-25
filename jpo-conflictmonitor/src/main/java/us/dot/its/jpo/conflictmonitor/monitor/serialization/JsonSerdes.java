@@ -49,6 +49,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SsmStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimeChangeDetailAggregator;
@@ -588,6 +589,10 @@ public class JsonSerdes {
 
     public static Serde<SsmStatus> SsmStatus() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SsmStatus.class));
+    }
+
+    public static Serde<JoinedRequestStatus> JoinedRequestStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(JoinedRequestStatus.class));
     }
 
     public static Serde<PriorityPreemptionRequestEvent>  PriorityPreemptionRequestEvent() {

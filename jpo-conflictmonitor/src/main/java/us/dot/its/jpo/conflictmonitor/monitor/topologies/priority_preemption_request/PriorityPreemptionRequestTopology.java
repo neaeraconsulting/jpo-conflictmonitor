@@ -57,9 +57,12 @@ public class PriorityPreemptionRequestTopology
         var builder = new StreamsBuilder();
 
         final String requestStoreName = parameters.getSrmStoreName();
-        final String statusStoreName = "status-store";
-        final Duration retentionTime = Duration.ofMinutes(parameters.getSrmStoreRetentionTimeMinutes());
-        final Duration ssmStreamGracePeriod = Duration.ofMillis(parameters.getSsmStreamGracePeriodMilliseconds());
+        final String statusStoreName = parameters.getSsmStoreName();
+        final Duration retentionTime = Duration.of(
+                parameters.getStoreRetentionTime(),
+                parameters.getRetentionTimeUnits());
+
+
 
 
         // Unwrap SRM Requests
@@ -202,12 +205,7 @@ public class PriorityPreemptionRequestTopology
                 .outerJoin(
                         srmRequestTable,
                         // ValueJoiner
-                        (ssmStatus, srmRequest) -> {
-                            JoinedRequestStatus joined = new JoinedRequestStatus(srmRequest, ssmStatus);
-                            return joined;
-                        },
-                        Named.as("ssm-srm-join")
-                );
+                        (ssmStatus, srmRequest) -> new JoinedRequestStatus(srmRequest, ssmStatus));
 
         // Diagnostic logging of the joined table
         if (parameters.isDebug()) {

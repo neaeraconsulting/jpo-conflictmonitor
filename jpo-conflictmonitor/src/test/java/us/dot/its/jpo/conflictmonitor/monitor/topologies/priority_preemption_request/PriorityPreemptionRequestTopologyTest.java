@@ -36,11 +36,15 @@ import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSsm;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Properties;
 
+import static java.time.temporal.ChronoUnit.MINUTES;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,6 +74,7 @@ public class PriorityPreemptionRequestTopologyTest {
     private static final long secondsLatency = 2L;
     private static final ProcessedBasicVehicleRole vehicleType = ProcessedBasicVehicleRole.PUBLICTRANSPORT;
     private static final ProcessedPriorityRequestType requestType = ProcessedPriorityRequestType.PRIORITYREQUEST;
+    private static final int maxSecondsBetweenSrms = 30;
 
     // Mock the metrics subtopology
     @Mock PriorityRequestMetricsTopology mockMetricsTopology;
@@ -149,25 +154,37 @@ public class PriorityPreemptionRequestTopologyTest {
     @Test
     public void testPriorityPreemptionRequestEvent_NoSsm() {
         Topology topology = createTopology();
-        try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
+
+        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 46,
+                55, 0, ZoneOffset.UTC);
+        final Instant startWallClock = start.toInstant();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
             var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
                     new JsonSerializer<RsuVehicleIdKey>(),
                     new JsonSerializer<ProcessedSrm>());
-
-            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
-                    new JsonSerializer<RsuIntersectionKey>(),
-                    new JsonSerializer<ProcessedSsm>());
 
             var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
                     new JsonDeserializer<>(IntersectionVehicleRequestKey.class),
                     new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
 
             final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
-            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
-            final ZonedDateTime now = ZonedDateTime.of(2025, 9, 30, 9, 46,
-                    55, 0, ZoneOffset.UTC);
-            final long srmTimestamp = now.toInstant().toEpochMilli();
-            final ProcessedSrm processedSrm = createSrm(now);
+
+            // send one srm every 5 seconds
+            for (int offset = 0; offset <= 60; offset += 5) {
+                final ZonedDateTime now = start.plusSeconds(offset);
+                final ProcessedSrm processedSrm = createSrm(now);
+                inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(offset));
+            }
+
+            // Don't send any SSMs
+
+            // Wait longer than max-time-between-srms
+            driver.advanceWallClockTime(Duration.ofSeconds(maxSecondsBetweenSrms + 10));
+
+            // Should be one event
+            var eventList = outputEventTopic.readKeyValuesToList();
+            assertThat(eventList, hasSize(1));
 
         }
     }
@@ -202,8 +219,11 @@ public class PriorityPreemptionRequestTopologyTest {
         parameters.setDebug(true);
         parameters.setOutputEventTopic(outputEventTopicName);
         parameters.setSrmStoreName("srm-store");
-        parameters.setSrmStoreRetentionTimeMinutes(10);
-        parameters.setSsmStreamGracePeriodMilliseconds(5000);
+        parameters.setSsmStoreName("ssm-store");
+        parameters.setStoreRetentionTime(10);
+        parameters.setRetentionTimeUnits(MINUTES);
+        parameters.setMaxTimeBetweenSrms(maxSecondsBetweenSrms);
+        parameters.setMaxTimeBetweenSrmsUnits(SECONDS);
         parameters.setProcessedSrmInputTopic(inputSrmTopicName);
         parameters.setProcessedSsmInputTopic(inputSsmTopicName);
         return parameters;
