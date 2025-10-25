@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_request;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
@@ -35,6 +36,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 import static java.time.temporal.ChronoUnit.MINUTES;
@@ -48,6 +50,7 @@ import static org.mockito.Mockito.when;
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestConstants.DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
 
+@Slf4j
 @RunWith(MockitoJUnitRunner.class)
 public class PriorityPreemptionRequestTopologyTest {
 
@@ -69,7 +72,7 @@ public class PriorityPreemptionRequestTopologyTest {
     private static final ProcessedBasicVehicleRole vehicleType = ProcessedBasicVehicleRole.PUBLICTRANSPORT;
     private static final ProcessedPriorityRequestType requestType = ProcessedPriorityRequestType.PRIORITYREQUEST;
     private static final int maxSecondsBetweenSrms = 30;
-    private static final int storeRetentionTime = 10;
+    private static final int storeRetentionTimeMinutes = 10;
     private static final String srmStoreName = "srm-request-store";
     private static final String ssmStoreName = "ssm-status-store";
     private static final String joinedStoreName = "joined-store";
@@ -153,8 +156,8 @@ public class PriorityPreemptionRequestTopologyTest {
     public void testPriorityPreemptionRequestEvent_NoSsm() {
         Topology topology = createTopology();
 
-        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 46,
-                55, 0, ZoneOffset.UTC);
+        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 0,
+                0, 0, ZoneOffset.UTC);
         final Instant startWallClock = start.toInstant();
         try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
             var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
@@ -168,11 +171,13 @@ public class PriorityPreemptionRequestTopologyTest {
             final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
 
             // send one srm every 5 seconds
-            for (int offset = 0; offset <= 60; offset += 5) {
+            final int step = 5;
+            for (int offset = 0; offset <= 60; offset += step) {
                 final ZonedDateTime now = start.plusSeconds(offset);
+                log.info("now: {}", now.format(DateTimeFormatter.ISO_INSTANT));
                 final ProcessedSrm processedSrm = createSrm(now);
                 inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
-                driver.advanceWallClockTime(Duration.ofSeconds(offset));
+                driver.advanceWallClockTime(Duration.ofSeconds(step));
             }
 
             // Don't send any SSMs
@@ -219,7 +224,7 @@ public class PriorityPreemptionRequestTopologyTest {
         parameters.setSrmStoreName(srmStoreName);
         parameters.setSsmStoreName(ssmStoreName);
         parameters.setJoinedStoreName(joinedStoreName);
-        parameters.setStoreRetentionTime(storeRetentionTime);
+        parameters.setStoreRetentionTime(storeRetentionTimeMinutes);
         parameters.setRetentionTimeUnits(MINUTES);
         parameters.setMaxTimeBetweenSrms(maxSecondsBetweenSrms);
         parameters.setMaxTimeBetweenSrmsUnits(SECONDS);

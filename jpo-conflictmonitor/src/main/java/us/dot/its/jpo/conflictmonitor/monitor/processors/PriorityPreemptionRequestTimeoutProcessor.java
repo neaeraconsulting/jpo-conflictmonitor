@@ -93,6 +93,9 @@ public class PriorityPreemptionRequestTimeoutProcessor
     }
 
     private void punctuate(long timestamp) {
+        if (isDebug) {
+            log.debug("punctuate {}", timestamp);
+        }
         var keysToDelete = new ArrayList<IntersectionVehicleRequestKey>();
         try (var storeInterator = joinedStore.all()) {
             while (storeInterator.hasNext()) {
@@ -101,8 +104,12 @@ public class PriorityPreemptionRequestTimeoutProcessor
                 JoinedRequestStatus joined = item.value;
                 SrmRequest request = joined.getSrmRequest();
                 long requestTimestamp = request.getTimestamp();
+                if (isDebug) {
+                    log.debug("timestamp {}, requestTimestamp {}, diff {}, maxTimeBetweenSrmsMillis {}", timestamp,
+                            requestTimestamp, timestamp - requestTimestamp, maxTimeBetweenSrmsMillis);
+                }
                 if (timestamp - requestTimestamp > maxTimeBetweenSrmsMillis) {
-                    // Forward event if timed out
+                    // Forward event if timed out and not already emitted for this key
                     PriorityPreemptionRequestEvent event = joined.toEvent();
                     context.forward(new Record<>(key, event, timestamp));
                     if (isDebug) {
