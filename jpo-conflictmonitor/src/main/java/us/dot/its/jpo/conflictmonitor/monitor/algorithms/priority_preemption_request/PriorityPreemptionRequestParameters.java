@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
 
+import java.time.temporal.ChronoUnit;
+
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.DEFAULT;
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.READ_ONLY;
 
@@ -43,18 +45,37 @@ public class PriorityPreemptionRequestParameters {
     private String outputEventTopic;
 
     @ConfigData(key = "priority.preemption.request.srmStoreName",
-            description = "Name of the state store to hold SRM Requests",
+            description = "Name of the versioned state store to hold SRM Requests",
             updateType = READ_ONLY)
     private String srmStoreName;
 
     @ConfigData(key = "priority.preemption.request.srmStoreRetentionTimeMinutes",
-            description = "Retention time of the SRM Versioned store",
+            description = "Retention time of the SRM versioned store",
             updateType = READ_ONLY)
-    private int srmStoreRetentionTimeMinutes;
+    private int srmStoreRetentionTime;
 
-    @ConfigData(key = "priority.preemption.request.ssmStreamGracePeriodMilliseconds",
-            description = "Grace period for buffering and sorting out-of-order SSM messages",
+    @ConfigData(key = "priority.preemption.request.ssmStoreName",
+            description = "Name of the versioned state store to hold SSM responses",
             updateType = READ_ONLY)
-    private long ssmStreamGracePeriodMilliseconds;
+    private String ssmStoreName;
+
+    @ConfigData(key = "priority.preemption.request.ssmStoreRetentionTimeMinutes",
+            description = "Retention time of the SSM versioned store",
+            updateType = READ_ONLY)
+    private int ssmStoreRetentionTime;
+
+    @ConfigData(key = "priority.preemption.request.retentionTimeUnits",
+            description = "Time units of the SSM and SRM store retention time parameters",
+            updateType = READ_ONLY)
+    private ChronoUnit retentionTimeUnits;
+
+    @ConfigData(key = "priority.preemption.request.maxTimeBetweenSrm",
+            description = """
+                The maximum time between SRM messages with the same IntersectionVehcleRequestKey for them to be
+                considered part of the same request. If an SRM with the given key is not received for longer than this
+                time since the last one, and no matching SSM has is received, a Priority/Preemption Request Event is 
+                emitted indicating the SRM did not receive a matching SSM.""",
+            updateType = READ_ONLY)
+    private int maxTimeBetweenSrms;
 
 }

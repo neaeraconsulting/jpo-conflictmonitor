@@ -82,7 +82,6 @@ public class PriorityPreemptionRequestTopologyTest {
     @Test
     public void testPriorityPreemptionRequestEvent() {
         Topology topology = createTopology();
-
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
             var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
@@ -97,9 +96,7 @@ public class PriorityPreemptionRequestTopologyTest {
                     new JsonDeserializer<>(IntersectionVehicleRequestKey.class),
                     new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
 
-            var outputMetricTopic = driver.createOutputTopic(outputEventTopicName,
-                    new JsonDeserializer<>(IntersectionVehicleTypeKey.class),
-                    new JsonDeserializer<>(PriorityRequestMetrics.class));
+            // Not testing metrics here
 
             final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
             final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
@@ -145,6 +142,36 @@ public class PriorityPreemptionRequestTopologyTest {
         }
     }
 
+    /**
+     * Test that a stream of SRMs emits an event if no SSM response is received* after a configured time,
+     * so that unmatched SRMs are included in the calculation of the fulfillment rate metric.
+     */
+    @Test
+    public void testPriorityPreemptionRequestEvent_NoSsm() {
+        Topology topology = createTopology();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
+
+            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
+                    new JsonSerializer<RsuIntersectionKey>(),
+                    new JsonSerializer<ProcessedSsm>());
+
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
+            final ZonedDateTime now = ZonedDateTime.of(2025, 9, 30, 9, 46,
+                    55, 0, ZoneOffset.UTC);
+            final long srmTimestamp = now.toInstant().toEpochMilli();
+            final ProcessedSrm processedSrm = createSrm(now);
+
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private Topology createTopology() {
         var parameters = getParameters();
@@ -154,7 +181,8 @@ public class PriorityPreemptionRequestTopologyTest {
         // Mock metrics subtopology
 
         // Ignore unchecked warning here
-        when(mockMetricsTopology.buildTopology(any(StreamsBuilder.class), any(KStream.class))).thenReturn(mockMetricsStream);
+        when(mockMetricsTopology.buildTopology(any(StreamsBuilder.class), any(KStream.class)))
+                .thenReturn(mockMetricsStream);
         CommonMetricsParameters commonMetricsParameters = new CommonMetricsParameters();
         PriorityRequestMetricsParameters priorityRequestMetricsParameters = new PriorityRequestMetricsParameters();
         priorityRequestMetricsParameters.setOutputMetricTopic(outputMetricTopicName);
@@ -205,7 +233,8 @@ public class PriorityPreemptionRequestTopologyTest {
         return new ProcessedSrm(geometry, props);
     }
 
-    private ProcessedSsm createSsm(final ZonedDateTime timestamp, final ProcessedPrioritizationResponseStatus signalStatus) {
+    private ProcessedSsm createSsm(final ZonedDateTime timestamp,
+                                   final ProcessedPrioritizationResponseStatus signalStatus) {
         var ssm =  new ProcessedSsm();
         ssm.setIntersectionId(intersectionId);
         ssm.setRegion(roadRegulatorId);
