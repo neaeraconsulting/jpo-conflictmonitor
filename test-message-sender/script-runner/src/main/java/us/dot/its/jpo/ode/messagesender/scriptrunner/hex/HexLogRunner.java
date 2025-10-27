@@ -71,14 +71,17 @@ public class HexLogRunner {
         final long startTime = System.currentTimeMillis() + delay;
         logger.info("Start time: {}", startTime);
 
-        listeners.startSavingToFile(outputFile, startTime, placeholders, mapFile, spatFile, bsmFile, rtcmFile, srmFile, ssmFile);
+        listeners.startSavingToFile(outputFile, startTime, placeholders, mapFile, spatFile, bsmFile, rtcmFile, srmFile,
+                ssmFile, immediate);
 
         // Schedule sending hex messages to ODE
         if (immediate) {
             final long immutableEarliestTimestamp = earliestTimestamp;
             Runnable allJob = () -> sendAllImmediate(inputFile, startTime, dockerHostIp, immutableEarliestTimestamp);
+
+            // Add a wait task to allow time to receive responses
             scheduler.schedule(allJob, Instant.now().plus(Duration.ofSeconds(1)));
-            Runnable waitJob = () -> logger.info("FInished waiting");
+            Runnable waitJob = () -> logger.info("Finished waiting");
             scheduler.schedule(waitJob, Instant.now().plus(Duration.ofSeconds(61)));
 
         } else {

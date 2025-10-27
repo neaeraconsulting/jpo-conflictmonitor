@@ -3,10 +3,13 @@ package us.dot.its.jpo.ode.messagesender.scriptrunner.hex;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.io.IOException;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -36,6 +39,7 @@ public class KafkaListeners {
     File rtcmFile;
     File srmFile;
     File ssmFile;
+    boolean immediate;
 
     @Autowired
     public KafkaListeners(KafkaTemplate<String, String> kafkaTemplate) {
@@ -45,7 +49,8 @@ public class KafkaListeners {
 
 
     public void startSavingToFile(File outputFile, long startTime, boolean placeholders,
-            File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile) {
+            File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile,
+                                  boolean immediate) {
         log.info("KafkaListener: startSavingToFile");
         this.outputFile = outputFile;
         this.startTime = startTime;
@@ -56,42 +61,52 @@ public class KafkaListeners {
         this.rtcmFile = rtcmFile;
         this.srmFile = srmFile;
         this.ssmFile = ssmFile;
+        this.immediate = immediate;
     }
 
 
-    @KafkaListener(topics = "topic.OdeBsmJson", groupId = "hexLogConverter-bsm")
+
+    @KafkaListener(topics = "topic.OdeBsmJson", groupId = "#{bsmGroup}")
     void listenBsm(String message) {
         listen(DSRCmsgID.BSM, message);
     }
 
-    @KafkaListener(topics = "topic.OdeSpatJson", groupId = "hexLogConverter-spat")
+    @KafkaListener(topics = "topic.OdeSpatJson", groupId = "#{spatGroup}")
     void listenSpat(String message) {
         listen(DSRCmsgID.SPAT, message);
     }
 
-    @KafkaListener(topics = "topic.OdeMapJson", groupId = "hexLogConverter-map")
+    @KafkaListener(topics = "topic.OdeMapJson", groupId = "#{mapGroup}")
     void listenMap(String message) {
         listen(DSRCmsgID.MAP, message);
     }
 
-    @KafkaListener(topics = "topic.OdeRtcmJson", groupId = "hexLogConverter-rtcm")
+    @KafkaListener(topics = "topic.OdeRtcmJson", groupId = "#{rtcmGroup}")
     void listenRtcm(String message) {
         listen(DSRCmsgID.RTCM, message);
     }
 
-    @KafkaListener(topics = "topic.OdeSrmJson", groupId = "hexLogConverter-srm")
+    @KafkaListener(topics = "topic.OdeSrmJson", groupId = "#{srmGroup}")
     void listenSrm(String message) {
         listen(DSRCmsgID.SRM, message);
     }
 
-    @KafkaListener(topics = "topic.OdeSsmJson", groupId = "hexLogConverter-ssm")
+    @KafkaListener(topics = "topic.OdeSsmJson", groupId = "#{ssmGroup}")
     void listenSsm(String message) {
         listen(DSRCmsgID.SSM, message);
     }
 
+    AtomicLong counter = new AtomicLong(1L);
+
     void listen(DSRCmsgID msgId, String message)  {
         final long now = System.currentTimeMillis();
-        final long offsetTime = now - startTime;
+
+        final long actualOffsetTime = now - startTime;
+
+        // if immediate, increment offset time for each message instead of using actual time
+        // to preserve ordering in timestamps
+        final long offsetTime = immediate ? counter.getAndIncrement() : actualOffsetTime;
+
         log.info("{}: Received {} message", offsetTime, msgId);
          
         if (outputFile != null) {
@@ -114,6 +129,8 @@ public class KafkaListeners {
             } catch (IOException e) {
                 log.error("Error writing to file", e);
             }
+        } else {
+            log.info("Output file is null");
         }
         writeToMessageFile(msgId, message, offsetTime);
     }
@@ -129,7 +146,7 @@ public class KafkaListeners {
         } else if (msgId == DSRCmsgID.RTCM) {
             msgFile = rtcmFile;
         } else if (msgId == DSRCmsgID.SRM) {
-            msgFile = ssmFile;
+            msgFile = srmFile;
         } else if (msgId == DSRCmsgID.SSM) {
             msgFile = ssmFile;
         }
@@ -177,9 +194,15 @@ public class KafkaListeners {
                 }
             } else if (DSRCmsgID.BSM.equals(msgId)) {
                 JsonNode coreData = node.at("/payload/data/coreData");
-                ObjectNode coreDataObj = (ObjectNode)coreData;
+                ObjectNode coreDataObj = (ObjectNode) coreData;
                 coreDataObj.put("secMark", MILLI_OF_MINUTE);
                 coreDataObj.put("id", TEMP_ID);
+            } else if (DSRCmsgID.RTCM.equals(msgId)) {
+                substituteRtcmPlaceholders(node);
+            } else if (DSRCmsgID.SRM.equals(msgId)) {
+                substituteSrmPlaceholders(node);
+            } else if (DSRCmsgID.SSM.equals(msgId)) {
+                substituteSsmPlaceholders(node);
             }
             return mapper.writeValueAsString(node);
         } catch (JsonProcessingException e) {
@@ -187,4 +210,27 @@ public class KafkaListeners {
         }
     }
 
+    private void substituteSrmPlaceholders(JsonNode node) {
+        JsonNode request = node.at("/payload/data/value/SignalRequestMessage");
+        if (request instanceof ObjectNode requestObj) {
+            requestObj.put("timeStamp", MINUTE_OF_YEAR);
+            requestObj.put("second", MILLI_OF_MINUTE);
+        } else {
+            log.error("node not found");
+        }
+    }
+
+    private void substituteSsmPlaceholders(JsonNode node) {
+        JsonNode status = node.at("/payload/data/value/SignalStatusMessage");
+        if (status instanceof ObjectNode statusObj) {
+            statusObj.put("timeStamp", MINUTE_OF_YEAR);
+            statusObj.put("second", MILLI_OF_MINUTE);
+        } else {
+            log.error("node not found");
+        }
+    }
+
+    private void substituteRtcmPlaceholders(JsonNode node) {
+        // TODO
+    }
 }

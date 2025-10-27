@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @EnableKafka
 @Component
@@ -35,5 +36,37 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, String> kafkaTemplate() {
         return new KafkaTemplate<String, String>(producerFactory());
+    }
+
+    final String groupSuffix = "listener";
+
+    @Bean
+    String bsmGroup() {
+        return "bsm-" + groupSuffix;
+    }
+
+    @Bean
+    String spatGroup() {
+        return "spat-" + groupSuffix;
+    }
+
+    @Bean
+    String rtcmGroup() {
+        return "rtcm-" + groupSuffix;
+    }
+
+    @Bean
+    String srmGroup() {
+        return "srm-" + groupSuffix;
+    }
+
+    @Bean
+    String ssmGroup() {
+        return "ssm-" + groupSuffix;
+    }
+
+    @Bean
+    String mapGroup() {
+        return "map-" + groupSuffix;
     }
 }
