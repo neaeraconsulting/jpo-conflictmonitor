@@ -2,13 +2,12 @@ package us.dot.its.jpo.ode.messagesender.scriptrunner.hex;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Hex;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,7 @@ import us.dot.its.jpo.ode.messagesender.scriptrunner.DateJsonMapper;
 
 
 /**
- * Sends a hex log to the ODE and recieves and saves the converted ODE JSON messages as script.
+ * Sends a hex log to the ODE and receives and saves the converted ODE JSON messages as script.
  * 
  * <p>Hex log format is line-delimited JSON with format: 
  * <pre>{ "timeStamp": milliseconds, "dir": "S" or "R", "hexMessage": "00142846F..."}</pre>
@@ -42,8 +41,8 @@ public class HexLogRunner {
     }
 
 
-    
 
+    final static ObjectMapper mapper = DateJsonMapper.getInstance();
     
 
     /**
@@ -51,10 +50,11 @@ public class HexLogRunner {
      * @throws IOException
      */
     public void convertHexLogToScript(String dockerHostIp, File inputFile, File outputFile, int delay,
-        boolean placeholders, File mapFile, File spatFile, File bsmFile) throws IOException {
+            boolean placeholders, File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile,
+            boolean immediate) throws IOException {
         logger.info("Running hex log, inputFile {}, outputFile: {}", inputFile, outputFile);
         
-        var mapper = DateJsonMapper.getInstance();
+
 
         // Get the earliest timestamp in the hexScript
         long earliestTimestamp = Long.MAX_VALUE;
@@ -71,8 +71,27 @@ public class HexLogRunner {
         final long startTime = System.currentTimeMillis() + delay;
         logger.info("Start time: {}", startTime);
 
-        listeners.startSavingToFile(outputFile, startTime, placeholders, mapFile, spatFile, bsmFile);
+        listeners.startSavingToFile(outputFile, startTime, placeholders, mapFile, spatFile, bsmFile, rtcmFile, srmFile, ssmFile);
 
+        // Schedule sending hex messages to ODE
+        if (immediate) {
+            final long immutableEarliestTimestamp = earliestTimestamp;
+            Runnable allJob = () -> sendAllImmediate(inputFile, startTime, dockerHostIp, immutableEarliestTimestamp);
+            scheduler.schedule(allJob, Instant.now().plus(Duration.ofSeconds(1)));
+            Runnable waitJob = () -> logger.info("FInished waiting");
+            scheduler.schedule(waitJob, Instant.now().plus(Duration.ofSeconds(61)));
+            // Wait to receive responses
+            scheduler.setWaitForTasksToCompleteOnShutdown(true);
+            scheduler.setAwaitTerminationSeconds(60*15);
+            scheduler.shutdown();
+        } else {
+            scheduleSends(inputFile, startTime, dockerHostIp, earliestTimestamp);
+        }
+
+    }
+
+    private void scheduleSends(File inputFile, long startTime, String dockerHostIp,
+                               long earliestTimestamp) throws IOException {
         // Schedule sending hex messages to ODE
         try (MappingIterator<HexLogItem> iterator = mapper.readerFor(HexLogItem.class).readValues(inputFile)) {
             while (iterator.hasNext()) {
@@ -95,24 +114,68 @@ public class HexLogRunner {
                 long timeOffset = hexItem.getTimeStamp() - earliestTimestamp;
                 scheduleSendHexItem(hex, msgId, startTime, timeOffset, dockerHostIp);
             }
-        } 
+        }
+
+        // Wait 15 minutes to receive responses
+        scheduler.setWaitForTasksToCompleteOnShutdown(true);
+        scheduler.setAwaitTerminationSeconds(60*15);
+        scheduler.shutdown();
     }
 
+    private void sendAllImmediate(File inputFile, long startTime, String dockerHostIp,
+                                  long earliestTimestamp) {
+        try (MappingIterator<HexLogItem> iterator = mapper.readerFor(HexLogItem.class).readValues(inputFile)) {
+            while (iterator.hasNext()) {
+                HexLogItem hexItem = iterator.next();
+
+                // Classify the Message Frame type
+                final String hex = hexItem.getHexMessage();
+                final String hexMsgId = hex.substring(0, 4);
+                final DSRCmsgID msgId = DSRCmsgID.fromHex(hexMsgId);
+                if (msgId == null) {
+                    logger.error("Unknown hex message id: {}", hexMsgId);
+                    continue;
+                }
+                final int udpPort = msgId.getUdpPort();
+                if (udpPort == 0) {
+                    logger.error("ODE does not accept {} messages", msgId);
+                    continue;
+                }
+
+                long timeOffset = hexItem.getTimeStamp() - earliestTimestamp;
+                sendHexItemImmediately(hex, msgId, startTime, timeOffset, dockerHostIp);
+            }
+        } catch (IOException e) {
+            logger.error("Exception reading from files", e);
+        }
+
+
+    }
 
     public void scheduleSendHexItem(String hexMessage, DSRCmsgID msgId, final long startTime, final long timeOffset, String dockerHostIp) {
         final long sendTime = startTime + timeOffset;
         final Instant sendInstant = Instant.ofEpochMilli(sendTime);
+        var job = createSendJob(hexMessage, msgId, startTime, sendTime, dockerHostIp);
+        scheduler.schedule(job, sendInstant);
+        logger.info("Scheduled {} job at {}", msgId, sendTime - startTime);
+    }
+
+    public void sendHexItemImmediately(String hexMessage, DSRCmsgID msgId, final long startTime, final long timeOffset, String dockerHostIp) {
+        final long sendTime = startTime + timeOffset;
+        var job = createSendJob(hexMessage, msgId, startTime, sendTime, dockerHostIp);
+        job.run();
+        logger.info("Sent {}", msgId);
+    }
+
+    private SendHexJob createSendJob(String hexMessage, DSRCmsgID msgId, long startTime, long sendTime, String dockerHostIp) {
         var job = new SendHexJob();
         job.setSendTime(sendTime);
         job.setStartTime(startTime);
         job.setMsgId(msgId);
         job.setHexMessage(hexMessage);
         job.setDockerHostIp(dockerHostIp);
-        scheduler.schedule(job, sendInstant);
-        logger.info("Scheduled {} job at {}", msgId, sendTime - startTime);
+        return job;
     }
-
-
 
 
    

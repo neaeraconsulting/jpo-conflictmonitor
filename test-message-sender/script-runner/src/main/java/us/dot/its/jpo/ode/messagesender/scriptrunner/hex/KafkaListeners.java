@@ -33,6 +33,9 @@ public class KafkaListeners {
     File mapFile;
     File spatFile;
     File bsmFile;
+    File rtcmFile;
+    File srmFile;
+    File ssmFile;
 
     @Autowired
     public KafkaListeners(KafkaTemplate<String, String> kafkaTemplate) {
@@ -41,13 +44,16 @@ public class KafkaListeners {
 
 
     public void startSavingToFile(File outputFile, long startTime, boolean placeholders,
-            File mapFile, File spatFile, File bsmFile) {
+            File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile) {
         this.outputFile = outputFile;
         this.startTime = startTime;
         this.placeholders = placeholders;
         this.mapFile = mapFile;
         this.spatFile = spatFile;
         this.bsmFile = bsmFile;
+        this.rtcmFile = rtcmFile;
+        this.srmFile = srmFile;
+        this.ssmFile = ssmFile;
     }
 
 
@@ -64,6 +70,21 @@ public class KafkaListeners {
     @KafkaListener(topics = "topic.OdeMapJson", groupId = "hexLogConverter-map")
     synchronized void listenMap(String message) {
         listen(DSRCmsgID.MAP, message);
+    }
+
+    @KafkaListener(topics = "topic.OdeRtcmJson", groupId = "hexLogConverter-rtcm")
+    synchronized void listedRtcm(String message) {
+        listen(DSRCmsgID.RTCM, message);
+    }
+
+    @KafkaListener(topics = "topic.OdeSrmJson", groupId = "hexLogConverter-srm")
+    synchronized void listedSrm(String message) {
+        listen(DSRCmsgID.SRM, message);
+    }
+
+    @KafkaListener(topics = "topic.OdeSsmJson", groupId = "hexLogConverter-ssm")
+    synchronized void listenSsm(String message) {
+        listen(DSRCmsgID.SSM, message);
     }
 
     void listen(DSRCmsgID msgId, String message)  {
@@ -103,6 +124,12 @@ public class KafkaListeners {
             msgFile = spatFile;
         } else if (msgId == DSRCmsgID.MAP) {
             msgFile = mapFile;
+        } else if (msgId == DSRCmsgID.RTCM) {
+            msgFile = rtcmFile;
+        } else if (msgId == DSRCmsgID.SRM) {
+            msgFile = ssmFile;
+        } else if (msgId == DSRCmsgID.SSM) {
+            msgFile = ssmFile;
         }
         if (msgFile == null) return;
 

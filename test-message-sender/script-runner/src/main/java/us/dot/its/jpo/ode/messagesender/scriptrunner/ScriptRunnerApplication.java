@@ -62,9 +62,13 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		"    --mapfile=<filename> : (Optional) Output file to save MAPs as line-delimited JSON\n\n" +
 		"    --spatfile=<filename>: (Optional) Output file to save SPATs as line-delimited JSON\n\n" +
 		"    --bsmfile=<filename> : (Optional) Output file to save BSMs as line-delimited JSON\n\n" +
+		"    --rtcmfile=<filename> : (Optional) Output file to save RTCMs as line-delimited JSON\n\n" +
+		"    --srmfile=<filename> : (Optional) Output file to save SRMs as line-delimited JSON\n\n" +
+		"    --ssmfile=<filename> : (Optional) Output file to save SSMs as line-delimited JSON\n\n" +
 		"    --ip=<docker host ip>: (Optional) IP address of docker host to send UDP packets to\n" +
 		"                           Uses DOCKER_HOST_IP env variable if not specified.\n\n" +
-		"    --delay=<milliseconds> : (Optional) Delay in milliseconds before starting to send messages.\n\n";
+		"    --delay=<milliseconds> : (Optional) Delay in milliseconds before starting to send messages.\n\n" +
+		"    --immediate          : In hex log mode, send all messages in order as fast as possible. Don't schedule send based on timestamps\n\n"	;
 
 		
 	@Autowired
@@ -112,6 +116,10 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		String mapfile = optionNames.contains("mapfile") ? appArgs.getOptionValues("mapfile").get(0) : null;
 		String spatfile = optionNames.contains("spatfile") ? appArgs.getOptionValues("spatfile").get(0) : null;
 		String bsmfile = optionNames.contains("bsmfile") ? appArgs.getOptionValues("bsmfile").get(0) : null;
+		String rtcmfile = optionNames.contains("rtcmfile") ? appArgs.getOptionValues("rtcmfile").get(0) : null;
+		String srmfile = optionNames.contains("srmfile") ? appArgs.getOptionValues("srmfile").get(0) : null;
+		String ssmfile = optionNames.contains("ssmfile") ? appArgs.getOptionValues("ssmfile").get(0) : null;
+		boolean immediate = optionNames.contains("immediate");
 
 
 		if (ip == null) {
@@ -124,7 +132,8 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		
 		if (missingOptions) exitUsage();
 
-		convertHexLogToScript(ip, infile, outfile, delay, placeholders, mapfile, spatfile, bsmfile);
+		convertHexLogToScript(ip, infile, outfile, delay, placeholders, mapfile, spatfile, bsmfile, rtcmfile, srmfile,
+				ssmfile, immediate);
 		
 	}
 
@@ -152,7 +161,8 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 	}
 
 	private void convertHexLogToScript(String dockerHostIp, String inputFilePath, String outputFilePath, int delay,
-			boolean placeholders, String mapFilePath, String spatFilePath, String bsmFilePath) throws IOException {
+			boolean placeholders, String mapFilePath, String spatFilePath, String bsmFilePath, String rtcmFilePath,
+			String srmFilePath, String ssmFilePath, boolean immediate) throws IOException {
 		logger.info("Docker Host IP: {}", dockerHostIp);
 		logger.info("Input File Path: {}", inputFilePath);
 		logger.info("Output File Path: {}", outputFilePath);
@@ -161,6 +171,10 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		logger.info("MAP File Path: {}", mapFilePath);
 		logger.info("SPAT File Path: {}", spatFilePath);
 		logger.info("BSM File Path: {}", bsmFilePath);
+		logger.info("RTCM File Path: {}", rtcmFilePath);
+		logger.info("SRM File Path: {}", srmFilePath);
+		logger.info("SSM File Path: {}", ssmFilePath);
+		logger.info("Send immediately: {}", immediate);
 
 		var inputFile = new File(inputFilePath);
 		if (!inputFile.exists()) {
@@ -171,12 +185,14 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		var mapFile = mapFilePath != null ? new File(mapFilePath) : null;
 		var spatFile = spatFilePath != null ? new File(spatFilePath) : null;
 		var bsmFile = bsmFilePath != null ? new File(bsmFilePath) : null;
+		var rtcmFile = bsmFilePath != null ? new File(rtcmFilePath) : null;
+		var srmFile = bsmFilePath != null ? new File(srmFilePath) : null;
+		var ssmFile = bsmFilePath != null ? new File(ssmFilePath) : null;
 		
 		
-		hexLogRunner.convertHexLogToScript(dockerHostIp, inputFile, outputFile, delay, placeholders, mapFile, spatFile, bsmFile);
-		scheduler.setWaitForTasksToCompleteOnShutdown(true);
-		scheduler.setAwaitTerminationSeconds(60*15);
-		scheduler.shutdown();
+		hexLogRunner.convertHexLogToScript(dockerHostIp, inputFile, outputFile, delay, placeholders, mapFile, spatFile,
+				bsmFile, rtcmFile, srmFile, ssmFile, immediate);
+
 	}
 
 }

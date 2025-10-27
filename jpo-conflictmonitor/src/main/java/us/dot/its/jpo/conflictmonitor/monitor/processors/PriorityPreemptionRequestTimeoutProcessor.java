@@ -18,8 +18,8 @@ import java.util.ArrayList;
 
 /**
  * Processor to periodically check the SRM/SSM joined table for SRMs with no SSM response
- * or no final status after the max time, and emit events amd clean up the ktable by sending
- * a tombstone.
+ * or no final status after the max time and emit events.  Maintains a key-value state store
+ * for the joined KTable, with a clock-time punctuator running the timeout check and cleanup.
  */
 @Slf4j
 public class PriorityPreemptionRequestTimeoutProcessor
