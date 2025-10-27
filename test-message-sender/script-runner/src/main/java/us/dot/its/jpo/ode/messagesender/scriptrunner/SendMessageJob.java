@@ -15,7 +15,6 @@ public class SendMessageJob implements Runnable {
 
     private final static Logger logger = LoggerFactory.getLogger(SendMessageJob.class);
 
-   
     KafkaTemplate<String, String> kafkaTemplate;
     String messageType;
     long sendTime;
@@ -24,6 +23,9 @@ public class SendMessageJob implements Runnable {
     Integer intersectionId;
     String logId;
     String bsmId;
+    String rtcmId;
+    String srmId;
+    String ssmId;
 
     final String ProcessedMapTopic = "topic.ProcessedMap";
     final String ProcessedSpatTopic = "topic.ProcessedSpat";

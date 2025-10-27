@@ -4,9 +4,8 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -22,9 +21,10 @@ import us.dot.its.jpo.ode.messagesender.scriptrunner.DateJsonMapper;
  * Listens to Kafka ODE JSON topics and constructs a script.
  */
 @Component
+@Slf4j
 public class KafkaListeners {
 
-    private static final Logger logger = LoggerFactory.getLogger(KafkaListeners.class);
+
 
     final KafkaTemplate<String, String> kafkaTemplate;
     File outputFile;
@@ -39,12 +39,14 @@ public class KafkaListeners {
 
     @Autowired
     public KafkaListeners(KafkaTemplate<String, String> kafkaTemplate) {
+        log.info("KafkaListeners constructor");
         this.kafkaTemplate = kafkaTemplate;
     }
 
 
     public void startSavingToFile(File outputFile, long startTime, boolean placeholders,
             File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile) {
+        log.info("KafkaListener: startSavingToFile");
         this.outputFile = outputFile;
         this.startTime = startTime;
         this.placeholders = placeholders;
@@ -58,43 +60,43 @@ public class KafkaListeners {
 
 
     @KafkaListener(topics = "topic.OdeBsmJson", groupId = "hexLogConverter-bsm")
-    synchronized void listenBsm(String message) {
+    void listenBsm(String message) {
         listen(DSRCmsgID.BSM, message);
     }
 
     @KafkaListener(topics = "topic.OdeSpatJson", groupId = "hexLogConverter-spat")
-    synchronized void listenSpat(String message) {
+    void listenSpat(String message) {
         listen(DSRCmsgID.SPAT, message);
     }
 
     @KafkaListener(topics = "topic.OdeMapJson", groupId = "hexLogConverter-map")
-    synchronized void listenMap(String message) {
+    void listenMap(String message) {
         listen(DSRCmsgID.MAP, message);
     }
 
     @KafkaListener(topics = "topic.OdeRtcmJson", groupId = "hexLogConverter-rtcm")
-    synchronized void listedRtcm(String message) {
+    void listenRtcm(String message) {
         listen(DSRCmsgID.RTCM, message);
     }
 
     @KafkaListener(topics = "topic.OdeSrmJson", groupId = "hexLogConverter-srm")
-    synchronized void listedSrm(String message) {
+    void listenSrm(String message) {
         listen(DSRCmsgID.SRM, message);
     }
 
     @KafkaListener(topics = "topic.OdeSsmJson", groupId = "hexLogConverter-ssm")
-    synchronized void listenSsm(String message) {
+    void listenSsm(String message) {
         listen(DSRCmsgID.SSM, message);
     }
 
     void listen(DSRCmsgID msgId, String message)  {
         final long now = System.currentTimeMillis();
         final long offsetTime = now - startTime;
-        logger.info("{}: Received {} message", offsetTime, msgId);   
+        log.info("{}: Received {} message", offsetTime, msgId);
          
         if (outputFile != null) {
             if (offsetTime < 0) {
-                logger.info("Not saving old message with negative offset time");
+                log.info("Not saving old message with negative offset time");
                 return;
             }
             var templatedMessage = placeholders ? substitutePlaceholders(msgId, message) : message;
@@ -106,11 +108,11 @@ public class KafkaListeners {
                     throw new RuntimeException("Error creating file", e);
                 }
             }
-            logger.info("{}: Writing {} message to file {}", offsetTime, msgId, outputFile.getName());
+            log.info("{}: Writing {} message to file {}", offsetTime, msgId, outputFile.getName());
             try {
                 FileUtils.writeStringToFile(outputFile, formattedMessage, StandardCharsets.UTF_8, true);
             } catch (IOException e) {
-                logger.error("Error writing to file", e);
+                log.error("Error writing to file", e);
             }
         }
         writeToMessageFile(msgId, message, offsetTime);
@@ -133,22 +135,22 @@ public class KafkaListeners {
         }
         if (msgFile == null) return;
 
-        if (msgFile != null) {
-            if (!msgFile.exists()) {
-                try {
-                    msgFile.createNewFile();
-                } catch (IOException e) {
-                    throw new RuntimeException("Error creating file", e);
-                }
-            }
-            logger.info("{}: Writing {} message to file {}", offsetTime, msgId, msgFile.getName());
-            String formattedMessage = String.format("%s%n", message);
+
+        if (!msgFile.exists()) {
             try {
-                FileUtils.writeStringToFile(msgFile, formattedMessage, StandardCharsets.UTF_8, true);
+                msgFile.createNewFile();
             } catch (IOException e) {
-                logger.error("Error writing to file", e);
+                throw new RuntimeException("Error creating file", e);
             }
         }
+        log.info("{}: Writing {} message to file {}", offsetTime, msgId, msgFile.getName());
+        String formattedMessage = String.format("%s%n", message);
+        try {
+            FileUtils.writeStringToFile(msgFile, formattedMessage, StandardCharsets.UTF_8, true);
+        } catch (IOException e) {
+            log.error("Error writing to file", e);
+        }
+
     }
 
     final String ISO_DATE_TIME = "@ISO_DATE_TIME@";
