@@ -80,10 +80,7 @@ public class HexLogRunner {
             scheduler.schedule(allJob, Instant.now().plus(Duration.ofSeconds(1)));
             Runnable waitJob = () -> logger.info("FInished waiting");
             scheduler.schedule(waitJob, Instant.now().plus(Duration.ofSeconds(61)));
-            // Wait to receive responses
-            scheduler.setWaitForTasksToCompleteOnShutdown(true);
-            scheduler.setAwaitTerminationSeconds(60*15);
-            scheduler.shutdown();
+
         } else {
             scheduleSends(inputFile, startTime, dockerHostIp, earliestTimestamp);
         }

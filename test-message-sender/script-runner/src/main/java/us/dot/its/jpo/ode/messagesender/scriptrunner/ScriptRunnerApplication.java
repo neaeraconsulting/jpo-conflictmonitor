@@ -134,7 +134,10 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 
 		convertHexLogToScript(ip, infile, outfile, delay, placeholders, mapfile, spatfile, bsmfile, rtcmfile, srmfile,
 				ssmfile, immediate);
-		
+		// Wait to receive responses
+		scheduler.setWaitForTasksToCompleteOnShutdown(true);
+		scheduler.setAwaitTerminationSeconds(60*15);
+		scheduler.shutdown();
 	}
 
 	private void exitUsage() {
@@ -192,6 +195,7 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		
 		hexLogRunner.convertHexLogToScript(dockerHostIp, inputFile, outputFile, delay, placeholders, mapFile, spatFile,
 				bsmFile, rtcmFile, srmFile, ssmFile, immediate);
+
 
 	}
 
