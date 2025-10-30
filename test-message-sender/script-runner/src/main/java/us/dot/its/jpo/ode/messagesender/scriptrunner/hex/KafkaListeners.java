@@ -3,15 +3,18 @@ package us.dot.its.jpo.ode.messagesender.scriptrunner.hex;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.listener.adapter.ConsumerRecordMetadata;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,12 +27,10 @@ import us.dot.its.jpo.ode.messagesender.scriptrunner.DateJsonMapper;
  * Listens to Kafka ODE JSON topics and constructs a script.
  */
 @Component
+@DependsOn({"kafkaTemplate", "kafkaConfig"})
 @Slf4j
 public class KafkaListeners {
 
-
-
-    final KafkaTemplate<String, String> kafkaTemplate;
     File outputFile;
     long startTime;
     boolean placeholders;
@@ -41,10 +42,13 @@ public class KafkaListeners {
     File ssmFile;
     boolean immediate;
 
+    @Getter
+    private final KafkaListenerEndpointRegistry registry;
+
+
     @Autowired
-    public KafkaListeners(KafkaTemplate<String, String> kafkaTemplate) {
-        log.info("KafkaListeners constructor");
-        this.kafkaTemplate = kafkaTemplate;
+    public KafkaListeners(KafkaListenerEndpointRegistry registry) {
+        this.registry = registry;
     }
 
 
@@ -65,40 +69,48 @@ public class KafkaListeners {
     }
 
 
-
-    @KafkaListener(topics = "topic.OdeBsmJson", groupId = "#{bsmGroup}")
-    void listenBsm(String message) {
-        listen(DSRCmsgID.BSM, message);
+    @KafkaListener(topics = {"topic.OdeSpatJson"}, groupId = "#{spatGroup}",
+            containerFactory = "kafkaListenerContainerFactory")
+    void listenSpat(ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata) {
+        listen(DSRCmsgID.SPAT, record, metadata);
     }
 
-    @KafkaListener(topics = "topic.OdeSpatJson", groupId = "#{spatGroup}")
-    void listenSpat(String message) {
-        listen(DSRCmsgID.SPAT, message);
+    @KafkaListener(topics = {"topic.OdeMapJson"}, groupId = "#{mapGroup}",
+            containerFactory = "kafkaListenerContainerFactory")
+    void listenMap(ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata) {
+        listen(DSRCmsgID.MAP, record, metadata);
     }
 
-    @KafkaListener(topics = "topic.OdeMapJson", groupId = "#{mapGroup}")
-    void listenMap(String message) {
-        listen(DSRCmsgID.MAP, message);
+    @KafkaListener(topics = {"topic.OdeBsmJson"}, groupId = "#{bsmGroup}",
+            containerFactory = "kafkaListenerContainerFactory")
+    void listenBsm(ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata) {
+        listen(DSRCmsgID.BSM, record, metadata);
     }
 
-    @KafkaListener(topics = "topic.OdeRtcmJson", groupId = "#{rtcmGroup}")
-    void listenRtcm(String message) {
-        listen(DSRCmsgID.RTCM, message);
+    @KafkaListener(topics = {"topic.OdeRtcmJson"}, groupId = "#{rtcmGroup}",
+            containerFactory = "kafkaListenerContainerFactory")
+    void listenRtcm(ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata) {
+        listen(DSRCmsgID.RTCM, record, metadata);
     }
 
-    @KafkaListener(topics = "topic.OdeSrmJson", groupId = "#{srmGroup}")
-    void listenSrm(String message) {
-        listen(DSRCmsgID.SRM, message);
+    @KafkaListener(topics = {"topic.OdeSrmJson"}, groupId = "#{srmGroup}",
+            containerFactory = "kafkaListenerContainerFactory")
+    void listenSrm(ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata) {
+        listen(DSRCmsgID.SRM, record, metadata);
     }
 
-    @KafkaListener(topics = "topic.OdeSsmJson", groupId = "#{ssmGroup}")
-    void listenSsm(String message) {
-        listen(DSRCmsgID.SSM, message);
+    @KafkaListener(topics = {"topic.OdeSsmJson"}, groupId = "#{ssmGroup}",
+            containerFactory = "kafkaListenerContainerFactory")
+    void listenSsm(ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata) {
+        listen(DSRCmsgID.SSM, record, metadata);
     }
+
 
     AtomicLong counter = new AtomicLong(1L);
 
-    void listen(DSRCmsgID msgId, String message)  {
+    void listen(DSRCmsgID msgId, ConsumerRecord<String, String> record, ConsumerRecordMetadata metadata)  {
+        log.info("received record msgId: {}, timestamp: {}", msgId, metadata.timestamp());
+        final String message = record.value();
         final long now = System.currentTimeMillis();
 
         final long actualOffsetTime = now - startTime;
@@ -182,21 +194,21 @@ public class KafkaListeners {
             JsonNode metadata = node.at("/metadata");
             ((ObjectNode)metadata).put("odeReceivedAt", ISO_DATE_TIME);
             if (DSRCmsgID.SPAT.equals(msgId)) {
-                JsonNode data = node.at("/payload/data");
-                ((ObjectNode)data).put("timeStamp", MINUTE_OF_YEAR);
-                JsonNode intersectionList = node.at("/payload/data/intersectionStateList/intersectionStatelist");
-                if (intersectionList.isArray()) {
-                    for (JsonNode intersection : intersectionList) {
-                        ObjectNode intersectionObj = (ObjectNode)intersection;
-                        intersectionObj.put("moy", MINUTE_OF_YEAR);
-                        intersectionObj.put("timeStamp", MILLI_OF_MINUTE);
-                    }
-                }
+//                JsonNode data = node.at("/payload/data");
+//                ((ObjectNode)data).put("timeStamp", MINUTE_OF_YEAR);
+//                JsonNode intersectionList = node.at("/payload/data/intersectionStateList/intersectionStatelist");
+//                if (intersectionList.isArray()) {
+//                    for (JsonNode intersection : intersectionList) {
+//                        ObjectNode intersectionObj = (ObjectNode)intersection;
+//                        intersectionObj.put("moy", MINUTE_OF_YEAR);
+//                        intersectionObj.put("timeStamp", MILLI_OF_MINUTE);
+//                    }
+//                }
             } else if (DSRCmsgID.BSM.equals(msgId)) {
-                JsonNode coreData = node.at("/payload/data/coreData");
-                ObjectNode coreDataObj = (ObjectNode) coreData;
-                coreDataObj.put("secMark", MILLI_OF_MINUTE);
-                coreDataObj.put("id", TEMP_ID);
+//                JsonNode coreData = node.at("/payload/data/coreData");
+//                ObjectNode coreDataObj = (ObjectNode) coreData;
+//                coreDataObj.put("secMark", MILLI_OF_MINUTE);
+//                coreDataObj.put("id", TEMP_ID);
             } else if (DSRCmsgID.RTCM.equals(msgId)) {
                 substituteRtcmPlaceholders(node);
             } else if (DSRCmsgID.SRM.equals(msgId)) {

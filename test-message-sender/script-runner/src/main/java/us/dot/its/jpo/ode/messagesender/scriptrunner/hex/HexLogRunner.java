@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
@@ -53,7 +55,19 @@ public class HexLogRunner {
             boolean placeholders, File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile,
             boolean immediate) throws IOException {
         logger.info("Running hex log, inputFile {}, outputFile: {}", inputFile, outputFile);
-        
+
+        KafkaListenerEndpointRegistry registry = listeners.getRegistry();
+        logger.info("Starting kafka listeners");
+        registry.start();
+
+        // Wait for partitions to be assigned to consumers
+        logPartitions(registry);
+        try {
+            Thread.sleep(10000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        logPartitions(registry);
 
 
         // Get the earliest timestamp in the hexScript
@@ -88,6 +102,20 @@ public class HexLogRunner {
             scheduleSends(inputFile, startTime, dockerHostIp, earliestTimestamp);
         }
 
+    }
+
+    private void logPartitions(KafkaListenerEndpointRegistry registry) {
+        for (var container : registry.getAllListenerContainers()) {
+            String listenerId = container.getListenerId();
+            String groupId = container.getGroupId();
+            logger.info("listenerId: {}, groupId: {}", listenerId, groupId);
+            var partitions = container.getAssignedPartitions();
+            if (partitions != null) {
+                for (var partition : partitions) {
+                    logger.info("partition: {}", partition);
+                }
+            }
+        }
     }
 
     private void scheduleSends(File inputFile, long startTime, String dockerHostIp,
