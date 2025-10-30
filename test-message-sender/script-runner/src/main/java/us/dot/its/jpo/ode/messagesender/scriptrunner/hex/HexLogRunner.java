@@ -53,7 +53,7 @@ public class HexLogRunner {
      */
     public void convertHexLogToScript(String dockerHostIp, File inputFile, File outputFile, int delay,
             boolean placeholders, File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile,
-            boolean immediate) throws IOException {
+            boolean immediate, final Long space) throws IOException {
         logger.info("Running hex log, inputFile {}, outputFile: {}", inputFile, outputFile);
 
         KafkaListenerEndpointRegistry registry = listeners.getRegistry();
@@ -91,7 +91,7 @@ public class HexLogRunner {
         // Schedule sending hex messages to ODE
         if (immediate) {
             final long immutableEarliestTimestamp = earliestTimestamp;
-            Runnable allJob = () -> sendAllImmediate(inputFile, startTime, dockerHostIp, immutableEarliestTimestamp);
+            Runnable allJob = () -> sendAllImmediate(inputFile, startTime, dockerHostIp, immutableEarliestTimestamp, space);
 
             // Add a wait task to allow time to receive responses
             scheduler.schedule(allJob, Instant.now().plus(Duration.ofSeconds(1)));
@@ -151,7 +151,7 @@ public class HexLogRunner {
     }
 
     private void sendAllImmediate(File inputFile, long startTime, String dockerHostIp,
-                                  long earliestTimestamp) {
+                                  long earliestTimestamp, Long space) {
         try (MappingIterator<HexLogItem> iterator = mapper.readerFor(HexLogItem.class).readValues(inputFile)) {
             while (iterator.hasNext()) {
                 HexLogItem hexItem = iterator.next();
@@ -171,6 +171,13 @@ public class HexLogRunner {
                 }
 
                 long timeOffset = hexItem.getTimeStamp() - earliestTimestamp;
+                if (space != null) {
+                    try {
+                        Thread.sleep(space);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
                 sendHexItemImmediately(hex, msgId, startTime, timeOffset, dockerHostIp);
             }
         } catch (IOException e) {

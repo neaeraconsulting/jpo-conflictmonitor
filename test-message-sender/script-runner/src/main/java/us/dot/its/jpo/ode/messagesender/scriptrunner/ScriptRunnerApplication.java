@@ -68,7 +68,10 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		"    --ip=<docker host ip>: (Optional) IP address of docker host to send UDP packets to\n" +
 		"                           Uses DOCKER_HOST_IP env variable if not specified.\n\n" +
 		"    --delay=<milliseconds> : (Optional) Delay in milliseconds before starting to send messages.\n\n" +
-		"    --immediate          : In hex log mode, send all messages in order as fast as possible. Don't schedule send based on timestamps\n\n"	;
+		"    --immediate            : In hex log mode, send all messages in order as fast as possible. Don't schedule send based on timestamps\n\n" +
+		"    --space=<milliseconds> : Space between messages with immediate option.\n\n"
+			;
+
 
 		
 	@Autowired
@@ -120,6 +123,7 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		String srmfile = optionNames.contains("srmfile") ? appArgs.getOptionValues("srmfile").get(0) : null;
 		String ssmfile = optionNames.contains("ssmfile") ? appArgs.getOptionValues("ssmfile").get(0) : null;
 		boolean immediate = optionNames.contains("immediate");
+		Long space = optionNames.contains("space") ? Long.parseLong(appArgs.getOptionValues("space").get(0)) : null;
 
 
 		if (ip == null) {
@@ -133,7 +137,7 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		if (missingOptions) exitUsage();
 
 		convertHexLogToScript(ip, infile, outfile, delay, placeholders, mapfile, spatfile, bsmfile, rtcmfile, srmfile,
-				ssmfile, immediate);
+				ssmfile, immediate, space);
 		// Wait to receive responses
 		scheduler.setWaitForTasksToCompleteOnShutdown(true);
 		scheduler.setAwaitTerminationSeconds(60*15);
@@ -165,7 +169,7 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 
 	private void convertHexLogToScript(String dockerHostIp, String inputFilePath, String outputFilePath, int delay,
 			boolean placeholders, String mapFilePath, String spatFilePath, String bsmFilePath, String rtcmFilePath,
-			String srmFilePath, String ssmFilePath, boolean immediate) throws IOException {
+			String srmFilePath, String ssmFilePath, boolean immediate, final Long space) throws IOException {
 		logger.info("Docker Host IP: {}", dockerHostIp);
 		logger.info("Input File Path: {}", inputFilePath);
 		logger.info("Output File Path: {}", outputFilePath);
@@ -194,7 +198,7 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		
 		
 		hexLogRunner.convertHexLogToScript(dockerHostIp, inputFile, outputFile, delay, placeholders, mapFile, spatFile,
-				bsmFile, rtcmFile, srmFile, ssmFile, immediate);
+				bsmFile, rtcmFile, srmFile, ssmFile, immediate, space);
 
 
 	}

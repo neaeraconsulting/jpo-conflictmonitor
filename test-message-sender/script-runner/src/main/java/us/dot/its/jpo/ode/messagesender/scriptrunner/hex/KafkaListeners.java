@@ -117,7 +117,8 @@ public class KafkaListeners {
 
         // if immediate, increment offset time for each message instead of using actual time
         // to preserve ordering in timestamps
-        final long offsetTime = immediate ? counter.getAndIncrement() : actualOffsetTime;
+//        final long offsetTime = immediate ? counter.getAndIncrement() : actualOffsetTime;
+        final long offsetTime = actualOffsetTime;
 
         log.info("{}: Received {} message", offsetTime, msgId);
          
