@@ -41,6 +41,7 @@ public class KafkaListeners {
     File srmFile;
     File ssmFile;
     boolean immediate;
+    Integer accelerate;
 
     @Getter
     private final KafkaListenerEndpointRegistry registry;
@@ -54,7 +55,7 @@ public class KafkaListeners {
 
     public void startSavingToFile(File outputFile, long startTime, boolean placeholders,
             File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile,
-                                  boolean immediate) {
+                                  boolean immediate, Integer accelerate) {
         log.info("KafkaListener: startSavingToFile");
         this.outputFile = outputFile;
         this.startTime = startTime;
@@ -66,6 +67,7 @@ public class KafkaListeners {
         this.srmFile = srmFile;
         this.ssmFile = ssmFile;
         this.immediate = immediate;
+        this.accelerate = accelerate;
     }
 
 
@@ -114,11 +116,7 @@ public class KafkaListeners {
         final long now = System.currentTimeMillis();
 
         final long actualOffsetTime = now - startTime;
-
-        // if immediate, increment offset time for each message instead of using actual time
-        // to preserve ordering in timestamps
-//        final long offsetTime = immediate ? counter.getAndIncrement() : actualOffsetTime;
-        final long offsetTime = actualOffsetTime;
+        final long offsetTime = accelerate != null ? actualOffsetTime/accelerate : actualOffsetTime;
 
         log.info("{}: Received {} message", offsetTime, msgId);
          

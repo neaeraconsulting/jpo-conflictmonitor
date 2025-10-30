@@ -53,7 +53,7 @@ public class HexLogRunner {
      */
     public void convertHexLogToScript(String dockerHostIp, File inputFile, File outputFile, int delay,
             boolean placeholders, File mapFile, File spatFile, File bsmFile, File rtcmFile, File srmFile, File ssmFile,
-            boolean immediate, final Long space) throws IOException {
+            boolean immediate, final Long space, final Integer accelerate, final int keeprunning) throws IOException {
         logger.info("Running hex log, inputFile {}, outputFile: {}", inputFile, outputFile);
 
         KafkaListenerEndpointRegistry registry = listeners.getRegistry();
@@ -86,7 +86,7 @@ public class HexLogRunner {
         logger.info("Start time: {}", startTime);
 
         listeners.startSavingToFile(outputFile, startTime, placeholders, mapFile, spatFile, bsmFile, rtcmFile, srmFile,
-                ssmFile, immediate);
+                ssmFile, immediate, accelerate);
 
         // Schedule sending hex messages to ODE
         if (immediate) {
@@ -96,7 +96,7 @@ public class HexLogRunner {
             // Add a wait task to allow time to receive responses
             scheduler.schedule(allJob, Instant.now().plus(Duration.ofSeconds(1)));
             Runnable waitJob = () -> logger.info("Finished waiting");
-            scheduler.schedule(waitJob, Instant.now().plus(Duration.ofSeconds(61)));
+            scheduler.schedule(waitJob, Instant.now().plus(Duration.ofSeconds(1 + keeprunning)));
 
         } else {
             scheduleSends(inputFile, startTime, dockerHostIp, earliestTimestamp);

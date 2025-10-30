@@ -46,6 +46,15 @@ public class SendMessageJob implements Runnable {
                 case "BSM":
                     kafkaTemplate.send("topic.OdeBsmJson", message);
                     break;
+                case "RTCM":
+                    kafkaTemplate.send("topic.OdeRtcmJson", message);
+                    break;
+                case "SRM":
+                    kafkaTemplate.send("topic.OdeSrmJson", message);
+                    break;
+                case "SSM":
+                    kafkaTemplate.send("topic.OdeSsmJson", message);
+                    break;
                 case "ProcessedMap":
                     kafkaTemplate.send(ProcessedMapTopic, partitionForIntersection(intersectionId, ProcessedMapTopic), getKey(rsuId, intersectionId), message);
                     break;
