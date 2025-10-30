@@ -619,9 +619,11 @@ public class MonitorServiceController {
         final String algorithmName = conflictMonitorProps.getPriorityRequestMetricsAlgorithm();
         final var algorithm = factory.getAlgorithm(algorithmName);
         final var parameters = conflictMonitorProps.getPriorityRequestMetricsParameters();
-        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
         algorithm.setParameters(parameters);
+        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
+        logger.info("Get Common parameters: {}", commonParameters);
         algorithm.setCommonParameters(commonParameters);
+        logger.info("Set Common parameters: {}", algorithm.getCommonParameters());
         return algorithm;
     }
 

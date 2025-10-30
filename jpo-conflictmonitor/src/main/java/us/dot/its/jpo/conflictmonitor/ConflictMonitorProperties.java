@@ -462,6 +462,11 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
    @Autowired
+   public void setCommonMetricsParameters(CommonMetricsParameters commonMetricsParameters) {
+      this.commonMetricsParameters = commonMetricsParameters;
+   }
+
+   @Autowired
    public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
       this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
    }

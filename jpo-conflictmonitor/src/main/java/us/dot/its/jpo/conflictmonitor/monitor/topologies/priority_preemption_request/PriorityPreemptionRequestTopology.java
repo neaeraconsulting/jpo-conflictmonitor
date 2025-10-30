@@ -336,10 +336,13 @@ public class PriorityPreemptionRequestTopology
         if (priorityRequestMetricsStreamsAlgorithm == null) {
             throw new IllegalStateException("PriorityRequestMetricsStreamsAlgorithm has not been set");
         }
-        if (priorityRequestMetricsStreamsAlgorithm.getParameters() != null) {
+        log.info("Algorithm: {}, parameters: {}, commonParameters: {}",
+                priorityRequestMetricsStreamsAlgorithm, priorityRequestMetricsStreamsAlgorithm.getParameters(),
+                priorityRequestMetricsStreamsAlgorithm.getCommonParameters());
+        if (priorityRequestMetricsStreamsAlgorithm.getParameters() == null) {
             throw new IllegalStateException("PriorityRequestMetricsParameters not set");
         }
-        if (priorityRequestMetricsStreamsAlgorithm.getCommonParameters() != null) {
+        if (priorityRequestMetricsStreamsAlgorithm.getCommonParameters() == null) {
             throw new IllegalStateException("Metrics algorithm Common Parameters not set");
         }
     }
