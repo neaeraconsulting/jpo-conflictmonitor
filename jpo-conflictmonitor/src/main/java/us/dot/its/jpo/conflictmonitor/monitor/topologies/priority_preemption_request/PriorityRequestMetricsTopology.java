@@ -2,9 +2,11 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_re
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsBuilder;
@@ -59,11 +61,12 @@ public class PriorityRequestMetricsTopology
         final var interval = commonParameters.getInterval();
         final var intervalUnits = commonParameters.getIntervalUnits();
         final Duration tumblingWindowDuration = Duration.of(interval, intervalUnits);
+        final Duration storeRetentionTime = Duration.of(interval * 2L, intervalUnits);
         final var gracePeriodMs = commonParameters.getGracePeriodMs();
         final Duration gracePeriodDuration = Duration.ofMillis(gracePeriodMs);
         final var eventTopic = parameters.getInputEventTopic();
 
-        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream = builder
+        var metricsStream = builder
                 .stream(eventTopic,
                     Consumed.with(
                                 JsonSerdes.IntersectionVehicleRequestKey(),
@@ -82,7 +85,10 @@ public class PriorityRequestMetricsTopology
                 })
 
                 // Make sure stream remains partitioned by intersection after rekey
-                .repartition(Repartitioned.streamPartitioner(new IntersectionIdPartitioner<>()))
+                .repartition(
+                        Repartitioned
+                                .with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String())
+                                .withStreamPartitioner(new IntersectionIdPartitioner<>()))
 
                 // Group by key for aggregation
                 .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
@@ -108,7 +114,13 @@ public class PriorityRequestMetricsTopology
                                 metrics.setNumberOfGrantedSsmResponses(metrics.getNumberOfGrantedSsmResponses() + 1);
                             }
                             return metrics;
-                        })
+                        },
+                        Named.as("priority-request-metrics-aggregation"),
+                        Materialized.<IntersectionVehicleTypeKey, PriorityRequestMetrics, WindowStore<Bytes, byte[]>>as("priority-request-metrics-aggregation-store")
+                                .withKeySerde(JsonSerdes.IntersectionVehicleTypeKey())
+                                .withValueSerde(JsonSerdes.PriorityRequestMetrics())
+                                .withRetention(storeRetentionTime)
+                )
                 .toStream()
 
                 // Get the time period from the window bounds and rekey to normal key, remove window

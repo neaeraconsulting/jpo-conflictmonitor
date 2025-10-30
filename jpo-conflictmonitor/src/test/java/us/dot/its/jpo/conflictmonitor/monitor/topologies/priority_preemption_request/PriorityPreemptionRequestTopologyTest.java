@@ -189,6 +189,7 @@ public class PriorityPreemptionRequestTopologyTest {
             var eventList = outputEventTopic.readKeyValuesToList();
             assertThat(eventList, hasSize(1));
 
+            // TODO check all properties
         }
     }
 
