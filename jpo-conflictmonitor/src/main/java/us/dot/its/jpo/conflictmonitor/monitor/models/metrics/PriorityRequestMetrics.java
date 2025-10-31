@@ -6,7 +6,6 @@ import lombok.*;
 @Getter
 @Setter
 @EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
 public class PriorityRequestMetrics
         extends Metrics<IntersectionVehicleTypeKey> {
 
@@ -23,7 +22,8 @@ public class PriorityRequestMetrics
      */
     private long numberOfGrantedSsmResponses;
 
-    private double getFulfillmentRate() {
+    public double getFulfillmentRate() {
+        if (numberOfDistinctSrmRequests == 0) return 0;
         return (double) numberOfGrantedSsmResponses / (double)numberOfDistinctSrmRequests;
     }
 

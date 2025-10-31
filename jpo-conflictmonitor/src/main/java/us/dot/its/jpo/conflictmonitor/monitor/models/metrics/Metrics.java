@@ -3,11 +3,12 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.metrics;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Data;
 import lombok.Generated;
+import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
-
-import java.util.Map;
+import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
@@ -22,6 +23,7 @@ import java.util.Map;
 })
 @Data
 @Generated
+@Slf4j
 public abstract class Metrics<TKey> {
 
     protected TKey key;
@@ -32,5 +34,15 @@ public abstract class Metrics<TKey> {
     protected Metrics(String name) {
         this.name = name;
         this.metricGeneratedAt = System.currentTimeMillis();
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return DateJsonMapper.getInstance().writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            log.error("Exception serializing {} Metrics to JSON", name, e);
+        }
+        return "";
     }
 }

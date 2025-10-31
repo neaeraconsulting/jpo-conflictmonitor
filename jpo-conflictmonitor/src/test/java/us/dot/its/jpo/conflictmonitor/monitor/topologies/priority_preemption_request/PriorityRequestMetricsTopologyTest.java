@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_request;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
@@ -22,11 +23,16 @@ import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.REJECTED;
 
+@Slf4j
 public class PriorityRequestMetricsTopologyTest {
 
     private static final int interval = 1;
@@ -45,11 +51,14 @@ public class PriorityRequestMetricsTopologyTest {
     private static final ProcessedBasicVehicleRole vehicleType = ProcessedBasicVehicleRole.PUBLICTRANSPORT;
     private static final ProcessedPriorityRequestType requestType = ProcessedPriorityRequestType.PRIORITYREQUEST;
 
-
     @Test
     public void testPriorityRequestMetrics() {
         Topology topology = createTopology();
-        final Instant startWallClock = Instant.now();
+        // Make sure to start on a time window boundary
+        final Instant startWallClock =
+                ZonedDateTime.of(2025, 1, 1, 0,0,0, 0, ZoneOffset.UTC)
+                        .toInstant();
+
         final long startTimestamp = startWallClock.toEpochMilli();
         try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
             var inputEventTopic = driver.createInputTopic(inputEventTopicName,
@@ -64,7 +73,7 @@ public class PriorityRequestMetricsTopologyTest {
             final int step = 500;
             final Duration stepDuration = Duration.ofMillis(500);
             final int times = 10;
-            for (int offset = 0; offset <= 2*times*step; offset += 2*step) {
+            for (int offset = 0; offset < 2*times*step; offset += 2*step) {
                 final long rejectedTimestamp = startTimestamp + offset;
                 final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
                 inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
@@ -75,8 +84,28 @@ public class PriorityRequestMetricsTopologyTest {
                 driver.advanceWallClockTime(stepDuration);
             }
             Duration intervalDuration = Duration.of(interval, intervalUnits);
+            final long rejectedTimestamp = startTimestamp + intervalDuration.toMillis();
+            final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
+            inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
             driver.advanceWallClockTime(intervalDuration);
-
+            var resultsList = outputMetricsTopic.readKeyValuesToList();
+            for (var result : resultsList) {
+                var key = result.key;
+                var value = result.value;
+                log.info("metric key: {}, value: {}", key, value);
+                assertThat(key.getIntersectionId(), equalTo(intersectionId));
+                assertThat(key.getRegion(), equalTo(roadRegulatorId));
+                assertThat(key.getVehicleType(), equalTo(vehicleType));
+                assertThat(value.getFulfillmentRate(), equalTo(0.5d));
+                assertThat(value.getNumberOfDistinctSrmRequests(), equalTo((long)2*times));
+                assertThat(value.getNumberOfGrantedSsmResponses(), equalTo((long)times));
+                assertThat(value.getKey().getVehicleType(),  equalTo(vehicleType));
+                assertThat(value.getName(), equalTo("PriorityRequest"));
+                assertThat(value.getTimePeriod(), notNullValue());
+                assertThat(value.getTimePeriod().getBeginTimestamp(), equalTo(startWallClock.toEpochMilli()));
+                assertThat(value.getTimePeriod().getEndTimestamp(), equalTo(startWallClock.plus(intervalDuration).toEpochMilli()));
+            }
+            assertThat(resultsList, hasSize(1));
         }
     }
 
