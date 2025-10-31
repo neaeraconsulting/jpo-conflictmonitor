@@ -2,7 +2,9 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.metrics;
 
 import lombok.*;
 
-
+/**
+ * Performance and Operation Metrics: Priority request fulfillment rate.
+ */
 @Getter
 @Setter
 @EqualsAndHashCode(callSuper = true)
@@ -22,8 +24,12 @@ public class PriorityRequestMetrics
      */
     private long numberOfGrantedSsmResponses;
 
-    public double getFulfillmentRate() {
-        if (numberOfDistinctSrmRequests == 0) return 0;
+    /**
+     * @return The priority request fulfillment rate.  Fraction of unique requests fulfilled with a final
+     * status of "granted", or null if there were no requests.
+     */
+    public Double getFulfillmentRate() {
+        if (numberOfDistinctSrmRequests == 0) return null;
         return (double) numberOfGrantedSsmResponses / (double)numberOfDistinctSrmRequests;
     }
 

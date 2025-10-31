@@ -5,6 +5,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
 
+/**
+ * Key to aggregate {@link PriorityRequestMetrics} on.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

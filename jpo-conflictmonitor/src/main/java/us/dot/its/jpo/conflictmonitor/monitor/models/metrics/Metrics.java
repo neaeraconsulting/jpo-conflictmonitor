@@ -10,6 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
+/**
+ * Performance and Operational Metrics.  SDD July 2025, section 3.5.27
+ * @param <TKey> The type of the key to aggregate the metrics on.
+ */
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,

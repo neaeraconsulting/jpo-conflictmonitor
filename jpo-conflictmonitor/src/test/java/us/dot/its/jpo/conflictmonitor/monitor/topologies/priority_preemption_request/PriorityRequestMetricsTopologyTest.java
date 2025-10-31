@@ -84,10 +84,13 @@ public class PriorityRequestMetricsTopologyTest {
                 driver.advanceWallClockTime(stepDuration);
             }
             Duration intervalDuration = Duration.of(interval, intervalUnits);
+
             final long rejectedTimestamp = startTimestamp + intervalDuration.toMillis();
             final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
             inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
+
             driver.advanceWallClockTime(intervalDuration);
+
             var resultsList = outputMetricsTopic.readKeyValuesToList();
             for (var result : resultsList) {
                 var key = result.key;
@@ -96,7 +99,7 @@ public class PriorityRequestMetricsTopologyTest {
                 assertThat(key.getIntersectionId(), equalTo(intersectionId));
                 assertThat(key.getRegion(), equalTo(roadRegulatorId));
                 assertThat(key.getVehicleType(), equalTo(vehicleType));
-                assertThat(value.getFulfillmentRate(), equalTo(0.5d));
+                assertThat(value.getFulfillmentRate(), allOf(notNullValue(), equalTo(0.5d)));
                 assertThat(value.getNumberOfDistinctSrmRequests(), equalTo((long)2*times));
                 assertThat(value.getNumberOfGrantedSsmResponses(), equalTo((long)times));
                 assertThat(value.getKey().getVehicleType(),  equalTo(vehicleType));

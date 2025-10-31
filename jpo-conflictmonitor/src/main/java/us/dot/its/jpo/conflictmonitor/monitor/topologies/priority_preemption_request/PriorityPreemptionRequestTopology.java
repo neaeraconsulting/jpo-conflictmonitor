@@ -2,13 +2,10 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_re
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.TimestampExtractor;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -29,7 +26,6 @@ import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
-import org.apache.kafka.common.utils.Bytes;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -248,7 +244,7 @@ public class PriorityPreemptionRequestTopology
         }
 
         // Check for events from joined stream
-        var eventStream = joinedStream
+        KStream<IntersectionVehicleRequestKey, PriorityPreemptionRequestEvent> eventStream = joinedStream
                 .filter((key, value) -> {
 
                     // Filter null SSMs
