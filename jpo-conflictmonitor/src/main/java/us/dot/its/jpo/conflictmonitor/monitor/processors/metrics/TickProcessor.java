@@ -1,6 +1,8 @@
 package us.dot.its.jpo.conflictmonitor.monitor.processors.metrics;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
@@ -8,6 +10,8 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
+import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -31,19 +35,22 @@ public class TickProcessor<TKey>
     final Duration retentionTime;
     final boolean isDebug;
     final String metricName;
+    final String timestampStoreName;
     KeyValueStore<TKey, Timestamps> timeStore;
 
-    public TickProcessor(CommonMetricsParameters params, boolean isDebug, String metricName) {
+    public TickProcessor(CommonMetricsParameters params, boolean isDebug, String metricName, String timestampStoreName) {
         metricsInterval = Duration.of(params.getInterval(), params.getIntervalUnits());
         punctuateInterval = Duration.of(params.getCheckInterval(), params.getCheckIntervalUnits());
         retentionTime = Duration.of(params.getRetentionTime(), params.getRetentionTimeUnits());
         this.isDebug = isDebug;
         this.metricName = metricName;
+        this.timestampStoreName = timestampStoreName;
     }
 
     @Override
     public void init(ProcessorContext<TKey, String> context) {
         super.init(context);
+        this.timeStore = context.getStateStore(timestampStoreName);
         context.schedule(punctuateInterval, PunctuationType.WALL_CLOCK_TIME,
                 this::punctuate);
     }
@@ -52,8 +59,8 @@ public class TickProcessor<TKey>
     public void process(Record<TKey, String> record) {
         // Keep track of stream time and clock time per key
         TKey key = record.key();
-        long streamTime = record.timestamp();
-        long clockTime = Instant.now().toEpochMilli();
+        long streamTime = context().currentStreamTimeMs();
+        long clockTime = context().currentSystemTimeMs();
         var timestamps = new Timestamps(streamTime, clockTime);
         timeStore.put(key, timestamps);
     }
@@ -114,5 +121,9 @@ public class TickProcessor<TKey>
      * @param clockTime The clock time
      */
     public record Timestamps(long streamTime, long clockTime){
+    }
+
+    public static Serde<Timestamps> TimestampsSerdes() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(Timestamps.class));
     }
 }

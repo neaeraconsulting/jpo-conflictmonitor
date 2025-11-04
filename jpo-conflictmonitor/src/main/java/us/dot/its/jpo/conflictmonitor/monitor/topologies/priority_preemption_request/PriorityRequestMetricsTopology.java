@@ -8,6 +8,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorSupplier;
+import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -69,6 +70,14 @@ public class PriorityRequestMetricsTopology
         final var gracePeriodMs = commonParameters.getGracePeriodMs();
         final Duration gracePeriodDuration = Duration.ofMillis(gracePeriodMs);
         final var eventTopic = parameters.getInputEventTopic();
+        final String timestampStoreName = "priorityRequestEventTimestampStore";
+
+        final var timestampStoreBuilder =
+                Stores.keyValueStoreBuilder(
+                        Stores.persistentKeyValueStore(timestampStoreName),
+                        JsonSerdes.IntersectionVehicleTypeKey(),
+                        TickProcessor.TimestampsSerdes());
+        builder.addStateStore(timestampStoreBuilder);
 
         var metricsStream = builder
                 .stream(eventTopic,
@@ -95,7 +104,9 @@ public class PriorityRequestMetricsTopology
                                 .withStreamPartitioner(new IntersectionIdPartitioner<>()))
 
                 // Insert ticks to keep stream time moving if we stop receiving events
-                .process(() -> new TickProcessor<IntersectionVehicleTypeKey>(commonParameters, parameters.isDebug(), new PriorityRequestMetrics().getName()))
+                .process(() -> new TickProcessor<IntersectionVehicleTypeKey>(commonParameters,
+                                parameters.isDebug(), new PriorityRequestMetrics().getName(), timestampStoreName),
+                        timestampStoreName)
 
                 // Group by key for aggregation
                 .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
