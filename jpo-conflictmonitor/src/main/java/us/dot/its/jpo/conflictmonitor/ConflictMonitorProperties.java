@@ -50,6 +50,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.IntersectionReferenceAlignmentAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalGroupAlignmentAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithmFactory;
@@ -73,10 +74,10 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.Notificati
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionAlgorithmFactory;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionAlgorithmFactory;
@@ -106,6 +107,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatVal
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 
 @Getter
 @Setter
@@ -139,6 +141,8 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private MapMessageCountProgressionAggregationAlgorithmFactory mapMessageCountProgressionAggregationAlgorithmFactory;
    private String spatMessageCountProgressionAggregationAlgorithm;
    private SpatMessageCountProgressionAggregationAlgorithmFactory spatMessageCountProgressionAggregationAlgorithmFactory;
+   private String revocableEnabledLaneAlignmentAggregationAlgorithm;
+   private RevocableEnabledLaneAlignmentAggregationAlgorithmFactory revocableEnabledLaneAlignmentAggregationAlgorithmFactory;
 
    private MapValidationAlgorithmFactory mapValidationAlgorithmFactory;
    private SpatValidationStreamsAlgorithmFactory spatValidationAlgorithmFactory;
@@ -204,10 +208,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private String connectionOfTravelAssessmentAlgorithm;
    private ConnectionOfTravelAssessmentParameters connectionOfTravelAssessmentAlgorithmParameters;
 
-   private RepartitionAlgorithmFactory repartitionAlgorithmFactory;
-   private String repartitionAlgorithm;
-   private RepartitionParameters repartitionAlgorithmParameters;
-
    private MapMessageCountProgressionAlgorithmFactory mapMessageCountProgressionAlgorithmFactory;
    private String mapMessageCountProgressionAlgorithm;
    private MapMessageCountProgressionParameters mapMessageCountProgressionAlgorithmParameters;
@@ -219,6 +219,10 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private BsmMessageCountProgressionAlgorithmFactory bsmMessageCountProgressionAlgorithmFactory;
    private String bsmMessageCountProgressionAlgorithm;
    private BsmMessageCountProgressionParameters bsmMessageCountProgressionAlgorithmParameters;
+
+   private RevocableEnabledLaneAlignmentAlgorithmFactory revocableEnabledLaneAlignmentAlgorithmFactory;
+   private String revocableEnabledLaneAlignmentAlgorithm;
+   private RevocableEnabledLaneAlignmentParameters revocableEnabledLaneAlignmentParameters;
 
    private NotificationAlgorithmFactory notificationAlgorithmFactory;
    private String notificationAlgorithm;
@@ -253,8 +257,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private MessageIngestAlgorithmFactory messageIngestAlgorithmFactory;
    private MessageIngestParameters messageIngestParameters;
 
-
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setAggregationParameters(AggregationParameters aggregationParameters) {
       this.aggregationParameters = aggregationParameters;
@@ -279,6 +282,8 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
               = getAlgorithmFromMap(algorithmMap, MapMessageCountProgressionEventAggregation.class);
       this.spatMessageCountProgressionAggregationAlgorithm
               = getAlgorithmFromMap(algorithmMap, SpatMessageCountProgressionEventAggregation.class);
+      this.revocableEnabledLaneAlignmentAggregationAlgorithm
+              = getAlgorithmFromMap(algorithmMap, RevocableEnabledLaneAlignmentEventAggregation.class);
    }
 
    // Get algorithm name from map of event type to algorithm
@@ -350,6 +355,11 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
    @Autowired
+   public void setRevocableEnabledLaneAlignmentAggregationAlgorithmFactory(RevocableEnabledLaneAlignmentAggregationAlgorithmFactory factory) {
+      this.revocableEnabledLaneAlignmentAggregationAlgorithmFactory = factory;
+   }
+
+   @Autowired
    public void setIntersectionEventAlgorithmFactory(IntersectionEventAlgorithmFactory intersectionEventAlgorithmFactory) {
       this.intersectionEventAlgorithmFactory = intersectionEventAlgorithmFactory;
    }
@@ -371,11 +381,13 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.spatValidationParameters = spatBroadcastRateParameters;
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setMapValidationAlgorithmFactory(MapValidationAlgorithmFactory factory) {
       this.mapValidationAlgorithmFactory = factory;
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSpatValidationAlgorithmFactory(SpatValidationStreamsAlgorithmFactory factory) {
       this.spatValidationAlgorithmFactory = factory;
@@ -398,7 +410,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.mapTimestampDeltaAlgorithm = mapTimestampDeltaParameters.getAlgorithm();
    }
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setMapTimestampDeltaAlgorithmFactory(MapTimestampDeltaAlgorithmFactory factory) {
       this.mapTimestampDeltaAlgorithmFactory = factory;
@@ -411,14 +423,24 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.spatTimestampDeltaAlgorithm = spatTimestampDeltaParameters.getAlgorithm();
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSpatTimestampDeltaAlgorithmFactory(SpatTimestampDeltaAlgorithmFactory factory) {
       this.spatTimestampDeltaAlgorithmFactory = factory;
    }
 
+   @Autowired
+   public void setRevocableEnabledLaneAlignmentParameters(RevocableEnabledLaneAlignmentParameters revocableEnabledLaneAlignmentParameters) {
+      this.revocableEnabledLaneAlignmentParameters = revocableEnabledLaneAlignmentParameters;
+      this.revocableEnabledLaneAlignmentAlgorithm = revocableEnabledLaneAlignmentParameters.getAlgorithm();
+   }
 
+   @Autowired
+   public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
+      this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
+   }
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setLaneDirectionOfTravelAlgorithmFactory(
          LaneDirectionOfTravelAlgorithmFactory laneDirectionOfTravelAlgorithmFactory) {
@@ -440,7 +462,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setConnectionOfTravelAlgorithmFactory(
          ConnectionOfTravelAlgorithmFactory connectionOfTravelAlgorithmFactory) {
@@ -462,7 +484,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSignalStateVehicleCrossesAlgorithmFactory(
          StopLinePassageAlgorithmFactory signalStateVehicleCrossesAlgorithmFactory) {
@@ -485,7 +507,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSignalStateVehicleStopsAlgorithmFactory(
          StopLineStopAlgorithmFactory signalStateVehicleStopsAlgorithmFactory) {
@@ -507,7 +529,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setMapSpatMessageAssessmentAlgorithmFactory(
          MapSpatMessageAssessmentAlgorithmFactory mapSpatMessageAssessmentAlgorithmFactory) {
@@ -529,7 +551,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
 
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSpatTimeChangeDetailsAlgorithmFactory(
          SpatTimeChangeDetailsAlgorithmFactory spatTimeChangeDetailsAlgorithmFactory) {
@@ -557,6 +579,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.spatTimeChangeDetailsParameters = spatTimeChangeDetailsParameters;
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSpatTransitionAlgorithmFactory(EventStateProgressionAlgorithmFactory spatTransitionAlgorithmFactory) {
       this.spatTransitionAlgorithmFactory = spatTransitionAlgorithmFactory;
@@ -572,7 +595,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.spatTransitionParameters = spatTransitionParameters;
    }
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setMapTimeChangeDetailsAlgorithmFactory(
          MapTimeChangeDetailsAlgorithmFactory mapTimeChangeDetailsAlgorithmFactory) {
@@ -595,7 +618,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
 
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setStopLinePassageAssessmentAlgorithmFactory(
          StopLinePassageAssessmentAlgorithmFactory stopLinePassageAssessmentAlgorithmFactory) {
@@ -617,6 +640,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.stopLinePassageAssessmentAlgorithmParameters = stopLinePassageAssessmentAlgorithmParameters;
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setStopLineStopAssessmentAlgorithmFactory(
          StopLineStopAssessmentAlgorithmFactory stopLineStopAssessmentAlgorithmFactory) {
@@ -639,7 +663,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setLaneDirectionOfTravelAssessmentAlgorithmFactory(
          LaneDirectionOfTravelAssessmentAlgorithmFactory laneDirectionfOfTravelAssessmentAlgorithmFactory) {
@@ -662,7 +686,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setConnectionOfTravelAssessmentAlgorithmFactory(
          ConnectionOfTravelAssessmentAlgorithmFactory connectionOfTravelAssessmentAlgorithmFactory) {
@@ -684,28 +708,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.connectionOfTravelAssessmentAlgorithmParameters = connectionOfTravelAssessmentAlgorithmParameters;
    }
 
-
-
-   @Autowired
-   public void setRepartitionAlgorithmFactory(RepartitionAlgorithmFactory repartitionAlgorithmFactory) {
-      this.repartitionAlgorithmFactory = repartitionAlgorithmFactory;
-   }
-
- 
-
-   @Value("${repartition.algorithm}")
-   public void setRepartitionAlgorithm(String repartitionAlgorithm) {
-      this.repartitionAlgorithm = repartitionAlgorithm;
-   }
-
-
-
-   @Autowired
-   public void setRepartitionAlgorithmParameters(RepartitionParameters repartitionAlgorithmParameters) {
-      this.repartitionAlgorithmParameters = repartitionAlgorithmParameters;
-   }
-
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setMapMessageCountProgressionAlgorithmFactory(MapMessageCountProgressionAlgorithmFactory mapMessageCountProgressionAlgorithmFactory) {
       this.mapMessageCountProgressionAlgorithmFactory = mapMessageCountProgressionAlgorithmFactory;
@@ -722,7 +725,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setSpatMessageCountProgressionAlgorithmFactory(SpatMessageCountProgressionAlgorithmFactory spatMessageCountProgressionAlgorithmFactory) {
       this.spatMessageCountProgressionAlgorithmFactory = spatMessageCountProgressionAlgorithmFactory;
@@ -738,7 +741,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.spatMessageCountProgressionAlgorithmParameters = spatMessageCountProgressionAlgorithmParameters;
    }
 
-
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setBsmMessageCountProgressionAlgorithmFactory(BsmMessageCountProgressionAlgorithmFactory bsmMessageCountProgressionAlgorithmFactory) {
       this.bsmMessageCountProgressionAlgorithmFactory = bsmMessageCountProgressionAlgorithmFactory;
@@ -759,9 +762,9 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       return notificationAlgorithmFactory;
    }
 
-   
-   
 
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setNotificationAlgorithmFactory(NotificationAlgorithmFactory notificationAlgorithmFactory) {
       this.notificationAlgorithmFactory = notificationAlgorithmFactory;
@@ -791,6 +794,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.eventAlgorithm = eventParameters.getAlgorithm();
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setEventAlgorithmFactory(EventAlgorithmFactory factory) {
       this.eventAlgorithmFactory = factory;
@@ -800,7 +804,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
 		return confluentCloudEnabled;
 	}
 
-   
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setBsmEventAlgorithmFactory(BsmEventAlgorithmFactory bsmEventAlgorithmFactory) {
       this.bsmEventAlgorithmFactory = bsmEventAlgorithmFactory;
@@ -811,6 +815,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.bsmEventParameters = bsmEventParameters;
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setMessageIngestAlgorithmFactory(MessageIngestAlgorithmFactory messageIngestAlgorithmFactory) {
       this.messageIngestAlgorithmFactory = messageIngestAlgorithmFactory;
@@ -839,8 +844,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    
    @Setter(AccessLevel.NONE)
    private String kafkaBrokers = null;
-
-   private static final String DEFAULT_KAFKA_PORT = "9092";
    
    @Setter(AccessLevel.NONE)
    private String hostId;

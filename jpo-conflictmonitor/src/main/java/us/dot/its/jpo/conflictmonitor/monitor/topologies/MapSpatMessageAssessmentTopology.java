@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
@@ -14,6 +15,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.*;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.Intersection.Intersection;
 import us.dot.its.jpo.conflictmonitor.monitor.models.Intersection.LaneConnection;
 import us.dot.its.jpo.conflictmonitor.monitor.models.RegulatorIntersectionId;
@@ -30,15 +33,18 @@ import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.connectinglanes.ConnectingLanesFeature;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.ProcessedMap;
-import us.dot.its.jpo.geojsonconverter.pojos.spat.MovementEvent;
-import us.dot.its.jpo.geojsonconverter.pojos.spat.MovementState;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedMovementEvent;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedMovementPhaseState;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedMovementState;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
-import us.dot.its.jpo.ode.plugin.j2735.J2735MovementPhaseState;
+
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentConstants.DEFAULT_MAP_SPAT_MESSAGE_ASSESSMENT_ALGORITHM;
 
+@Slf4j
 @Component(DEFAULT_MAP_SPAT_MESSAGE_ASSESSMENT_ALGORITHM)
 public class MapSpatMessageAssessmentTopology
         extends BaseStreamsTopology<MapSpatMessageAssessmentParameters>
@@ -49,16 +55,17 @@ public class MapSpatMessageAssessmentTopology
     private IntersectionReferenceAlignmentAggregationStreamsAlgorithm intersectionReferenceAlignmentAggregationAlgorithm;
     private SignalGroupAlignmentAggregationStreamsAlgorithm signalGroupAlignmentAggregationAlgorithm;
     private SignalStateConflictAggregationStreamsAlgorithm signalStateConflictAggregationAlgorithm;
+    private RevocableEnabledLaneAlignmentStreamsAlgorithm revocableEnabledLaneAlignmentAlgorithm;
 
     @Override
     protected Logger getLogger() {
         return logger;
     }
 
-    private J2735MovementPhaseState getSpatEventStateBySignalGroup(ProcessedSpat spat, int signalGroup) {
-        for (MovementState state : spat.getStates()) {
+    private ProcessedMovementPhaseState getSpatEventStateBySignalGroup(ProcessedSpat spat, int signalGroup) {
+        for (ProcessedMovementState state : spat.getStates()) {
             if (state.getSignalGroup() == signalGroup) {
-                List<MovementEvent> movementEvents = state.getStateTimeSpeed();
+                List<ProcessedMovementEvent> movementEvents = state.getStateTimeSpeed();
                 if (!movementEvents.isEmpty()) {
                     return movementEvents.getFirst().getEventState();
                 }
@@ -71,18 +78,18 @@ public class MapSpatMessageAssessmentTopology
 //        return intersectionID + "_" + ingressOne + "_" + ingressTwo + "_" + egressOne + "_" + egressTwo;
 //    }
 
-    private boolean doStatesConflict(J2735MovementPhaseState a, J2735MovementPhaseState b) {
-        return a.equals(J2735MovementPhaseState.PROTECTED_CLEARANCE)
-                        && !b.equals(J2735MovementPhaseState.STOP_AND_REMAIN)
+    private boolean doStatesConflict(ProcessedMovementPhaseState a, ProcessedMovementPhaseState b) {
+        return a.equals(ProcessedMovementPhaseState.PROTECTED_CLEARANCE)
+                        && !b.equals(ProcessedMovementPhaseState.STOP_AND_REMAIN)
                 ||
-                a.equals(J2735MovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
-                        && !b.equals(J2735MovementPhaseState.STOP_AND_REMAIN)
+                a.equals(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
+                        && !b.equals(ProcessedMovementPhaseState.STOP_AND_REMAIN)
                 ||
-                b.equals(J2735MovementPhaseState.PROTECTED_CLEARANCE)
-                        && !a.equals(J2735MovementPhaseState.STOP_AND_REMAIN)
+                b.equals(ProcessedMovementPhaseState.PROTECTED_CLEARANCE)
+                        && !a.equals(ProcessedMovementPhaseState.STOP_AND_REMAIN)
                 ||
-                b.equals(J2735MovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
-                        && !a.equals(J2735MovementPhaseState.STOP_AND_REMAIN);
+                b.equals(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
+                        && !a.equals(ProcessedMovementPhaseState.STOP_AND_REMAIN);
     }
 
     public Topology buildTopology() {
@@ -109,9 +116,6 @@ public class MapSpatMessageAssessmentTopology
                 Materialized.with(
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedMapGeoJson()));
-
-
-
 
         // For intersection reference alignment, re-key to RSU-only key to test if intersection ID and region match between
         // MAP and SPaTs from the same RSU
@@ -210,10 +214,8 @@ public class MapSpatMessageAssessmentTopology
             buildIntersectionReferenceAlignmentNotificationTopology(intersectionReferenceAlignmentEventStream);
         }
 
-
-
-        // Join Spats with MAP KTable, RsuIntersectionKey for the Signal Group Alignment check which presume
-        // that the Spat and Map are from the same intersection
+        // Join Spats with MAP KTable on RsuIntersectionKey for the Signal Group Alignment check, and Revocable
+        // Enabled Lane Alignment check, which presume that the Spat and Map are from the same intersection
         KStream<RsuIntersectionKey, SpatMap> spatJoinedMap = processedSpatStream
                 .join(mapKTable, (spat, map) -> new SpatMap(spat, map),
                         Joined.<RsuIntersectionKey, ProcessedSpat, ProcessedMap<LineString>>as("spat-maps-joined")
@@ -244,7 +246,7 @@ public class MapSpatMessageAssessmentTopology
                     Set<Integer> mapSignalGroups = new HashSet<>();
                     Set<Integer> spatSignalGroups = new HashSet<>();
 
-                    for (MovementState state : value.getSpat().getStates()) {
+                    for (ProcessedMovementState state : value.getSpat().getStates()) {
                         spatSignalGroups.add(state.getSignalGroup());
                     }
 
@@ -301,9 +303,29 @@ public class MapSpatMessageAssessmentTopology
                     }
 
                     Intersection intersection = Intersection.fromProcessedMap(map);
-                    ArrayList<LaneConnection> connections = intersection.getLaneConnections();
+                    ArrayList<LaneConnection> unfilteredConnections = intersection.getLaneConnections();
 
-
+                    // Filter out lane connections involving disabled revocable lanes which should be ignored by
+                    // the Signal State Conflict check.
+                    Set<Integer> revocableLaneIds = intersection.getRevocableLaneIds();
+                    Set<Integer> enabledLanes = new HashSet<>(spat.getEnabledLanes());
+                    var connections = new ArrayList<LaneConnection>();
+                    for (LaneConnection connection : unfilteredConnections) {
+                        int ingressId = connection.getIngressLane().getId();
+                        int egressId = connection.getEgressLane().getId();
+                        boolean ingressIsRevocable = revocableLaneIds != null && revocableLaneIds.contains(ingressId);
+                        boolean egressIsRevocable = revocableLaneIds != null && revocableLaneIds.contains(egressId);
+                        boolean ingressNotEnabled = !enabledLanes.contains(ingressId);
+                        boolean egressNotEnabled = !enabledLanes.contains(egressId);
+                        boolean ingressDisabled = ingressIsRevocable && ingressNotEnabled;
+                        boolean egressDisabled = egressIsRevocable && egressNotEnabled;
+                        if (ingressDisabled || egressDisabled) {
+                            log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are revocable and " +
+                                    "disabled. Not including them in Signal State Conflict check", key, ingressId, egressId);
+                        } else {
+                            connections.add(connection);
+                        }
+                    }
 
                     
                     for (int i = 0; i < connections.size(); i++) {
@@ -324,9 +346,9 @@ public class MapSpatMessageAssessmentTopology
                             
                             if (firstConnection.crosses(secondConnection) && firstConnection.getIngressLane() != secondConnection.getIngressLane()) {
 
-                                J2735MovementPhaseState firstState = getSpatEventStateBySignalGroup(spat,
+                                ProcessedMovementPhaseState firstState = getSpatEventStateBySignalGroup(spat,
                                         firstConnection.getSignalGroup());
-                                J2735MovementPhaseState secondState = getSpatEventStateBySignalGroup(spat,
+                                ProcessedMovementPhaseState secondState = getSpatEventStateBySignalGroup(spat,
                                         secondConnection.getSignalGroup());
 
                                 if (firstState == null || secondState == null) {
@@ -345,8 +367,8 @@ public class MapSpatMessageAssessmentTopology
                                     event.setSecondConflictingSignalState(secondState);
                                     event.setSource(key.toString());
 
-                                    if (firstState.equals(J2735MovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
-                                            || firstState.equals(J2735MovementPhaseState.PROTECTED_CLEARANCE)) {
+                                    if (firstState.equals(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
+                                            || firstState.equals(ProcessedMovementPhaseState.PROTECTED_CLEARANCE)) {
                                         event.setConflictType(secondState);
                                     } else {
                                         event.setConflictType(firstState);
@@ -361,6 +383,9 @@ public class MapSpatMessageAssessmentTopology
 
                     return events;
                 });
+
+        // Revocable Enabled Lane Alignment Algorithm uses the joined Spat/Map stream
+        revocableEnabledLaneAlignmentAlgorithm.buildTopology(builder, spatJoinedMap);
 
         if (parameters.isAggregateSignalStateConflictEvents()) {
             // Aggregate Signal State Conflict events
@@ -645,4 +670,15 @@ public class MapSpatMessageAssessmentTopology
             throw new IllegalArgumentException("Signal State Conflict Aggregation algorithm must be a Streams algorithm");
         }
     }
+
+    @Override
+    public void setRevocableEnabledLaneAlignmentAlgorithm(RevocableEnabledLaneAlignmentAlgorithm revocableEnabledLaneAlignmentAlgorithm) {
+        // Enforce the algorithm being a Streams algorithm
+        if (revocableEnabledLaneAlignmentAlgorithm instanceof RevocableEnabledLaneAlignmentStreamsAlgorithm streamsAlgorithm) {
+            this.revocableEnabledLaneAlignmentAlgorithm = streamsAlgorithm;
+        } else {
+            throw new IllegalArgumentException("Revocable Enabled Lane Alignment Algorithm must be a Streams algorithm");
+        }
+    }
+
 }
