@@ -77,7 +77,7 @@ public class TickProcessor<TKey>
 
     private void punctuate(final long punctuateClockTime) {
         if (isDebug) {
-            log.debug("punctuate at clock time {} for {}", punctuateClockTime, metricName);
+            log.trace("punctuate at clock time {} for {}", punctuateClockTime, metricName);
         }
         var keysToDelete = new HashSet<TKey>();
         try (var storeIterator = timeStore.all()) {

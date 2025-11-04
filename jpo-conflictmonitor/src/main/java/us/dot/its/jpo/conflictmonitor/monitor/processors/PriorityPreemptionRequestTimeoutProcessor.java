@@ -94,7 +94,7 @@ public class PriorityPreemptionRequestTimeoutProcessor
 
     private void punctuate(long timestamp) {
         if (isDebug) {
-            log.debug("punctuate {}", timestamp);
+            log.trace("punctuate {}", timestamp);
         }
         var keysToDelete = new ArrayList<IntersectionVehicleRequestKey>();
         try (var storeInterator = joinedStore.all()) {
