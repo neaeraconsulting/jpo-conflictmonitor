@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.processors.metrics;
 
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -53,6 +54,10 @@ public class TickProcessor<TKey>
         this.timeStore = context.getStateStore(timestampStoreName);
         context.schedule(punctuateInterval, PunctuationType.WALL_CLOCK_TIME,
                 this::punctuate);
+        if (isDebug) {
+            log.info("Initialized punctuate processor with timestamp store name {}, punctuate interval {}",
+                    timestampStoreName, punctuateInterval);
+        }
     }
 
     @Override
@@ -63,11 +68,16 @@ public class TickProcessor<TKey>
         long clockTime = context().currentSystemTimeMs();
         var timestamps = new Timestamps(streamTime, clockTime);
         timeStore.put(key, timestamps);
+        if (isDebug) {
+            log.debug("Processed record key: {}, streamTime: {}, clockTime: {}", key, streamTime, clockTime);
+        }
+        // Forward it on
+        context().forward(record);
     }
 
     private void punctuate(final long punctuateClockTime) {
         if (isDebug) {
-            log.debug("punctuate at {} for {}", punctuateClockTime, metricName);
+            log.debug("punctuate at clock time {} for {}", punctuateClockTime, metricName);
         }
         var keysToDelete = new HashSet<TKey>();
         try (var storeIterator = timeStore.all()) {
@@ -78,9 +88,19 @@ public class TickProcessor<TKey>
                 final long streamTime = timestamps.streamTime();
                 final long clockTime = timestamps.clockTime();
 
+
                 // Punctuate timestamp is clock time
                 final long millisSinceLastMessage = punctuateClockTime - clockTime;
                 final Duration timeSinceLastMessage = Duration.ofMillis(millisSinceLastMessage);
+
+                if (isDebug) {
+                    log.debug("checking last message time for key: {}. punctuate clock time: {},  " +
+                                    "last message clock time: {}, last message stream time {}, " +
+                                    "time since last message: {}, metrics interval: {}, retention time: {}",
+                            key, punctuateClockTime, clockTime, streamTime, timeSinceLastMessage.toMillis(),
+                            metricsInterval.toMillis(), retentionTime.toMillis());
+                }
+
                 if (timeSinceLastMessage.isNegative()) {
                     log.error("For key {}, punctuate time, {}, is before clock time of latest message, {}.  " +
                                     "Something is wrong with the clock.  Deleting this key/value",
@@ -97,7 +117,7 @@ public class TickProcessor<TKey>
                     final var record = new Record<>(key, TICK, newStreamTime);
                     context().forward(record);
                     if (isDebug) {
-                        log.info("emitted tick: key: {}, value {}, timestamp {}",
+                        log.info("emitted tick: key: {}, value {}, new stream time: {}",
                                 record.key(), record.value(), record.timestamp());
                     }
                 }
@@ -111,6 +131,9 @@ public class TickProcessor<TKey>
         // Clean up
         for (TKey key : keysToDelete) {
             timeStore.delete(key);
+            if (isDebug) {
+                log.info("deleted key: {}", key);
+            }
         }
 
     }

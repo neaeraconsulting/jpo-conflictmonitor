@@ -130,6 +130,9 @@ public class PriorityRequestMetricsTopology
 
                             // Don't count ticks in the metric
                             if (TickProcessor.TICK.equals(status)) {
+                                if (parameters.isDebug()) {
+                                    log.debug("Ignore TICK in metric aggregation: {}", metrics);
+                                }
                                 return metrics;
                             }
 
@@ -139,6 +142,10 @@ public class PriorityRequestMetricsTopology
                             // Granted goes in numerator
                             if (GRANTED.getName().equals(status)) {
                                 metrics.setNumberOfGrantedSsmResponses(metrics.getNumberOfGrantedSsmResponses() + 1);
+                            }
+
+                            if (parameters.isDebug()) {
+                                log.debug("Updated aggregated metrics: {}", metrics);
                             }
 
                             return metrics;
@@ -152,7 +159,13 @@ public class PriorityRequestMetricsTopology
                 .toStream()
 
                 // Filter out empty events, could happen if only ticks received in a window
-                .filter((key, metrics) -> metrics.getNumberOfDistinctSrmRequests() > 0)
+                .filter((key, metrics) -> {
+                    boolean anyRequests = metrics.getNumberOfDistinctSrmRequests() > 0;
+                    if (parameters.isDebug() && !anyRequests) {
+                        log.info("Metrics have no events, maybe a windowing artifact, discarding metrics: {}", metrics);
+                    }
+                    return anyRequests;
+                })
 
                 // Get the time period from the window bounds and rekey to normal key, remove window
                 .map((windowedKey, value) -> {

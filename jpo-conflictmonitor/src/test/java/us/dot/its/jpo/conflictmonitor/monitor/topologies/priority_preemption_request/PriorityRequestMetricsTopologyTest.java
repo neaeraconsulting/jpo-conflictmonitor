@@ -88,7 +88,7 @@ public class PriorityRequestMetricsTopologyTest {
                 driver.advanceWallClockTime(stepDuration);
             }
 
-            // Advance one full interval in steps of checkInterval
+            // Advance clock time at least one full interval in steps of checkInterval to get close aggregation window
             Duration intervalDuration = Duration.of(interval, intervalUnits);
             Duration checkIntervalDuration = Duration.of(checkInterval, checkIntervalUnits);
             Duration advancedDuration = Duration.ofMillis(0L);
