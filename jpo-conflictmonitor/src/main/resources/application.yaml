@@ -641,6 +641,10 @@ metrics:
     interval: 1
     interval-units: MINUTES
     grace-period-ms: 5000
+    check-interval: 20
+    check-interval-units: SECONDS
+    retention-time: 3
+    retention-time-units: MINUTES
   priority.request:
     algorithm: defaultPriorityRequestMetricsAlgorithm
     debug: true

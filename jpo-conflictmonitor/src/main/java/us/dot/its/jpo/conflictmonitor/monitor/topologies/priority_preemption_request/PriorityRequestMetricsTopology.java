@@ -94,9 +94,8 @@ public class PriorityRequestMetricsTopology
                                 .with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String())
                                 .withStreamPartitioner(new IntersectionIdPartitioner<>()))
 
-                .process(() -> new TickProcessor<IntersectionVehicleTypeKey>(Duration.ofMinutes(1L), parameters.isDebug(), new PriorityRequestMetrics().getName()))
-
-                // () -> new TickProcessor<IntersectionVehicleTypeKey, PriorityPreemptionRequestEvent>(Duration.ofMinutes(1L))
+                // Insert ticks to keep stream time moving if we stop receiving events
+                .process(() -> new TickProcessor<IntersectionVehicleTypeKey>(commonParameters, parameters.isDebug(), new PriorityRequestMetrics().getName()))
 
                 // Group by key for aggregation
                 .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
@@ -117,10 +116,20 @@ public class PriorityRequestMetricsTopology
                         // Aggregator
                         (key, status, metrics) -> {
                             metrics.setKey(key);
+
+                            // Don't count ticks in the metric
+                            if (TickProcessor.TICK.equals(status)) {
+                                return metrics;
+                            }
+
+                            // Anything other than a tick counts towards the total
                             metrics.setNumberOfDistinctSrmRequests(metrics.getNumberOfDistinctSrmRequests() + 1);
+
+                            // Granted goes in numerator
                             if (GRANTED.getName().equals(status)) {
                                 metrics.setNumberOfGrantedSsmResponses(metrics.getNumberOfGrantedSsmResponses() + 1);
                             }
+
                             return metrics;
                         },
                         Named.as("priority-request-metrics-aggregation"),
@@ -130,6 +139,9 @@ public class PriorityRequestMetricsTopology
                                 .withRetention(storeRetentionTime)
                 )
                 .toStream()
+
+                // Filter out empty events, could happen if only ticks received in a window
+                .filter((key, metrics) -> metrics.getNumberOfDistinctSrmRequests() > 0)
 
                 // Get the time period from the window bounds and rekey to normal key, remove window
                 .map((windowedKey, value) -> {
