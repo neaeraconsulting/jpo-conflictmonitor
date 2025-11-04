@@ -38,6 +38,10 @@ public class PriorityRequestMetricsTopologyTest {
     private static final int interval = 1;
     private static final ChronoUnit intervalUnits = ChronoUnit.MINUTES;
     private static final long gracePeriodMs = 0;
+    private static final int checkInterval = 20;
+    private static final ChronoUnit checkIntervalUnits = ChronoUnit.SECONDS;
+    private static final int retentionTime = 3;
+    private static final ChronoUnit retentionTimeUnits = ChronoUnit.MINUTES;
 
     private static final String inputEventTopicName = "topic.CmPriorityPreemptionRequestEvent";
     private static final String outputMetricsTopicName = "topic.CmPriorityRequestMetrics";
@@ -83,14 +87,15 @@ public class PriorityRequestMetricsTopologyTest {
                 inputEventTopic.pipeInput(eventKey, grantedEvent, grantedTimestamp);
                 driver.advanceWallClockTime(stepDuration);
             }
+
+            // Advance one full interval in steps of checkInterval
             Duration intervalDuration = Duration.of(interval, intervalUnits);
-
-            // TODO remove
-//            final long rejectedTimestamp = startTimestamp + intervalDuration.toMillis();
-//            final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
-//            inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
-
-            driver.advanceWallClockTime(intervalDuration);
+            Duration checkIntervalDuration = Duration.of(checkInterval, checkIntervalUnits);
+            Duration advancedDuration = Duration.ofMillis(0L);
+            while (advancedDuration.compareTo(intervalDuration) <= 0) {
+                driver.advanceWallClockTime(checkIntervalDuration);
+                advancedDuration = advancedDuration.plus(checkIntervalDuration);
+            }
 
             var resultsList = outputMetricsTopic.readKeyValuesToList();
             for (var result : resultsList) {
@@ -115,13 +120,7 @@ public class PriorityRequestMetricsTopologyTest {
 
     private Topology createTopology() {
         var parameters = getParameters();
-        parameters.setDebug(true);
-        parameters.setInputEventTopic(inputEventTopicName);
-        parameters.setOutputMetricTopic(outputMetricsTopicName);
         var commonParameters = getCommonParameters();
-        commonParameters.setInterval(interval);
-        commonParameters.setIntervalUnits(intervalUnits);
-        commonParameters.setGracePeriodMs(gracePeriodMs);
         var metricsTopology = new PriorityRequestMetricsTopology();
         metricsTopology.setParameters(parameters);
         metricsTopology.setCommonParameters(commonParameters);
@@ -167,11 +166,24 @@ public class PriorityRequestMetricsTopologyTest {
     }
 
     private PriorityRequestMetricsParameters getParameters() {
-        return new PriorityRequestMetricsParameters();
+        final var params = new PriorityRequestMetricsParameters();
+        params.setDebug(true);
+        params.setAlgorithm("defaultPriorityRequestMetricsAlgorithm");
+        params.setInputEventTopic(inputEventTopicName);
+        params.setOutputMetricTopic(outputMetricsTopicName);
+        return params;
     }
 
     private CommonMetricsParameters getCommonParameters() {
-        return new CommonMetricsParameters();
+        final var params = new CommonMetricsParameters();
+        params.setInterval(interval);
+        params.setIntervalUnits(intervalUnits);
+        params.setGracePeriodMs(gracePeriodMs);
+        params.setCheckInterval(checkInterval);
+        params.setCheckIntervalUnits(checkIntervalUnits);
+        params.setRetentionTime(retentionTime);
+        params.setRetentionTimeUnits(retentionTimeUnits);
+        return params;
     }
 }
 
