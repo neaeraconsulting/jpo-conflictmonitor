@@ -85,9 +85,10 @@ public class PriorityRequestMetricsTopologyTest {
             }
             Duration intervalDuration = Duration.of(interval, intervalUnits);
 
-            final long rejectedTimestamp = startTimestamp + intervalDuration.toMillis();
-            final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
-            inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
+            // TODO remove
+//            final long rejectedTimestamp = startTimestamp + intervalDuration.toMillis();
+//            final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
+//            inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
 
             driver.advanceWallClockTime(intervalDuration);
 

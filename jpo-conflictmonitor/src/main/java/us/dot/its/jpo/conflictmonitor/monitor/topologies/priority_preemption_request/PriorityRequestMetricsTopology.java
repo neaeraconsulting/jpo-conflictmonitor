@@ -6,6 +6,8 @@ import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -19,6 +21,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.TimestampExtractors.
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 
@@ -90,6 +94,10 @@ public class PriorityRequestMetricsTopology
                                 .with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String())
                                 .withStreamPartitioner(new IntersectionIdPartitioner<>()))
 
+                .process(() -> new TickProcessor<IntersectionVehicleTypeKey>(Duration.ofMinutes(1L), parameters.isDebug(), new PriorityRequestMetrics().getName()))
+
+                // () -> new TickProcessor<IntersectionVehicleTypeKey, PriorityPreemptionRequestEvent>(Duration.ofMinutes(1L))
+
                 // Group by key for aggregation
                 .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
 
@@ -133,6 +141,10 @@ public class PriorityRequestMetricsTopology
                     value.setTimePeriod(period);
                     return new KeyValue<>(key, value);
                 });
+
+        if (this.getParameters().isDebug()) {
+            metricsStream.process(() -> new DiagnosticProcessor<>("Produced PriorityRequestMetrics", log));
+        }
 
         return metricsStream;
     }
