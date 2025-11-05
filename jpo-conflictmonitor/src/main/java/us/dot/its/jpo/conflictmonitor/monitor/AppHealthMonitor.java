@@ -341,21 +341,7 @@ public class AppHealthMonitor {
        
     }
 
-    /**
-     * Returns the status of Kafka Connect connectors.
-     *
-     * @return response entity containing the connectors' status as a JSON string
-     */
-    @GetMapping(value = "/connectors")
-    public @ResponseBody ResponseEntity<String> connectors() {
-        final var restTemplate = new RestTemplate();
-        final var url = String.format("%s/connectors?expand=status", 
-                conflictMonitorProperties.getConnectURL());
-        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-        return response;
-    }
-
-    /**
+    /*
      * Returns all items in the spatial index (quadtree).
      *
      * @return response entity containing a list of all spatial index items
