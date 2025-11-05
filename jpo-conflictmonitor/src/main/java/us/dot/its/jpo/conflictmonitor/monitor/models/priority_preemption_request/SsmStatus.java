@@ -19,12 +19,12 @@ public class SsmStatus {
     public SsmStatus() {}
 
     public SsmStatus(Integer intersectionId, Integer region, long timestamp, ProcessedSignalStatus signalStatus) {
-        this.intersectionId = intersectionId;
-        this.region = region;
+        this.intersectionId = intersectionId != null ? intersectionId : -1;
+        this.region = region != null ? region : -1;
         this.timestamp = timestamp;
         vehicleId = signalStatus.getVehicleID();
         vehicleType = signalStatus.getRequesterRole();
-        requestId = signalStatus.getRequestID();
+        requestId = signalStatus.getRequestID() != null ? signalStatus.getRequestID() : -1;
         inboundLaneId = signalStatus.getInboundOnLaneID();
         inboundApproachId = signalStatus.getInboundOnApproachID();
         inboundLaneConnectionId = signalStatus.getInboundOnLaneConnectionID();

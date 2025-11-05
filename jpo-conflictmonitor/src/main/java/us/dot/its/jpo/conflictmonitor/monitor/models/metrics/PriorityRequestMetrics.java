@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.metrics;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 /**
@@ -10,6 +11,16 @@ import lombok.*;
 @EqualsAndHashCode(callSuper = true)
 public class PriorityRequestMetrics
         extends Metrics<IntersectionVehicleTypeKey> {
+
+    /**
+     * @return Top level intersection id needed form Mongo collection
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Integer getIntersectionID() {
+        if (key != null) {
+            return key.getIntersectionId();
+        }
+    }
 
     /**
      * The number distinct request IDs in valid SRMs for one intersection and vehicle type

@@ -11,17 +11,17 @@ public class IntersectionVehicleRequestKey implements IntersectionKey {
     public IntersectionVehicleRequestKey() {}
 
     public IntersectionVehicleRequestKey(final String vehicleId, final ProcessedSignalRequest request) {
+        this.intersectionId = request.getIntersectionId() != null ? request.getIntersectionId() : -1;
+        this.region = request.getRegion() != null ? request.getRegion() : -1;
         this.vehicleId = vehicleId;
-        intersectionId = request.getIntersectionId();
-        region = request.getRegion();
-        requestId = request.getRequestID();
+        this.requestId = request.getRequestID() != null ? request.getRequestID() : -1;
     }
 
     public IntersectionVehicleRequestKey(final Integer intersectionId, final Integer region, final ProcessedSignalStatus status) {
-        this.intersectionId = intersectionId;
-        this.region = region;
-        vehicleId = status.getVehicleID();
-        requestId = status.getRequestID();
+        this.intersectionId = intersectionId != null ? intersectionId : -1;
+        this.region = region != null ? region : -1;
+        this.vehicleId = status.getVehicleID();
+        this.requestId = status.getRequestID() != null ? status.getRequestID() : -1;
     }
 
     private int intersectionId;

@@ -18,9 +18,9 @@ public class SrmRequest {
         this.vehicleId = vehicleId;
         this.timestamp = timestamp;
         this.vehicleType = vehicleType;
-        intersectionId = request.getIntersectionId();
-        region = request.getRegion();
-        requestId = request.getRequestID();
+        intersectionId = request.getIntersectionId() != null ? request.getIntersectionId() : -1;
+        region = request.getRegion() != null ? request.getRegion() : -1;
+        requestId = request.getRequestID() != null ? request.getRequestID() : -1;
         inboundLaneId = request.getInboundLaneID();
         inboundApproachId = request.getInboundApproachID();
         inboundLaneConnectionId = request.getInboundLaneConnectionID();

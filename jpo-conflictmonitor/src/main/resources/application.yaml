@@ -237,6 +237,13 @@ kafka.topics:
       cleanupPolicy: compact
     - name: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
       cleanupPolicy: compact
+    - name: topic.CmPriorityPreemptionRequestEvent
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmPriorityRequestMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
+
 
 
 # Connection of Travel
