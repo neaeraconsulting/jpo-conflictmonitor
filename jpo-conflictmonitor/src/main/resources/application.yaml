@@ -230,6 +230,16 @@ kafka.topics:
       cleanupPolicy: compact
     - name: topic.CmEventStateProgressionNotificationAggregation
       cleanupPolicy: compact
+    - name: topic.CmRevocableEnabledLaneAlignmentEventAggregation
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmRevocableEnabledLaneAlignmentEvent
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmRevocableEnabledLaneAlignmentNotification
+      cleanupPolicy: compact
+    - name: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
+      cleanupPolicy: compact
 
 
 # Connection of Travel
@@ -315,12 +325,12 @@ map.validation:
 
 
 
-# BSM Repartition
-repartition:
-  algorithm: defaultRepartitionAlgorithm
-  debug: false
-  bsmInputTopicName: topic.OdeBsmJson
-  bsmRepartitionOutputTopicName: topic.CmBsmJsonRepartition
+## BSM Repartition
+#repartition:
+#  algorithm: defaultRepartitionAlgorithm
+#  debug: false
+#  bsmInputTopicName: topic.OdeBsmJson
+#  bsmRepartitionOutputTopicName: topic.CmBsmJsonRepartition
 
 notification:
   algorithm: defaultNotificationAlgorithm
@@ -444,7 +454,7 @@ intersection.reference.alignment.notification:
 # BSM Events
 bsm.event:
   algorithm: defaultBsmEventAlgorithm
-  inputTopic: topic.CmBsmJsonRepartition
+  inputTopic: topic.ProcessedBsm
   outputTopic: topic.CmBsmEvents
   bsmIntersectionOutputTopic: topic.CmBsmIntersection
   stateStoreName: bsm-event-state-store
@@ -576,7 +586,7 @@ event.state.progression:
     - { stateA: CAUTION_CONFLICTING_TRAFFIC, stateB: STOP_AND_REMAIN }
 
 aggregation:
-  debug: true
+  debug: false
   interval: 60
   intervalUnits: SECONDS
   checkIntervalMs: 1000
@@ -592,6 +602,7 @@ aggregation:
     BsmMessageCountProgressionAggregation: topic.CmBsmMessageCountProgressionEventAggregation
     MapMessageCountProgressionAggregation: topic.CmMapMessageCountProgressionEventAggregation
     SpatMessageCountProgressionAggregation: topic.CmSpatMessageCountProgressionEventAggregation
+    RevocableEnabledLaneAlignmentAggregation: topic.CmRevocableEnabledLaneAlignmentEventAggregation
   eventAlgorithmMap:
     SpatMinimumDataAggregation: defaultSpatMinimumDataAggregationAlgorithm
     MapMinimumDataAggregation: defaultMapMinimumDataAggregationAlgorithm
@@ -603,9 +614,16 @@ aggregation:
     BsmMessageCountProgressionAggregation: defaultBsmMessageCountProgressionAggregationAlgorithm
     MapMessageCountProgressionAggregation: defaultMapMessageCountProgressionAggregationAlgorithm
     SpatMessageCountProgressionAggregation: defaultSpatMessageCountProgressionAggregationAlgorithm
+    RevocableEnabledLaneAlignmentAggregation: defaultRevocableEnabledLaneAlignmentAggregationAlgorithm
 
 
-
+revocable.enabled.lane.alignment:
+  algorithm: defaultRevocableEnabledLaneAlignmentAlgorithm
+  debug: true
+  aggregateEvents: false
+  outputTopicName: topic.CmRevocableEnabledLaneAlignmentEvent
+  notificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotification
+  aggNotificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
 
 
 
