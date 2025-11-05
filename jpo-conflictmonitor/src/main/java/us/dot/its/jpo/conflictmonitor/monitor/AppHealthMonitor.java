@@ -341,7 +341,7 @@ public class AppHealthMonitor {
        
     }
 
-    /**
+    /*
      * Returns all items in the spatial index (quadtree).
      *
      * @return response entity containing a list of all spatial index items
