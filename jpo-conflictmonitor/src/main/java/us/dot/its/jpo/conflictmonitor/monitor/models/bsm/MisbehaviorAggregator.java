@@ -1,6 +1,4 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.bsm;
-
-import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -49,12 +47,12 @@ public class MisbehaviorAggregator {
         }
         
 
-        BigDecimal speed = newBsm.getProperties().getSpeed();
-        BigDecimal lat = newBsm.getProperties().getAccelSet().getAccelLat();
-        BigDecimal lng = newBsm.getProperties().getAccelSet().getAccelLong();
-        BigDecimal vert = newBsm.getProperties().getAccelSet().getAccelVert();
-        BigDecimal yaw = newBsm.getProperties().getAccelSet().getAccelYaw();
-        BigDecimal orientation = newBsm.getProperties().getHeading();
+        double speed = newBsm.getProperties().getSpeed();
+        double lat = newBsm.getProperties().getAccelSet().getAccelLat();
+        double lng = newBsm.getProperties().getAccelSet().getAccelLong();
+        double vert = newBsm.getProperties().getAccelSet().getAccelVert();
+        double updatedHeading = newBsm.getProperties().getHeading();
+        yawRate = newBsm.getProperties().getAccelSet().getAccelYaw();
 
 
         double timeDelta = getDecimalTime(newBsm.getProperties().getTimeStamp().toInstant().toEpochMilli() - lastRecordTime);
@@ -79,35 +77,29 @@ public class MisbehaviorAggregator {
             longitude = newLongitude;
         }
 
-        if(orientation != null){
-
-            double updatedHeading = getVehicleHeading(orientation);
-            if(heading != 0 && orientation.doubleValue() != 28800){
-                calculatedYawRate = (updatedHeading - heading) / timeDelta;// * .0125;
-            }
-
-            heading = updatedHeading;
-        }
         
-        if(speed != null && speed.doubleValue() != 8191){
+        if(heading != 0 && updatedHeading != 28800){
+            calculatedYawRate = (updatedHeading - heading) / timeDelta;
+        }
+
+        heading = updatedHeading;
+        
+        
+        if(speed != 8191){
             vehicleSpeed = getVehicleSpeed(speed);
         }
 
-        if(yaw != null){
-            yawRate = getVehicleHeading(yaw);
-        }
-
-        if(lat != null && lat.doubleValue() != 2001){
+        if(lat != 2001){
             lateralAcceleration += getVehicleAcceleration(lat);
             numLateral +=1;
         }
 
-        if(lng != null && lng.doubleValue() != 2001){
+        if(lng != 2001){
             longitudinalAcceleration += getVehicleAcceleration(lng);
             numLongitudinal +=1;
         }
 
-        if(vert != null && vert.doubleValue() != -127){
+        if(vert != -127){
             verticalAcceleration += getVehicleAcceleration(vert);
             numVertical +=1;
         }
@@ -155,8 +147,8 @@ public class MisbehaviorAggregator {
      * @param acceleration
      * @return The Vehicle Acceleration converted to Ft / S^2
      */
-    public double getVehicleAcceleration(BigDecimal acceleration){
-        return acceleration.doubleValue() * 3.2808399; // Already converted to Meters / second
+    public double getVehicleAcceleration(double acceleration){
+        return acceleration * 3.2808399; // Already converted to Meters / second
     }
 
     /**
@@ -164,26 +156,8 @@ public class MisbehaviorAggregator {
      * @param speed
      * @return The Vehicle Acceleration converted to mph
      */
-    public double getVehicleSpeed(BigDecimal speed){
-        return speed.doubleValue() * 0.6213712; // Speed is already partially converted to M/S in processed BSM
-    }
-
-    /**
-     * 
-     * @param yaw
-     * @return The Vehicle Acceleration converted to degrees / second
-     */
-    public double getVehicleYawRate(BigDecimal yaw){
-        return yaw.doubleValue(); // Already converted to degrees per second. 
-    }
-
-    /**
-     * 
-     * @param orientation
-     * @return The Vehicle Orientation in Degrees
-     */
-    public double getVehicleHeading(BigDecimal orientation){
-        return orientation.doubleValue(); // Already converted to Degrees
+    public double getVehicleSpeed(double speed){
+        return speed * 0.6213712; // Speed is already partially converted to M/S in processed BSM
     }
 
     public double getDecimalTime(long time){

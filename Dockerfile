@@ -40,7 +40,7 @@ ENV LD_PRELOAD="/usr/lib64/libjemalloc.so"
 # Set max Java heap usage as percentage of total available memory.
 ENTRYPOINT ["java", \
 	"-Dlogback.configurationFile=/home/logback.xml", \
-    "-XX:+UseG1GC", \
+    "-XX:+UseG3GC", \
     "-XX:MaxGCPauseMillis=20", \
     "-XX:InitiatingHeapOccupancyPercent=35", \
     "-XX:MetaspaceSize=96m", \
@@ -72,4 +72,20 @@ ENTRYPOINT ["java", \
 #    "-XX:InitialRAMPercentage=5.0", \
 #    "-XX:MaxRAMPercentage=50.0", \
 #    "-jar", \
+#	"/home/jpo-conflictmonitor.jar"]
+
+# Remote debug entrypoint
+#ENTRYPOINT ["java", \
+#    "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:10090", \
+#	"-Dlogback.configurationFile=/home/logback.xml", \
+#    "-XX:+UseG1GC", \
+#    "-XX:MaxGCPauseMillis=20", \
+#    "-XX:InitiatingHeapOccupancyPercent=35", \
+#    "-XX:MetaspaceSize=96m", \
+#    "-XX:MinMetaspaceFreeRatio=50", \
+#    "-XX:MaxMetaspaceFreeRatio=80", \
+#    "-XX:+ExplicitGCInvokesConcurrent", \
+#    "-XX:InitialRAMPercentage=5.0", \
+#    "-XX:MaxRAMPercentage=50.0", \
+#	"-jar", \
 #	"/home/jpo-conflictmonitor.jar"]

@@ -11,7 +11,6 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.any;
 
 import us.dot.its.jpo.conflictmonitor.ConflictMonitorProperties;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.AggregationParameters;
@@ -22,6 +21,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.event_state
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.*;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
@@ -60,12 +61,13 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageI
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionAlgorithmFactory;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionStreamsAlgorithm;
+
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageParameters;
@@ -122,9 +124,7 @@ public class MonitorServiceControllerTest {
     ConfigInitializer configInitializer;
 
 
-    @Mock RepartitionAlgorithmFactory repartitionAlgorithmFactory;
-    @Mock RepartitionStreamsAlgorithm repartitionAlgorithm;
-    RepartitionParameters repartitionParameters = new RepartitionParameters();
+
 
     @Mock NotificationAlgorithmFactory notificationAlgorithmFactory;
     @Mock NotificationStreamsAlgorithm notificationAlgorithm;
@@ -167,6 +167,8 @@ public class MonitorServiceControllerTest {
     @Mock SpatMessageCountProgressionAggregationAlgorithm spatMessageCountProgressionAggregationAlgorithm;
     @Mock BsmMessageCountProgressionAggregationAlgorithmFactory bsmMessageCountProgressionAggregationAlgorithmFactory;
     @Mock BsmMessageCountProgressionAggregationAlgorithm bsmMessageCountProgressionAggregationAlgorithm;
+    @Mock RevocableEnabledLaneAlignmentAggregationAlgorithmFactory revocableEnabledLaneAlignmentAggregationAlgorithmFactory;
+    @Mock RevocableEnabledLaneAlignmentAggregationAlgorithm revocableEnabledLaneAlignmentAggregationAlgorithm;
 
 
     @Mock SpatTimeChangeDetailsAlgorithmFactory spatTimeChangeDetailsAlgorithmFactory;
@@ -214,9 +216,9 @@ public class MonitorServiceControllerTest {
     @Mock IntersectionEventAlgorithmFactory intersectionEventAlgorithmFactory;
     @Mock IntersectionEventStreamsAlgorithm intersectionEventAlgorithm;
     
-    @Mock StopLinePassageAssessmentAlgorithmFactory signalStateEventAssessmentAlgorithmFactory;
-    @Mock StopLinePassageAssessmentStreamsAlgorithm signalStateEventAssessmentAlgorithm;
-    StopLinePassageAssessmentParameters signalStateEventAssessmentParameters = new StopLinePassageAssessmentParameters();
+    @Mock StopLinePassageAssessmentAlgorithmFactory stopLinePassageAssessmentAlgorithmFactory;
+    @Mock StopLinePassageAssessmentStreamsAlgorithm stopLinePassageAssessmentAlgorithm;
+    StopLinePassageAssessmentParameters stopLinePassageAssessmentParameters = new StopLinePassageAssessmentParameters();
 
     @Mock LaneDirectionOfTravelAssessmentAlgorithmFactory laneDirectionOfTravelAssessmentAlgorithmFactory;
     @Mock LaneDirectionOfTravelAssessmentStreamsAlgorithm laneDirectionOfTravelAssessmentAlgorithm;
@@ -242,6 +244,10 @@ public class MonitorServiceControllerTest {
     @Mock BsmMessageCountProgressionAlgorithm bsmMessageCountProgressionAlgorithm;
     BsmMessageCountProgressionParameters bsmMessageCountProgressionParameters = new BsmMessageCountProgressionParameters();
 
+    @Mock RevocableEnabledLaneAlignmentAlgorithmFactory revocableEnabledLaneAlignmentAlgorithmFactory;
+    @Mock RevocableEnabledLaneAlignmentAlgorithm revocableEnabledLaneAlignmentAlgorithm;
+    RevocableEnabledLaneAlignmentParameters revocableEnabledLaneParameters = new RevocableEnabledLaneAlignmentParameters();
+
     @Mock
     EventAlgorithmFactory eventAlgorithmFactory;
     @Mock
@@ -255,12 +261,7 @@ public class MonitorServiceControllerTest {
     public void testConstructor() {
 
         final String defaultAlgo = "default";
-        
-        when(conflictMonitorProperties.getRepartitionAlgorithmFactory()).thenReturn(repartitionAlgorithmFactory);
-        when(conflictMonitorProperties.getRepartitionAlgorithm()).thenReturn(defaultAlgo);
-        when(repartitionAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(repartitionAlgorithm);
-        when(conflictMonitorProperties.getRepartitionAlgorithmParameters()).thenReturn(repartitionParameters);
-        
+
         when(conflictMonitorProperties.getNotificationAlgorithmFactory()).thenReturn(notificationAlgorithmFactory);
         when(conflictMonitorProperties.getNotificationAlgorithm()).thenReturn(defaultAlgo);
         when(notificationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(notificationAlgorithm);
@@ -328,10 +329,21 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getBsmMessageCountProgressionAggregationAlgorithm()).thenReturn(defaultAlgo);
         when(bsmMessageCountProgressionAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(bsmMessageCountProgressionAggregationAlgorithm);
 
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAlgorithmFactory);
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAlgorithm()).thenReturn(defaultAlgo);
+        when(revocableEnabledLaneAlignmentAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(revocableEnabledLaneAlignmentAlgorithm);
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentParameters()).thenReturn(revocableEnabledLaneParameters);
+
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithmFactory);
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithm()).thenReturn(defaultAlgo);
+        when(revocableEnabledLaneAlignmentAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithm);
+
         when(conflictMonitorProperties.getSpatTimeChangeDetailsAlgorithmFactory()).thenReturn(spatTimeChangeDetailsAlgorithmFactory);
         when(conflictMonitorProperties.getSpatTimeChangeDetailsAlgorithm()).thenReturn(defaultAlgo);
         when(spatTimeChangeDetailsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(spatTimeChangeDetailsAlgorithm);
         when(conflictMonitorProperties.getSpatTimeChangeDetailsParameters()).thenReturn(spatTimeChangeDetailsParameters);
+
+
 
         when(conflictMonitorProperties.getMapSpatMessageAssessmentAlgorithmFactory()).thenReturn(mapSpatMessageAssessmentAlgorithmFactory);
         when(conflictMonitorProperties.getMapSpatMessageAssessmentAlgorithm()).thenReturn(defaultAlgo);
@@ -377,10 +389,10 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getIntersectionEventAlgorithm()).thenReturn(defaultAlgo);
         when(intersectionEventAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(intersectionEventAlgorithm);
         
-        when(conflictMonitorProperties.getSignalStateEventAssessmentAlgorithmFactory()).thenReturn(signalStateEventAssessmentAlgorithmFactory);
-        when(conflictMonitorProperties.getSignalStateEventAssessmentAlgorithm()).thenReturn(defaultAlgo);
-        when(signalStateEventAssessmentAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(signalStateEventAssessmentAlgorithm);
-        when(conflictMonitorProperties.getSignalStateEventAssessmentAlgorithmParameters()).thenReturn(signalStateEventAssessmentParameters);
+        when(conflictMonitorProperties.getStopLinePassageAssessmentAlgorithmFactory()).thenReturn(stopLinePassageAssessmentAlgorithmFactory);
+        when(conflictMonitorProperties.getStopLinePassageAssessmentAlgorithm()).thenReturn(defaultAlgo);
+        when(stopLinePassageAssessmentAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(stopLinePassageAssessmentAlgorithm);
+        when(conflictMonitorProperties.getStopLinePassageAssessmentAlgorithmParameters()).thenReturn(stopLinePassageAssessmentParameters);
 
         when(conflictMonitorProperties.getLaneDirectionOfTravelAssessmentAlgorithmFactory()).thenReturn(laneDirectionOfTravelAssessmentAlgorithmFactory);
         when(conflictMonitorProperties.getLaneDirectionOfTravelAssessmentAlgorithm()).thenReturn(defaultAlgo);
@@ -428,15 +440,14 @@ public class MonitorServiceControllerTest {
         assertThat(monitorServiceController, notNullValue());
 
         // Check all algorithms were started
-        verify(repartitionAlgorithm, times(1)).start();
         verify(mapValidationAlgorithm, times(1)).start();
         verify(spatValidationAlgorithm, times(1)).start();
-        verify(spatTimeChangeDetailsAlgorithm, times(1)).start();
+//        verify(spatTimeChangeDetailsAlgorithm, times(1)).start();
         verify(mapSpatMessageAssessmentAlgorithm, times(1)).start();
         //verify(bsmEventAlgorithm, times(1)).start();
         //verify(messageIngestAlgorithm, times(1)).start();
         verify(intersectionEventAlgorithm, times(1)).start();
-        verify(signalStateEventAssessmentAlgorithm, times(1)).start();
+        verify(stopLinePassageAssessmentAlgorithm, times(1)).start();
         verify(laneDirectionOfTravelAssessmentAlgorithm, times(1)).start();
         verify(connectionOfTravelAssessmentAlgorithm, times(1)).start();
         verify(stopLineStopAssessmentAlgorithm, times(1)).start();

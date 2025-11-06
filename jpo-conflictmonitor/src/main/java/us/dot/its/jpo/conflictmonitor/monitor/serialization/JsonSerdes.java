@@ -7,6 +7,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.bsm_message
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.event_state_progression.EventStateProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationKey;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
@@ -23,7 +24,6 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAgg
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
-import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmRsuIdKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.MisbehaviorAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.DefaultConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfig;
@@ -39,6 +39,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.MapMessageCountProgr
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.BsmMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.EventStateProgressionEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.SpatTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapBoundingBox;
@@ -50,21 +52,14 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.Rsu
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.deserialization.GenericJsonDeserializer;
-import us.dot.its.jpo.geojsonconverter.partitioner.RsuIdKey;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.MapBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.Assessment;
-import us.dot.its.jpo.ode.model.OdeBsmData;
+
 
 public class JsonSerdes {
-   
-    public static Serde<OdeBsmData> OdeBsm() {
-        return Serdes.serdeFrom(
-            new JsonSerializer<OdeBsmData>(), 
-            new JsonDeserializer<>(OdeBsmData.class));
-    }
 
     public static Serde<BsmAggregator> BsmDataAggregator() {
         return Serdes.serdeFrom(
@@ -187,7 +182,7 @@ public class JsonSerdes {
             new JsonDeserializer<>(StopLinePassageAssessment.class));
     }
 
-    public static Serde<StopLinePassageAggregator> SignalStateEventAggregator() {
+    public static Serde<StopLinePassageAggregator> StopLinePassageAggregator() {
         return Serdes.serdeFrom(
             new JsonSerializer<StopLinePassageAggregator>(),
             new JsonDeserializer<>(StopLinePassageAggregator.class));
@@ -240,14 +235,6 @@ public class JsonSerdes {
             new JsonSerializer<ConnectionOfTravelAggregator>(),
             new JsonDeserializer<>(ConnectionOfTravelAggregator.class));
     }
-
-    public static Serde<BsmRsuIdKey> BsmRsuIdKey() {
-        return Serdes.serdeFrom(
-            new JsonSerializer<BsmRsuIdKey>(),
-            new JsonDeserializer<>(BsmRsuIdKey.class));
-    }
-
-
 
     public static Serde<BsmIntersectionIdKey> BsmIntersectionIdKey() {
         return Serdes.serdeFrom(
@@ -572,5 +559,31 @@ public class JsonSerdes {
             new JsonSerializer<MisbehaviorAggregator>(),
             new JsonDeserializer<>(MisbehaviorAggregator.class)
         );
+    }
+    
+    public static Serde<RevocableEnabledLaneAlignmentEvent> RevocableEnabledLaneAlignmentEvent() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<>(),
+                new JsonDeserializer<>(RevocableEnabledLaneAlignmentEvent.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentEventAggregation> RevocableEnabledLaneAlignmentEventAggregation() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<>(),
+                new JsonDeserializer<>(RevocableEnabledLaneAlignmentEventAggregation.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentAggregationKey> RevocableEnabledLaneAlignmentAggregationKey() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<>(),
+                new JsonDeserializer<>(RevocableEnabledLaneAlignmentAggregationKey.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentNotification> RevocableEnabledLaneAlignmentNotification() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotification.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentNotificationAggregation> RevocableEnabledLaneAlignmentNotificationAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotificationAggregation.class));
     }
 }

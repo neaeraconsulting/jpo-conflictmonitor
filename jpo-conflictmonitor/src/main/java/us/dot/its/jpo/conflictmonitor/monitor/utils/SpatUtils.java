@@ -6,14 +6,12 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimestampExtractor;
-import us.dot.its.jpo.geojsonconverter.pojos.spat.MovementEvent;
-import us.dot.its.jpo.geojsonconverter.pojos.spat.MovementState;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedMovementPhaseState;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedMovementState;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
-import us.dot.its.jpo.ode.plugin.j2735.J2735MovementPhaseState;
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -21,10 +19,23 @@ import java.util.ListIterator;
 @Slf4j
 public class SpatUtils {
 
-    public static J2735MovementPhaseState getSignalGroupState(ProcessedSpat spat, int signalGroup){
-        for(MovementState state: spat.getStates()){
-            if(state.getSignalGroup() == signalGroup && state.getStateTimeSpeed().size() > 0){
-                return state.getStateTimeSpeed().get(0).getEventState();
+
+    /**
+     * The number of Milliseconds in a Second.
+     */
+    public static final double MS_TO_SEC = 1000.0;
+
+
+    /**
+     * Returns the state of a given signal group within the Processed Spat Message.
+     * @param spat - The Processed Spat Message
+     * @param signalGroup - which signal group to use
+     * @return MovementPhaseState corresponding to the given signalGroup in the spat message. Returns null if the signalGroup is not present in the SPaT message.
+     */
+    public static ProcessedMovementPhaseState getSignalGroupState(ProcessedSpat spat, int signalGroup){
+        for(ProcessedMovementState state: spat.getStates()){
+            if(state.getSignalGroup() == signalGroup && !state.getStateTimeSpeed().isEmpty()){
+                return state.getStateTimeSpeed().getFirst().getEventState();
             }
         }
         return null;
@@ -48,6 +59,12 @@ public class SpatUtils {
         return filteredSpats;
     }
 
+    /**
+     * Generate string describing SPaT timing for a given signal group across a list of SPATs.
+     * @param spats - List of SPATs, assumed to be ordered by timestamp
+     * @param signalGroupId - signal group to describe
+     * @return A human readable string representing time timing deltas for a given spat and the provided signal group Id.
+     */
     public static String describeSpats(List<ProcessedSpat> spats, int signalGroupId) {
         StringBuilder sb = new StringBuilder();
         sb.append("SPATs for signal group ");
@@ -65,12 +82,18 @@ public class SpatUtils {
         return sb.toString();
     }
 
+    /**
+     * Calculates the estimated duration of signal states in a SPaT message based upon the time between two SPaT messages.
+     * @param spats - List of SPATs used to calculate SpatTimings from
+     * @param signalGroupId signalGroupId to perform the calculation on.
+     * @return List of SpatTiming objects representing the duration of each state.
+     */
     public static List<SpatTiming> getSpatTiming(List<ProcessedSpat> spats, int signalGroupId) {
         var timingList = new ArrayList<SpatTiming>();
 
         for (ProcessedSpat spat : spats) {
             long timestamp = SpatTimestampExtractor.getSpatTimestamp(spat);
-            J2735MovementPhaseState state = getSignalGroupState(spat, signalGroupId);
+            ProcessedMovementPhaseState state = getSignalGroupState(spat, signalGroupId);
             var spatTiming = new SpatTiming(timestamp, state);
             timingList.add(spatTiming);
         }
@@ -99,7 +122,9 @@ public class SpatUtils {
     }
 
     /**
-     * Get statistics for the amount of time during each signal phase while
+     * Get statistics for the amount of time during each signal phase.
+     * @param spats - List of ProcessedSPaT messages to calculate statistics for
+     * @param signalGroupId - Signal group ID to use in calculating the Statistics
      * @return {@link SpatStatistics}
      */
     public static SpatStatistics getSpatStatistics(List<ProcessedSpat> spats, int signalGroupId) {
@@ -128,19 +153,38 @@ public class SpatUtils {
                     break;
             }
         }
-        return new SpatStatistics(redMillis/1000.0, yellowMillis/1000.0, greenMillis/1000.0, darkMillis/1000.0);
+        return new SpatStatistics(redMillis/MS_TO_SEC, yellowMillis/MS_TO_SEC, greenMillis/MS_TO_SEC, darkMillis/MS_TO_SEC);
     }
 
     @Getter
     @Setter
     public static class SpatTiming {
-        public SpatTiming(long timestamp, J2735MovementPhaseState state) {
+
+        /**
+         * UTC milliseconds timestamp representing when the SPaT first used a given signal state.
+         */
+        private long timestamp;
+
+        /**
+         * The State of the Light.
+         */
+        private ProcessedMovementPhaseState state;
+
+        /**
+         * The number of milliseconds the light was in this state.
+         */
+        private long duration;
+
+
+        /**
+         * Creates a SPaT timing object with the given timestamp and state.
+         * @param timestamp The timestamp
+         * @param state the phase state
+         */
+        public SpatTiming(long timestamp, ProcessedMovementPhaseState state) {
             this.timestamp = timestamp;
             this.state = state;
         }
-        private long timestamp;
-        private J2735MovementPhaseState state;
-        private long duration;
     }
 
 
@@ -179,6 +223,11 @@ public class SpatUtils {
 
     }
 
+    /**
+     * Return the epochMillisecond when the SPaT message occured. 
+     * @param processedSpat - ProcessedSpat Message
+     * @return the Epoch Timestamp of the Processed Spat Message. Returns 0 if no timestamp is available.
+     */
     public static long getTimestamp(ProcessedSpat processedSpat) {
         if (processedSpat == null) {
             log.error("ProcessedSpat is null");
@@ -192,6 +241,11 @@ public class SpatUtils {
         return zdt.toInstant().toEpochMilli();
     }
 
+    /**
+     * Returns the epochMillisecond of when the ode received the SPaT message.
+     * @param processedSpat - The ProcessedSpat to extract the timestamp from
+     * @return The epoch timestamp of equivalent to the OdeReceivedAt time in the ProcessedSpat message. Returns 0 if the odeReceivedAt time is missing.
+     */
     public static long getOdeReceivedAt(ProcessedSpat processedSpat) {
         if (processedSpat == null) {
             log.error("ProcessedSpat is null");
@@ -209,5 +263,7 @@ public class SpatUtils {
             return 0L;
         }
     }
+
+
 
 }

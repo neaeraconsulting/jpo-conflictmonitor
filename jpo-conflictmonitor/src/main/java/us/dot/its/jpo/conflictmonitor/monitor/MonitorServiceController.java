@@ -17,8 +17,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.event_state
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.IntersectionReferenceAlignmentAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalGroupAlignmentAggregationAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalGroupAlignmentAggregationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
@@ -54,10 +54,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageI
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionAlgorithmFactory;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.repartition.RepartitionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageParameters;
@@ -108,6 +106,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MonitorServiceController {
 
     private static final Logger logger = LoggerFactory.getLogger(MonitorServiceController.class);
+
     org.apache.kafka.common.serialization.Serdes bas;
 
     @Getter
@@ -124,12 +123,12 @@ public class MonitorServiceController {
 
     
     @Autowired
-    public MonitorServiceController(final ConflictMonitorProperties conflictMonitorProps, 
-            final KafkaTemplate<String, String> kafkaTemplate,
-            final ConfigTopology configTopology,
-            final ConfigParameters configParameters,
-            final ConfigInitializer configInitializer,
-            final MapIndex mapIndex) {
+    public MonitorServiceController(final ConflictMonitorProperties conflictMonitorProps,
+                                    final KafkaTemplate<String, String> kafkaTemplate,
+                                    final ConfigTopology configTopology,
+                                    final ConfigParameters configParameters,
+                                    final ConfigInitializer configInitializer,
+                                    final MapIndex mapIndex) {
 
         this.conflictMonitorProps = conflictMonitorProps;
         this.kafkaTemplate = kafkaTemplate;
@@ -154,24 +153,6 @@ public class MonitorServiceController {
             Runtime.getRuntime().addShutdownHook(new Thread(configTopology::stop));
             configTopology.setKafkaTemplate(kafkaTemplate);
             configTopology.start();
-
-
-            final String repartition = "repartition";
-            final RepartitionAlgorithmFactory repartitionAlgoFactory = conflictMonitorProps.getRepartitionAlgorithmFactory();
-            final String repAlgo = conflictMonitorProps.getRepartitionAlgorithm();
-            final RepartitionAlgorithm repartitionAlgo = repartitionAlgoFactory.getAlgorithm(repAlgo);
-            final RepartitionParameters repartitionParams = conflictMonitorProps.getRepartitionAlgorithmParameters();
-            configTopology.registerConfigListeners(repartitionParams);
-            if (repartitionAlgo instanceof StreamsTopology) {     
-                final var streamsAlgo = (StreamsTopology)repartitionAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(repartition));
-                streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, repartition, stateChangeTopic, healthTopic));
-                streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, repartition, healthTopic));
-                algoMap.put(repartition, streamsAlgo);
-            }
-            repartitionAlgo.setParameters(repartitionParams);
-            Runtime.getRuntime().addShutdownHook(new Thread(repartitionAlgo::stop));
-            repartitionAlgo.start();
 
 
             final String notification = "notification";
@@ -296,23 +277,23 @@ public class MonitorServiceController {
 
 
 
-            // Signal State Event Assessment Topology
-            final String signalStateEventAssessment = "signalStateEventAssessment";
-            final StopLinePassageAssessmentAlgorithmFactory sseaAlgoFactory = conflictMonitorProps.getSignalStateEventAssessmentAlgorithmFactory();
-            final String signalStateEventAssessmentAlgorithm = conflictMonitorProps.getSignalStateEventAssessmentAlgorithm();
-            final StopLinePassageAssessmentAlgorithm signalStateEventAssesmentAlgo = sseaAlgoFactory.getAlgorithm(signalStateEventAssessmentAlgorithm);
-            final StopLinePassageAssessmentParameters signalStateEventAssessmenAlgoParams = conflictMonitorProps.getSignalStateEventAssessmentAlgorithmParameters();
-            configTopology.registerConfigListeners(signalStateEventAssessmenAlgoParams);
-            if (signalStateEventAssesmentAlgo instanceof StreamsTopology) {
-                final var streamsAlgo = (StreamsTopology)signalStateEventAssesmentAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(signalStateEventAssessment));
-                streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, signalStateEventAssessment, stateChangeTopic, healthTopic));
-                streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, signalStateEventAssessment, healthTopic));
-                algoMap.put(signalStateEventAssessment, streamsAlgo);
+            // Stop Line Passage Assessment Topology
+            final String stopLinePassageAssessment = "stopLinePassageAssessment";
+            final StopLinePassageAssessmentAlgorithmFactory slpaAlgoFactory = conflictMonitorProps.getStopLinePassageAssessmentAlgorithmFactory();
+            final String stopLinePassageAssessmentAlgorithm = conflictMonitorProps.getStopLinePassageAssessmentAlgorithm();
+            final StopLinePassageAssessmentAlgorithm stopLinePassageAssesmentAlgo = slpaAlgoFactory.getAlgorithm(stopLinePassageAssessmentAlgorithm);
+            final StopLinePassageAssessmentParameters stopLinePassageAssessmenAlgoParams = conflictMonitorProps.getStopLinePassageAssessmentAlgorithmParameters();
+            configTopology.registerConfigListeners(stopLinePassageAssessmenAlgoParams);
+            if (stopLinePassageAssesmentAlgo instanceof StreamsTopology) {
+                final var streamsAlgo = (StreamsTopology)stopLinePassageAssesmentAlgo;
+                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(stopLinePassageAssessment));
+                streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, stopLinePassageAssessment, stateChangeTopic, healthTopic));
+                streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, stopLinePassageAssessment, healthTopic));
+                algoMap.put(stopLinePassageAssessment, streamsAlgo);
             }
-            signalStateEventAssesmentAlgo.setParameters(signalStateEventAssessmenAlgoParams);
-            Runtime.getRuntime().addShutdownHook(new Thread(signalStateEventAssesmentAlgo::stop));
-            signalStateEventAssesmentAlgo.start();
+            stopLinePassageAssesmentAlgo.setParameters(stopLinePassageAssessmenAlgoParams);
+            Runtime.getRuntime().addShutdownHook(new Thread(stopLinePassageAssesmentAlgo::stop));
+            stopLinePassageAssesmentAlgo.start();
 
             // // Stop Line Stop Assessment Topology
             final String stopLineStopAssessment = "stopLineStopAssessment";
@@ -409,6 +390,7 @@ public class MonitorServiceController {
         } catch (Exception e) {
             logger.error("Encountered issue with creating topologies", e);
         }
+
     }
 
     private void startMapValidationAlgorithm() {
@@ -485,6 +467,29 @@ public class MonitorServiceController {
         spatTimeChangeDetailsAlgo.start();
     }
 
+    private SpatTimeChangeDetailsAlgorithm getSpatTimeChangeDetailsAlgorithm() {
+        final String spatTimeChangeDetails = "spatTimeChangeDetails";
+        final SpatTimeChangeDetailsAlgorithmFactory spatTCDAlgoFactory = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithmFactory();
+        final String spatTCDAlgo = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithm();
+        final SpatTimeChangeDetailsAlgorithm spatTimeChangeDetailsAlgo = spatTCDAlgoFactory.getAlgorithm(spatTCDAlgo);
+        final SpatTimeChangeDetailsParameters spatTimeChangeDetailsParams = conflictMonitorProps.getSpatTimeChangeDetailsParameters();
+        configTopology.registerConfigListeners(spatTimeChangeDetailsParams);
+        if (spatTimeChangeDetailsAlgo instanceof StreamsTopology) {
+            final var streamsAlgo = (StreamsTopology)spatTimeChangeDetailsAlgo;
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(spatTimeChangeDetails));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, spatTimeChangeDetails, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, spatTimeChangeDetails, healthTopic));
+            algoMap.put(spatTimeChangeDetails, streamsAlgo);
+        }
+        spatTimeChangeDetailsAlgo.setParameters(spatTimeChangeDetailsParams);
+
+        // Plug in aggregation algorithm
+        final TimeChangeDetailsAggregationAlgorithm aggAlgorithm = getTimeChangeDetailsAggregationAlgorithm();
+        spatTimeChangeDetailsAlgo.setAggregationAlgorithm(aggAlgorithm);
+
+        return spatTimeChangeDetailsAlgo;
+    }
+
     private void startMapSpatAlignmentAlgorithm() {
         final String mapSpatAlignment = "mapSpatAlignment";
         final MapSpatMessageAssessmentAlgorithmFactory mapSpatAlgoFactory = conflictMonitorProps.getMapSpatMessageAssessmentAlgorithmFactory();
@@ -507,6 +512,10 @@ public class MonitorServiceController {
         mapSpatAlignmentAlgo.setIntersectionReferenceAlignmentAggregationAlgorithm(intersectionAlignAggAlgo);
         mapSpatAlignmentAlgo.setSignalGroupAlignmentAggregationAlgorithm(signalGroupAlignAggAlgo);
         mapSpatAlignmentAlgo.setSignalStateConflictAggregationAlgorithm(signalStateConflictAggAlgo);
+
+        // Plug in Revocable Enabled Lane Alignment algorithm
+        var revocableEnabledLaneAlignmentAlgo = getRevocableEnabledLaneAlignmentAlgorithm();
+        mapSpatAlignmentAlgo.setRevocableEnabledLaneAlignmentAlgorithm(revocableEnabledLaneAlignmentAlgo);
 
         Runtime.getRuntime().addShutdownHook(new Thread(mapSpatAlignmentAlgo::stop));
         mapSpatAlignmentAlgo.start();
@@ -724,6 +733,27 @@ public class MonitorServiceController {
     private BsmMessageCountProgressionAggregationAlgorithm getBsmMessageCountProgressionAggregationAlgorithm() {
         final var factory = conflictMonitorProps.getBsmMessageCountProgressionAggregationAlgorithmFactory();
         final String algorithmName = conflictMonitorProps.getBsmMessageCountProgressionAggregationAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getAggregationParameters();
+        algorithm.setParameters(parameters);
+        return algorithm;
+    }
+
+    private RevocableEnabledLaneAlignmentAlgorithm getRevocableEnabledLaneAlignmentAlgorithm() {
+        final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getRevocableEnabledLaneAlignmentParameters();
+        algorithm.setParameters(parameters);
+        // Plug in aggregation algorithm
+        final var aggAlgorithm = getRevocableEnabledLaneAlignmentAggregationAlgorithm();
+        algorithm.setAggregationAlgorithm(aggAlgorithm);
+        return algorithm;
+    }
+
+    private RevocableEnabledLaneAlignmentAggregationAlgorithm getRevocableEnabledLaneAlignmentAggregationAlgorithm() {
+        final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAggregationAlgorithm();
         final var algorithm = factory.getAlgorithm(algorithmName);
         final var parameters = conflictMonitorProps.getAggregationParameters();
         algorithm.setParameters(parameters);

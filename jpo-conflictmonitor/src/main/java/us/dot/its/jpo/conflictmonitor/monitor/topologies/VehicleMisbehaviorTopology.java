@@ -9,21 +9,19 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.SlidingWindows;
-import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmRsuIdKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.MisbehaviorAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.ProcessedBsmTimestampExtractor;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
+import us.dot.its.jpo.geojsonconverter.partitioner.RsuLogKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
 // import us.dot.its.jpo.conflictmonitor.monitor.processors.VehicleMisbehaviorProcessor;
 // import us.dot.its.jpo.conflictmonitor.monitor.processors.VehicleMisbehaviorProcessorSupplier;
@@ -50,28 +48,27 @@ public class VehicleMisbehaviorTopology
     public Topology buildTopology() {
         StreamsBuilder builder = new StreamsBuilder();
 
-        // final String processedBsmStateStore = parameters.getProcessedBsmStateStoreName();
 
-        KStream<BsmRsuIdKey, ProcessedBsm<Point>> inputStream = builder.stream(parameters.getBsmInputTopicName(),
+        KStream<RsuLogKey, ProcessedBsm<Point>> inputStream = builder.stream(parameters.getBsmInputTopicName(),
                 Consumed.with(
-                        us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.BsmRsuIdKey(),
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey(),
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm()).withTimestampExtractor(new ProcessedBsmTimestampExtractor()));
 
-        KTable<Windowed<BsmRsuIdKey>, MisbehaviorAggregator> accelerations = inputStream
+        KTable<Windowed<RsuLogKey>, MisbehaviorAggregator> accelerations = inputStream
             .groupByKey()
             .windowedBy(SlidingWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(2),Duration.ofMillis(500)))
             .aggregate(
                 MisbehaviorAggregator::new,
                 (key, value, aggregate) -> aggregate.add(value),
-                Materialized.with(us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.BsmRsuIdKey(), JsonSerdes.MisbehaviorAggregator()));
+                Materialized.with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey(), JsonSerdes.MisbehaviorAggregator()));
 
         // inputStream.print(Printed.toSysOut());
 
 
-        KStream<BsmRsuIdKey, VehicleMisbehaviorEvent> vehicleMisbehaviorEventsStream = accelerations
+        KStream<RsuLogKey, VehicleMisbehaviorEvent> vehicleMisbehaviorEventsStream = accelerations
             .toStream()
             .flatMap((key, value)->{
-                List<KeyValue<BsmRsuIdKey, VehicleMisbehaviorEvent>> result = new ArrayList<>();
+                List<KeyValue<RsuLogKey, VehicleMisbehaviorEvent>> result = new ArrayList<>();
 
                 if( (value.getNumEvents() >=2 && (
                         Math.abs(value.getCalculatedSpeed() - value.getVehicleSpeed()) > parameters.getSpeedRange() ||
@@ -102,7 +99,7 @@ public class VehicleMisbehaviorTopology
                     event.setCalculatedYawRate(value.getCalculatedYawRate());
                     event.setCalculatedSpeed(value.getCalculatedSpeed());
 
-                    result.add(new KeyValue<BsmRsuIdKey, VehicleMisbehaviorEvent>(key.key(), event));
+                    result.add(new KeyValue<RsuLogKey, VehicleMisbehaviorEvent>(key.key(), event));
                 }
 
                 return result;
@@ -112,7 +109,7 @@ public class VehicleMisbehaviorTopology
         
         vehicleMisbehaviorEventsStream.to(parameters.getVehicleMisbehaviorEventOutputTopicName(),
                 Produced.with(
-                        us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.BsmRsuIdKey(),
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey(),
                         us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.VehicleMisbehaviorEvent()));
 
 

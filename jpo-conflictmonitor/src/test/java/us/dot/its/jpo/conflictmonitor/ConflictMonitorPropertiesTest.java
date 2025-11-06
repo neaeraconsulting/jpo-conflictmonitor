@@ -121,18 +121,15 @@ public class ConflictMonitorPropertiesTest {
         // assertThat(properties.getMapTimeChangeDetailsAlgorithmFactory(), notNullValue());
         // assertThat(properties.getMapTimeChangeDetailsAlgorithm(), notNullValue());
         // assertThat(properties.getMapTimeChangeDetailsParameters(), notNullValue());
-        assertThat(properties.getSignalStateEventAssessmentAlgorithmFactory(), notNullValue());
-        assertThat(properties.getSignalStateEventAssessmentAlgorithm(), notNullValue());
-        assertThat(properties.getSignalStateEventAssessmentAlgorithmParameters(), notNullValue());
+        assertThat(properties.getStopLinePassageAssessmentAlgorithmFactory(), notNullValue());
+        assertThat(properties.getStopLinePassageAssessmentAlgorithm(), notNullValue());
+        assertThat(properties.getStopLinePassageAssessmentAlgorithmParameters(), notNullValue());
         assertThat(properties.getLaneDirectionOfTravelAssessmentAlgorithmFactory(), notNullValue());
         assertThat(properties.getLaneDirectionOfTravelAssessmentAlgorithm(), notNullValue());
         assertThat(properties.getLaneDirectionOfTravelAssessmentAlgorithmParameters(), notNullValue());
         assertThat(properties.getConnectionOfTravelAssessmentAlgorithmFactory(), notNullValue());
         assertThat(properties.getConnectionOfTravelAssessmentAlgorithm(), notNullValue());
         assertThat(properties.getConnectionOfTravelAssessmentAlgorithmParameters(), notNullValue());
-        assertThat(properties.getRepartitionAlgorithmFactory(), notNullValue());
-        assertThat(properties.getRepartitionAlgorithm(), notNullValue());
-        assertThat(properties.getRepartitionAlgorithmParameters(), notNullValue());
         assertThat(properties.getIntersectionEventAlgorithmFactory(), notNullValue());
         assertThat(properties.getIntersectionEventAlgorithm(), notNullValue());
         assertThat(properties.getKafkaStateChangeEventTopic(), notNullValue());
@@ -140,7 +137,6 @@ public class ConflictMonitorPropertiesTest {
         assertThat(properties.getVersion(), notNullValue());
         assertThat(properties.getKafkaBrokers(), notNullValue());
         assertThat(properties.getHostId(), notNullValue());
-        assertThat(properties.getConnectURL(), notNullValue());
         // assertThat(properties.getDbHostIP(), notNullValue());
         // assertThat(properties.getKafkaBrokerIP(), notNullValue());
         assertThat(properties.getKafkaTopicOdeBsmJson(), notNullValue());
@@ -148,7 +144,7 @@ public class ConflictMonitorPropertiesTest {
         assertThat(properties.getKafkaTopicCmBsmEvent(), notNullValue());
         assertThat(properties.getKafkaTopicCmConnectionOfTravelEvent(), notNullValue());
         assertThat(properties.getKafkaTopicCmLaneDirectionOfTravelEvent(), notNullValue());
-        assertThat(properties.getKafkaTopicCmSignalStateEvent(), notNullValue());
+        assertThat(properties.getKafkaTopicCmStopLinePassageEvent(), notNullValue());
         assertThat(properties.getKafkaTopicMapGeoJson(), notNullValue());
         assertThat(properties.getKafkaTopicProcessedMap(), notNullValue());
         assertThat(properties.getKafkaTopicProcessedSpat(), notNullValue());
