@@ -40,7 +40,7 @@ ENV LD_PRELOAD="/usr/lib64/libjemalloc.so"
 # Set max Java heap usage as percentage of total available memory.
 ENTRYPOINT ["java", \
 	"-Dlogback.configurationFile=/home/logback.xml", \
-    "-XX:+UseG3GC", \
+    "-XX:+UseG1GC", \
     "-XX:MaxGCPauseMillis=20", \
     "-XX:InitiatingHeapOccupancyPercent=35", \
     "-XX:MetaspaceSize=96m", \
