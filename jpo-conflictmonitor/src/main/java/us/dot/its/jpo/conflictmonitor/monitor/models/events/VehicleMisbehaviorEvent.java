@@ -1,5 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.events;
 
+import java.util.Set;
+
 import lombok.EqualsAndHashCode;
 import lombok.Generated;
 import lombok.Getter;
@@ -91,5 +93,15 @@ public class VehicleMisbehaviorEvent extends Event{
      */
     double calculatedYawRate;
 
-    
+    /**
+     *  List representing the reasons that a vehicle misbehavior event was generated.
+     */
+
+    Set<VehicleMisbehaviorReason> misbehaviorReasons;
+
 }
+
+
+
+
+

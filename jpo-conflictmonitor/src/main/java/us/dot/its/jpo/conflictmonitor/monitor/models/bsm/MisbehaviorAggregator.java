@@ -47,12 +47,12 @@ public class MisbehaviorAggregator {
         }
         
 
-        double speed = newBsm.getProperties().getSpeed();
-        double lat = newBsm.getProperties().getAccelSet().getAccelLat();
-        double lng = newBsm.getProperties().getAccelSet().getAccelLong();
-        double vert = newBsm.getProperties().getAccelSet().getAccelVert();
-        double updatedHeading = newBsm.getProperties().getHeading();
-        yawRate = newBsm.getProperties().getAccelSet().getAccelYaw();
+        Double speed = newBsm.getProperties().getSpeed();
+        Double lat = newBsm.getProperties().getAccelSet().getAccelLat();
+        Double lng = newBsm.getProperties().getAccelSet().getAccelLong();
+        Double vert = newBsm.getProperties().getAccelSet().getAccelVert();
+        Double updatedHeading = newBsm.getProperties().getHeading();
+        Double orientation = newBsm.getProperties().getAccelSet().getAccelYaw();
 
 
         double timeDelta = getDecimalTime(newBsm.getProperties().getTimeStamp().toInstant().toEpochMilli() - lastRecordTime);
@@ -77,29 +77,37 @@ public class MisbehaviorAggregator {
             longitude = newLongitude;
         }
 
-        
-        if(heading != 0 && updatedHeading != 28800){
-            calculatedYawRate = (updatedHeading - heading) / timeDelta;
+        if(orientation != null){
+            yawRate = orientation;
         }
+        
+        if(updatedHeading != null){
+            if(heading != 0 && updatedHeading != 28800){
+                calculatedYawRate = (updatedHeading - heading) / timeDelta;
+            }
+            heading = updatedHeading;
+        }
+        
 
-        heading = updatedHeading;
+            
         
         
-        if(speed != 8191){
+        
+        if(speed != null && speed != 8191){
             vehicleSpeed = getVehicleSpeed(speed);
         }
 
-        if(lat != 2001){
+        if(lat != null && lat != 2001){
             lateralAcceleration += getVehicleAcceleration(lat);
             numLateral +=1;
         }
 
-        if(lng != 2001){
+        if(lng != null && lng != 2001){
             longitudinalAcceleration += getVehicleAcceleration(lng);
             numLongitudinal +=1;
         }
 
-        if(vert != -127){
+        if(vert != null && vert != -127){
             verticalAcceleration += getVehicleAcceleration(vert);
             numVertical +=1;
         }
@@ -157,7 +165,7 @@ public class MisbehaviorAggregator {
      * @return The Vehicle Acceleration converted to mph
      */
     public double getVehicleSpeed(double speed){
-        return speed * 0.6213712; // Speed is already partially converted to M/S in processed BSM
+        return speed * 2.236936; // Speed is already partially converted to M/S in processed BSM
     }
 
     public double getDecimalTime(long time){

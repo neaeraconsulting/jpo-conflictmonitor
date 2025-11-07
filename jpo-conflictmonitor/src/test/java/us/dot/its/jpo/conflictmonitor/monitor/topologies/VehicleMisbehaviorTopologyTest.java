@@ -8,10 +8,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorReason;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuLogKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
+
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
@@ -134,7 +137,8 @@ public class VehicleMisbehaviorTopologyTest {
             assertEquals(1, eventResults.size());
             final var eventResult = eventResults.getFirst();
             assertEquals(Math.round(eventResult.value.getCalculatedSpeed()), 0);
-            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 16);
+            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 56);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.SPEED_DELTA_INVALID));
         }
     }
 
@@ -162,7 +166,8 @@ public class VehicleMisbehaviorTopologyTest {
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             final var eventResult = eventResults.getFirst();
-            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 157);
+            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 566);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_SPEED));
 
         }
     }
@@ -194,6 +199,7 @@ public class VehicleMisbehaviorTopologyTest {
             final var eventResult = eventResults.getFirst();
             assertEquals(Math.round(eventResult.value.getReportedYawRate()), 0);
             assertEquals(Math.round(eventResult.value.getCalculatedYawRate()), 38);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.YAW_DELTA_INVALID));
         }
     }
 
@@ -222,6 +228,7 @@ public class VehicleMisbehaviorTopologyTest {
             assertEquals(1, eventResults.size());
             final var eventResult = eventResults.getFirst();
             assertEquals(Math.round(eventResult.value.getReportedYawRate()), 690);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_ROTATION));
         }
     }
 
@@ -250,6 +257,7 @@ public class VehicleMisbehaviorTopologyTest {
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             assertEquals(Math.round(eventResults.get(0).value.getReportedAccelerationLat()), 164);
+            assertTrue(eventResults.get(0).value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_LATERAL_ACCELERATION));
         }
     }
 
@@ -278,6 +286,7 @@ public class VehicleMisbehaviorTopologyTest {
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             assertEquals(Math.round(eventResults.get(0).value.getReportedAccelerationLon()), 164);
+            assertTrue(eventResults.get(0).value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_LONGITUDINAL_ACCELERATION));
         }
     }
 
@@ -306,6 +315,7 @@ public class VehicleMisbehaviorTopologyTest {
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             assertEquals(Math.round(eventResults.get(0).value.getReportedAccelerationVert()), 164);
+            assertTrue(eventResults.get(0).value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_VERTICAL_ACCELERATION));
         }
     }
 }

@@ -20,16 +20,17 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.Veh
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.MisbehaviorAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.ProcessedBsmTimestampExtractor;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorReason;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuLogKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
-// import us.dot.its.jpo.conflictmonitor.monitor.processors.VehicleMisbehaviorProcessor;
-// import us.dot.its.jpo.conflictmonitor.monitor.processors.VehicleMisbehaviorProcessorSupplier;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorConstants.DEFAULT_VEHICLE_MISBEHAVIOR_ALGORITHM;
 
@@ -69,17 +70,43 @@ public class VehicleMisbehaviorTopology
             .toStream()
             .flatMap((key, value)->{
                 List<KeyValue<RsuLogKey, VehicleMisbehaviorEvent>> result = new ArrayList<>();
+                
+                Set<VehicleMisbehaviorReason> misbehaviorReasons = new HashSet<VehicleMisbehaviorReason>();
 
-                if( (value.getNumEvents() >=2 && (
-                        Math.abs(value.getCalculatedSpeed() - value.getVehicleSpeed()) > parameters.getSpeedRange() ||
-                        Math.abs(value.getCalculatedYawRate() - value.getYawRate()) > parameters.getYawRateRange())
-                    ) ||
-                    Math.abs(value.getVehicleSpeed()) > parameters.getAllowableMaxSpeed() ||
-                    Math.abs(value.getYawRate()) > parameters.getAllowableMaxHeadingDelta()||
-                    Math.abs(value.getAverageLateralAcceleration()) > parameters.getAccelerationRangeLateral() ||
-                    Math.abs(value.getAverageLongitudinalAcceleration()) > parameters.getAccelerationRangeLongitudinal() ||
-                    Math.abs(value.getAverageVerticalAcceleration()) > parameters.getAccelerationRangeVertical()){
-                    
+                System.out.println("Comparing BSM to Parameters");
+                System.out.println(parameters.getSpeedRange() + " " + parameters.getAccelerationRangeLateral() + " " + parameters.getAccelerationRangeLongitudinal());
+
+
+                if(value.getNumEvents() >=2){
+                    if(Math.abs(value.getCalculatedSpeed() - value.getVehicleSpeed()) > parameters.getSpeedRange()){
+                        misbehaviorReasons.add(VehicleMisbehaviorReason.SPEED_DELTA_INVALID);
+                    } 
+                    if(Math.abs(value.getCalculatedYawRate() - value.getYawRate()) > parameters.getYawRateRange()){
+                        misbehaviorReasons.add(VehicleMisbehaviorReason.YAW_DELTA_INVALID);
+                    }
+                }
+
+                if(Math.abs(value.getVehicleSpeed()) > parameters.getAllowableMaxSpeed()){
+                    misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_SPEED);
+                }
+
+                if(Math.abs(value.getYawRate()) > parameters.getAllowableMaxHeadingDelta()){
+                    misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_ROTATION);
+                }
+
+                if(Math.abs(value.getAverageLateralAcceleration()) > parameters.getAccelerationRangeLateral()){
+                    misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_LATERAL_ACCELERATION);
+                }
+
+                if(Math.abs(value.getAverageLongitudinalAcceleration()) > parameters.getAccelerationRangeLongitudinal()){
+                    misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_LONGITUDINAL_ACCELERATION);
+                }
+
+                if(Math.abs(value.getAverageVerticalAcceleration()) > parameters.getAccelerationRangeVertical()){
+                    misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_VERTICAL_ACCELERATION);
+                }
+
+                if(misbehaviorReasons.size() > 0){    
                     VehicleMisbehaviorEvent event = new VehicleMisbehaviorEvent();
                     event.setSource(key.toString());
                     event.setTimeStamp(value.getLastRecordTime());
@@ -98,6 +125,8 @@ public class VehicleMisbehaviorTopology
 
                     event.setCalculatedYawRate(value.getCalculatedYawRate());
                     event.setCalculatedSpeed(value.getCalculatedSpeed());
+
+                    event.setMisbehaviorReasons(misbehaviorReasons);
 
                     result.add(new KeyValue<RsuLogKey, VehicleMisbehaviorEvent>(key.key(), event));
                 }
