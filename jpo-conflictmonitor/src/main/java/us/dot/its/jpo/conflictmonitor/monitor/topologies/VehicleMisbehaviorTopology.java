@@ -73,10 +73,6 @@ public class VehicleMisbehaviorTopology
                 
                 Set<VehicleMisbehaviorReason> misbehaviorReasons = new HashSet<VehicleMisbehaviorReason>();
 
-                System.out.println("Comparing BSM to Parameters");
-                System.out.println(parameters.getSpeedRange() + " " + parameters.getAccelerationRangeLateral() + " " + parameters.getAccelerationRangeLongitudinal());
-
-
                 if(value.getNumEvents() >=2){
                     if(Math.abs(value.getCalculatedSpeed() - value.getVehicleSpeed()) > parameters.getSpeedRange()){
                         misbehaviorReasons.add(VehicleMisbehaviorReason.SPEED_DELTA_INVALID);

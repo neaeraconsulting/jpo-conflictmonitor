@@ -80,12 +80,4 @@ public class VehicleMisbehaviorParameters {
         description = "The name of the topic to write Vehicle Misbehavior events to", 
         updateType = READ_ONLY)
     String vehicleMisbehaviorEventOutputTopicName;
-
-    @PostConstruct
-    public void logValues() {
-        System.out.println("Acceleration lateral: " + accelerationRangeLateral);
-        System.out.println("Acceleration longitudinal: " + accelerationRangeLongitudinal);
-        System.out.println("Acceleration vertical: " + accelerationRangeVertical);
-        System.out.println("Speed range: " + speedRange);
-    }
 }
