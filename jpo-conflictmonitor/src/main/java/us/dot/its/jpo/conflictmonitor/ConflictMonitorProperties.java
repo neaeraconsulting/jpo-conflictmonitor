@@ -884,7 +884,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
     * General Properties
     */
    private String version;
-   // public static final int OUTPUT_SCHEMA_VERSION = 6;
    
    @Setter(AccessLevel.NONE)
    private String kafkaBrokers = null;
@@ -892,26 +891,9 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Setter(AccessLevel.NONE)
    private String hostId;
 
-   @Setter(AccessLevel.NONE)
-   private String connectURL = null;
-
-   // @Setter(AccessLevel.NONE)
-   // private String dockerHostIP = null;
 
    @Setter(AccessLevel.NONE)
    private String kafkaBrokerIP = null;
-
-   // No longer need a mongo DB connection for this service
-   // @Setter(AccessLevel.NONE)
-   // private String dbHostIP = null;
-
-
-
-   private static final String DEFAULT_CONNECT_PORT = "8083";
-
-  
-
-
 
    // BSM
    private String kafkaTopicOdeBsmJson;
@@ -997,15 +979,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
                confluentKey = getEnvironmentVariable("CONFLUENT_KEY");
                confluentSecret = getEnvironmentVariable("CONFLUENT_SECRET");
          }
-      }
-
-      // Initialize the Kafka Connect URL
-      if (connectURL == null) {
-         String tempConnectURL = getEnvironmentVariable("CONNECT_URL");
-         if (tempConnectURL == null) {
-            tempConnectURL = String.format("http://%s:%s", "localhost", DEFAULT_CONNECT_PORT);
-         }
-         connectURL = tempConnectURL;
       }
 
       // List<String> asList = Arrays.asList(this.getKafkaTopicsDisabled());
