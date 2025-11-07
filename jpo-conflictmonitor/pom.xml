@@ -11,17 +11,17 @@
   </parent>
   <groupId>usdot.jpo.ode</groupId>
   <artifactId>jpo-conflictmonitor</artifactId>
-  <version>3.1.1</version>
+  <version>3.2.0-alpha1</version>
   <packaging>jar</packaging>
   <name>jpo-conflictmonitor</name>
   <url>http://maven.apache.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <geotools.version>29-SNAPSHOT</geotools.version>
+    <geotools.version>29.6</geotools.version>
     <sonar.organization>usdot-jpo-ode</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <!-- <maven.deploy.skip>false</maven.deploy.skip> -->
-    <description>Detects Intersection Message Conflicts from messaged passed by the ODE</description>
+    <description>Detects Intersection Message Conflicts from messages passed by the ODE</description>
     <java.version>21</java.version>
     <!-- Resource delimeter for build properties in application.yaml -->
     <resource.delimeter>^</resource.delimeter>
@@ -191,18 +191,19 @@
 
     <dependency>
       <groupId>org.geotools</groupId>
-      <artifactId>gt-shapefile</artifactId>
+      <artifactId>gt-main</artifactId>
       <version>${geotools.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-opengis</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>33.0.0-jre</version>
-    </dependency>
-    <dependency>
-      <groupId>org.geotools</groupId>
-      <artifactId>gt-epsg-wkt</artifactId>
-      <version>${geotools.version}</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-math3 -->
@@ -255,7 +256,7 @@
       <name>Central Repository</name>
       <url>https://repo.maven.apache.org/maven2</url>
     </repository>
-    <!-- OSGEO repositories -->
+    <!-- OSGEO repositories for jts and geotools.  Only use release versions, not snapshots  -->
     <repository>
       <id>osgeo</id>
       <name>OSGeo Release Repository</name>
@@ -265,17 +266,6 @@
       </snapshots>
       <releases>
         <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>osgeo-snapshot</id>
-      <name>OSGeo Snapshot Repository</name>
-      <url>https://repo.osgeo.org/repository/snapshot/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>false</enabled>
       </releases>
     </repository>
   </repositories>
