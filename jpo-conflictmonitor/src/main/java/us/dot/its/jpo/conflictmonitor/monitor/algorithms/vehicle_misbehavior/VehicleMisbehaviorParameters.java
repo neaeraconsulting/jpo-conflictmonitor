@@ -6,11 +6,12 @@ import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.RE
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import lombok.Generated;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
-import us.dot.its.jpo.conflictmonitor.monitor.models.config.UnitsEnum;
+
 
 @Data
 @Generated
@@ -30,17 +31,17 @@ public class VehicleMisbehaviorParameters {
         updateType = DEFAULT)
     boolean debug;
 
-    @ConfigData(key = "vehicle.misbehavior.acceleration_range.lateral", 
+    @ConfigData(key = "vehicle.misbehavior.acceleration_lateral_range", 
         description = "Threshold for generating an event due to an unrealistic acceleration. Measured in Feet per second squared.", 
         updateType = DEFAULT)
     double accelerationRangeLateral;
 
-    @ConfigData(key = "vehicle.misbehavior.acceleration_range.longitudinal", 
+    @ConfigData(key = "vehicle.misbehavior.acceleration_longitudinal_range", 
         description = "Threshold for generating an event due to an unrealistic acceleration. Measured in Feet per second squared.", 
         updateType = DEFAULT)
     double accelerationRangeLongitudinal;
 
-    @ConfigData(key = "vehicle.misbehavior.acceleration_range.vertical", 
+    @ConfigData(key = "vehicle.misbehavior.acceleration_vertical_range", 
         description = "Threshold for generating an event due to an unrealistic acceleration. Measured in Feet per second squared.", 
         updateType = DEFAULT)
     double accelerationRangeVertical;
@@ -80,5 +81,11 @@ public class VehicleMisbehaviorParameters {
         updateType = READ_ONLY)
     String vehicleMisbehaviorEventOutputTopicName;
 
-    
+    @PostConstruct
+    public void logValues() {
+        System.out.println("Acceleration lateral: " + accelerationRangeLateral);
+        System.out.println("Acceleration longitudinal: " + accelerationRangeLongitudinal);
+        System.out.println("Acceleration vertical: " + accelerationRangeVertical);
+        System.out.println("Speed range: " + speedRange);
+    }
 }
