@@ -17,9 +17,7 @@ public class PriorityRequestMetrics
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public Integer getIntersectionID() {
-        if (key != null) {
-            return key.getIntersectionId();
-        }
+        return key.getIntersectionId() != null ? key.getIntersectionId() : null;
     }
 
     /**
