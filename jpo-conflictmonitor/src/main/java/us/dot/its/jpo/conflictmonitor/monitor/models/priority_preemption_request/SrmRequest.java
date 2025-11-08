@@ -1,6 +1,9 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
@@ -9,6 +12,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
  * A flattened object with one SRM status response and key fields from the SRM that contains it.
  */
 @Data
+@Slf4j
 public class SrmRequest {
 
     public SrmRequest() {}
@@ -43,4 +47,14 @@ public class SrmRequest {
     private Integer outboundApproachId;
     private Integer outboundLaneConnectionId;
     private ProcessedPriorityRequestType requestType;
+
+    @Override
+    public String toString() {
+        try {
+            return DateJsonMapper.getInstance().writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            log.error("Exception serializing to JSON", e);
+        }
+        return "";
+    }
 }

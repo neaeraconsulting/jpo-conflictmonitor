@@ -262,7 +262,7 @@ public class PriorityPreemptionRequestTopology
                         return false;
                     }
 
-                    // Nothing missing: produce an event
+                    // Nothing missing and there is a final status: produce an event
                     return true;
                 })
 
@@ -285,6 +285,11 @@ public class PriorityPreemptionRequestTopology
                         joinedStoreName)
                 .merge(eventStream);
 
+        // Count SSM Responses with granted status for fulfillment metric
+        // Include timeout events without a final status in the metrics
+        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
+                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+
         // Write to event topic
         mergedEventStream.to(parameters.getOutputEventTopic(),
                 Produced.with(
@@ -292,9 +297,7 @@ public class PriorityPreemptionRequestTopology
                         JsonSerdes.PriorityPreemptionRequestEvent(),
                         new IntersectionIdPartitioner<>()));
 
-        // Count SSM Responses with granted status for fulfillment metric
-        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
-                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+
 
         if (parameters.isDebug()) {
             metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));

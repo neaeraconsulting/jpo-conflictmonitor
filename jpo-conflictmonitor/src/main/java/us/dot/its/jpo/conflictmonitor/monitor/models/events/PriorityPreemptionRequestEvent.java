@@ -25,6 +25,9 @@ public class PriorityPreemptionRequestEvent
     private String vehicleId;
     private ProcessedBasicVehicleRole vehicleType;
     private int requestId;
+    /**
+     * Timestamp of the latest SRM for this event
+     */
     private long requestTimestamp;
     private ProcessedPriorityRequestType priorityRequestType;
 
@@ -39,6 +42,9 @@ public class PriorityPreemptionRequestEvent
     private Integer outboundApproachId;
     private Integer outboundLaneConnectionId;
 
+    /**
+     * Timestamp of the latest matching SSM for this event
+     */
     private long timeOfLastResponse;
 
     private ProcessedPrioritizationResponseStatus status;

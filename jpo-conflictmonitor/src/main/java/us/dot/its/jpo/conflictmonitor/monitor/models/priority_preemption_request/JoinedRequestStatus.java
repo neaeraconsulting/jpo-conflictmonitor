@@ -1,13 +1,17 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
+import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Slf4j
 public class JoinedRequestStatus {
     private SrmRequest srmRequest;
     private SsmStatus ssmStatus;
@@ -28,13 +32,23 @@ public class JoinedRequestStatus {
             event.setOutboundLaneId(request.getOutboundLaneId());
             event.setOutboundApproachId(request.getOutboundApproachId());
             event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
+            event.setRequestId(request.getRequestId());
         }
         var status = getSsmStatus();
         if (status != null) {
-            event.setRequestId(status.getRequestId());
             event.setTimeOfLastResponse(status.getTimestamp());
             event.setStatus(status.getStatus());
         }
         return event;
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return DateJsonMapper.getInstance().writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            log.error("Exception serializing to JSON", e);
+        }
+        return "";
     }
 }
