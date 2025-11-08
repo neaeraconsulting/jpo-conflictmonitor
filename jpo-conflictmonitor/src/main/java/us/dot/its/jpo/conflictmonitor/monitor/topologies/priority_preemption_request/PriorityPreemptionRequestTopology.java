@@ -30,6 +30,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -307,17 +308,18 @@ public class PriorityPreemptionRequestTopology
         // Use versioned state store with the same retention time as the SRM and SSM KTables
         // to suppress duplicates during the retention time
         final String deduplicateEventsStoreName = parameters.getDeduplicateEventsStoreName();
-        var deduplicateTable = builder.stream(parameters.getOutputEventTopic(),
+        var deduplicateTable = builder
+                .stream(parameters.getOutputEventTopic(),
                         Consumed.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                                 JsonSerdes.PriorityPreemptionRequestEvent()))
-                // Don't need to store the entire event, we only care about the key, convert value to boolean true
-                .mapValues(event -> true)
+                // Don't need to store the entire event, we only care about the key, convert value timestamp
+                .mapValues(event -> event.getEventGeneratedAt())
                 .toTable(
-                    Materialized.<IntersectionVehicleRequestSequenceKey, Boolean>as(
+                    Materialized.<IntersectionVehicleRequestSequenceKey, Long>as(
                                 Stores.persistentKeyValueStore(
                                         deduplicateEventsStoreName))
                         .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
-                        .withValueSerde(Serdes.Boolean())
+                        .withValueSerde(Serdes.Long())
                 );
 
 
@@ -329,11 +331,13 @@ public class PriorityPreemptionRequestTopology
                         // Join serdes with grace period for versioned store
                         Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                                     JsonSerdes.PriorityPreemptionRequestEvent(),
-                                    Serdes.Boolean())
+                                    Serdes.Long())
                                 )
                 // Filer out events with keys already in the previous table
+                // that are that were sent within the retention time
                 .filter((key, eventPair)
-                        -> eventPair.getRight() == null || !eventPair.getRight())
+                        -> eventPair.getRight() == null ||
+                                Instant.ofEpochMilli(eventPair.getRight()).plus(retentionTime).isBefore(Instant.now()))
                 // Extract the event
                 .mapValues(Pair::getLeft);
 
