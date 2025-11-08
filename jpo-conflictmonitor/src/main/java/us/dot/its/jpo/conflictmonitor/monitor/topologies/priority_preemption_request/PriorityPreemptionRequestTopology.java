@@ -314,9 +314,8 @@ public class PriorityPreemptionRequestTopology
                 .mapValues(event -> true)
                 .toTable(
                     Materialized.<IntersectionVehicleRequestSequenceKey, Boolean>as(
-                                Stores.persistentVersionedKeyValueStore(
-                                        deduplicateEventsStoreName,
-                                        retentionTime))
+                                Stores.persistentKeyValueStore(
+                                        deduplicateEventsStoreName))
                         .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
                         .withValueSerde(Serdes.Boolean())
                 );
@@ -331,7 +330,7 @@ public class PriorityPreemptionRequestTopology
                         Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                                     JsonSerdes.PriorityPreemptionRequestEvent(),
                                     Serdes.Boolean())
-                                .withGracePeriod(retentionTime))
+                                )
                 // Filer out events with keys already in the previous table
                 .filter((key, eventPair)
                         -> eventPair.getRight() == null || !eventPair.getRight())
