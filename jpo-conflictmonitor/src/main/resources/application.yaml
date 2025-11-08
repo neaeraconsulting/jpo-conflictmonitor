@@ -637,20 +637,21 @@ priority.preemption.request:
   output-event-topic: topic.CmPriorityPreemptionRequestEvent
   srm-store-name: srm-request-store
   ssm-store-name: ssm-status-store
-  joined-store-name: joined-store
+  joined-store-name: joined-srm-ssm-store
+  deduplicate-events-store-name: srm-ssm-event-deduplicate-store
   store-retention-time: 1
-  retention-time-units: HOURS
-  max-time-between-srms: 2
-  max-time-between-srms-units: MINUTES
+  retention-time-units: MINUTES
+  max-time-between-srms: 30
+  max-time-between-srms-units: SECONDS
 
 metrics:
   common:
-    interval: 1
-    interval-units: MINUTES
-    grace-period-ms: 5000
-    check-interval: 20
+    interval: 30
+    interval-units: SECONDS
+    grace-period-ms: 500
+    check-interval: 10
     check-interval-units: SECONDS
-    retention-time: 3
+    retention-time: 1
     retention-time-units: MINUTES
   priority.request:
     algorithm: defaultPriorityRequestMetricsAlgorithm

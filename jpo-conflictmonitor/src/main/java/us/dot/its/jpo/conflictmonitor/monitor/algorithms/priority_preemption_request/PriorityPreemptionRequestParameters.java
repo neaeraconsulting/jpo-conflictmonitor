@@ -83,4 +83,9 @@ public class PriorityPreemptionRequestParameters {
             updateType = READ_ONLY)
     private String joinedStoreName;
 
+    @ConfigData(key = "priority.preemption.request.deduplicateEventsStoreName",
+        description = "Name of the state store for deduplicating output events",
+        updateType = READ_ONLY)
+    private String deduplicateEventsStoreName;
+
 }

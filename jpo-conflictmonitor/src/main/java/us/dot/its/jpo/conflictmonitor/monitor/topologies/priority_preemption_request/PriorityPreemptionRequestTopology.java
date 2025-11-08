@@ -2,6 +2,8 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_re
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -274,7 +276,7 @@ public class PriorityPreemptionRequestTopology
                 .mapValues(value -> {
                     var event = value.toEvent();
                     if (parameters.isDebug()) {
-                        log.info("SSM/SRM Event: {}", event);
+                        log.trace("SSM/SRM Event (pre-deduplicated): {}", event);
                     }
                     return event;
                 });
@@ -294,8 +296,58 @@ public class PriorityPreemptionRequestTopology
 //        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
 //                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
 
+        // Filter out non-final events
+        var filteredEventStream = mergedEventStream
+                // Filter out non-final statuses only used in metrics
+                .filter((key, value)
+                        -> value.hasFinalStatus());
+
+
+        // Read in keys of events that were already sent to a KTable for deduplicating output events
+        // Use versioned state store with the same retention time as the SRM and SSM KTables
+        // to suppress duplicates during the retention time
+        final String deduplicateEventsStoreName = parameters.getDeduplicateEventsStoreName();
+        var deduplicateTable = builder.stream(parameters.getOutputEventTopic(),
+                        Consumed.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
+                                JsonSerdes.PriorityPreemptionRequestEvent()))
+                // Don't need to store the entire event, we only care about the key, convert value to boolean true
+                .mapValues(event -> true)
+                .toTable(
+                    Materialized.<IntersectionVehicleRequestSequenceKey, Boolean>as(
+                                Stores.persistentVersionedKeyValueStore(
+                                        deduplicateEventsStoreName,
+                                        retentionTime))
+                        .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
+                        .withValueSerde(Serdes.Boolean())
+                );
+
+
+        var deduplicatedEventStream = filteredEventStream
+                // Join with the table of previously sent events
+                .leftJoin(deduplicateTable,
+                        // Value Joiner
+                        (event, wasPreviousEvent) -> Pair.of(event, wasPreviousEvent),
+                        // Join serdes with grace period for versioned store
+                        Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
+                                    JsonSerdes.PriorityPreemptionRequestEvent(),
+                                    Serdes.Boolean())
+                                .withGracePeriod(retentionTime))
+                // Filer out events with keys already in the previous table
+                .filter((key, eventPair)
+                        -> eventPair.getRight() == null || !eventPair.getRight())
+                // Extract the event
+                .mapValues(Pair::getLeft);
+
+        // Produce deduplicated Event
+        if (parameters.isDebug()) {
+            deduplicatedEventStream.peek((key, event) -> {
+                log.info("SSM/SRM Event (deduplicated): {}", event);
+            });
+        }
+
+
         // Write to event topic
-        mergedEventStream.to(parameters.getOutputEventTopic(),
+        deduplicatedEventStream.to(parameters.getOutputEventTopic(),
                 Produced.with(
                         JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                         JsonSerdes.PriorityPreemptionRequestEvent(),

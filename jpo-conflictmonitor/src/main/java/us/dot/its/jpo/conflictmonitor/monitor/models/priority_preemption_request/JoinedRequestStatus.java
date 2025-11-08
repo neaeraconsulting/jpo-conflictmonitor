@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
@@ -69,11 +70,16 @@ public class JoinedRequestStatus {
         var request = getSrmRequest();
         var status = getSsmStatus();
         if (request != null && status != null) {
-            // Check key items match
-            if (!Objects.equals(request.getRequestId(),  status.getRequestId())) {
+            // key items must match
+            if (request.getRequestId() != status.getRequestId()) {
                 throw new IllegalArgumentException("requestId differs between request and status");
             }
-            // TODO fill in
+            if (!StringUtils.equals(request.getVehicleId(), status.getVehicleId())) {
+                throw new IllegalArgumentException("vehicleId differs between request and status");
+            }
+            if (request.getRequestSequenceNumber() != status.getRequestSequenceNumber()) {
+                throw new IllegalArgumentException("requestSequenceNumber differs between request and status");
+            }
         }
     }
 
