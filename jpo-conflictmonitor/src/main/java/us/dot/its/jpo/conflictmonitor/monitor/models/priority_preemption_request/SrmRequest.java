@@ -18,7 +18,8 @@ public class SrmRequest {
     public SrmRequest() {}
 
     public SrmRequest(final String vehicleId, final ProcessedBasicVehicleRole vehicleType,
-                      final long timestamp, final long ingestTime, final ProcessedSignalRequest request) {
+                      final long timestamp, final long ingestTime, final ProcessedSignalRequest request,
+                      final int requestSequenceNumber) {
         this.vehicleId = vehicleId;
         this.timestamp = timestamp;
         this.ingestTime = ingestTime;
@@ -33,6 +34,7 @@ public class SrmRequest {
         outboundApproachId = request.getOutboundApproachID();
         outboundLaneConnectionId = request.getOutboundLaneConnectionID();
         requestType = request.getPriorityRequestType();
+        this.requestSequenceNumber = requestSequenceNumber;
     }
 
     private String vehicleId;
@@ -49,6 +51,7 @@ public class SrmRequest {
     private Integer outboundApproachId;
     private Integer outboundLaneConnectionId;
     private ProcessedPriorityRequestType requestType;
+    private int requestSequenceNumber;
 
 
     @Override

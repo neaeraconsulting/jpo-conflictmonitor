@@ -8,16 +8,24 @@ import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
+import java.util.Objects;
+
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Slf4j
 public class JoinedRequestStatus {
+    public JoinedRequestStatus(SrmRequest srmRequest, SsmStatus ssmStatus) {
+        this.srmRequest = srmRequest;
+        this.ssmStatus = ssmStatus;
+        validate();
+    }
     private SrmRequest srmRequest;
     private SsmStatus ssmStatus;
+
     public PriorityPreemptionRequestEvent toEvent() {
         var event = new PriorityPreemptionRequestEvent();
         var request = getSrmRequest();
+        var status = getSsmStatus();
         if (request != null) {
             event.setIntersectionID(request.getIntersectionId());
             event.setRoadRegulatorID(request.getRegion());
@@ -34,34 +42,39 @@ public class JoinedRequestStatus {
             event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
             event.setRequestId(request.getRequestId());
             event.setRequestIngestTime(request.getIngestTime());
-        } else {
-            event.setIntersectionID(0);
-            event.setRoadRegulatorID(0);
-            event.setVehicleId(null);
-            event.setRequestTimestamp(0L);
-            event.setPriorityRequestType(null);
-            event.setVehicleType(null);
-            event.setPriorityRequestType(null);
-            event.setInboundLaneId(null);
-            event.setInboundApproachId(null);
-            event.setInboundLaneConnectionId(null);
-            event.setOutboundLaneId(null);
-            event.setOutboundApproachId(null);
-            event.setOutboundLaneConnectionId(null);
-            event.setRequestId(0);
-            event.setRequestIngestTime(0L);
+            event.setRequestSequenceNumber(request.getRequestSequenceNumber());
         }
-        var status = getSsmStatus();
+
         if (status != null) {
             event.setTimeOfLastResponse(status.getTimestamp());
             event.setResponseIngestTime(status.getIngestTime());
             event.setStatus(status.getStatus());
-        } else {
-            event.setTimeOfLastResponse(0L);
-            event.setResponseIngestTime(0L);
-            event.setStatus(null);
+            event.setRequestSequenceNumber(status.getRequestSequenceNumber());
         }
         return event;
+    }
+
+    public void setSrmRequest(SrmRequest srmRequest) {
+        this.srmRequest = srmRequest;
+        validate();
+    }
+
+    public void setSsmStatus(SsmStatus ssmStatus) {
+        this.ssmStatus = ssmStatus;
+        validate();
+    }
+
+
+    private void validate() {
+        var request = getSrmRequest();
+        var status = getSsmStatus();
+        if (request != null && status != null) {
+            // Check key items match
+            if (!Objects.equals(request.getRequestId(),  status.getRequestId())) {
+                throw new IllegalArgumentException("requestId differs between request and status");
+            }
+            // TODO fill in
+        }
     }
 
     @Override

@@ -25,6 +25,7 @@ public class PriorityPreemptionRequestEvent
     private String vehicleId;
     private ProcessedBasicVehicleRole vehicleType;
     private int requestId;
+    private int requestSequenceNumber;
 
     private ProcessedPriorityRequestType priorityRequestType;
 

@@ -121,7 +121,7 @@ public class PriorityPreemptionRequestTopology
 
                     for (final ProcessedSignalRequest processedRequest : requests) {
                         var requestKey = new IntersectionVehicleRequestSequenceKey(vehicleId, processedRequest, requestSequenceNumber);
-                        var request = new SrmRequest(vehicleId, vehicleType, timestamp, ingestTime, processedRequest);
+                        var request = new SrmRequest(vehicleId, vehicleType, timestamp, ingestTime, processedRequest, requestSequenceNumber);
                         requestList.add(new KeyValue<>(requestKey, request));
                     }
 

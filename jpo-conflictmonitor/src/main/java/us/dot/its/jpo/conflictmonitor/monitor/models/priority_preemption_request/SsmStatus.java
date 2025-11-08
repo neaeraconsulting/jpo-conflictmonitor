@@ -38,6 +38,7 @@ public class SsmStatus {
         outboundApproachId = signalStatus.getOutboundOnApproachID();
         outboundLaneConnectionId = signalStatus.getOutboundOnLaneConnectionID();
         status = signalStatus.getStatus();
+        requestSequenceNumber = signalStatus.getRequesterSequenceNumber() != null ? signalStatus.getRequesterSequenceNumber() : -1;
     }
 
     private String vehicleId;
@@ -54,6 +55,7 @@ public class SsmStatus {
     private Integer outboundApproachId;
     private Integer outboundLaneConnectionId;
     private ProcessedPrioritizationResponseStatus status;
+    private int requestSequenceNumber;
 
     public static final Set<ProcessedPrioritizationResponseStatus> finalStatuses
             = Sets.newHashSet(GRANTED, REJECTED, MAXPRESENCE, RESERVICELOCKED);
