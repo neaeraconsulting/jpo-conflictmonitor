@@ -48,10 +48,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetr
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SsmStatus;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimeChangeDetailAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.RsuIntersectionSignalGroupKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
@@ -605,5 +602,9 @@ public class JsonSerdes {
 
     public static Serde<IntersectionVehicleTypeKey> IntersectionVehicleTypeKey() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleTypeKey.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestSequenceKey> IntersectionVehicleRequestSequenceKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class));
     }
 }

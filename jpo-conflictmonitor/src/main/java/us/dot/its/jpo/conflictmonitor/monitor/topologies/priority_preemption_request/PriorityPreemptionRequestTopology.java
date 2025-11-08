@@ -69,7 +69,7 @@ public class PriorityPreemptionRequestTopology
         var joinedStoreBuilder =
                 Stores.keyValueStoreBuilder(
                         Stores.persistentKeyValueStore(joinedStoreName),
-                        JsonSerdes.IntersectionVehicleRequestKey(),
+                        JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                         JsonSerdes.JoinedRequestStatus()
                 );
         builder.addStateStore(joinedStoreBuilder);
@@ -92,7 +92,7 @@ public class PriorityPreemptionRequestTopology
         var srmRequestStream = processedSrmStream
                 .flatMap((rsuVehicleIdKey, processedSrm) -> {
 
-                    List<KeyValue<IntersectionVehicleRequestKey, SrmRequest>> requestList = new ArrayList<>();
+                    List<KeyValue<IntersectionVehicleRequestSequenceKey, SrmRequest>> requestList = new ArrayList<>();
 
                     SrmProperties properties = processedSrm.getProperties();
                     if (properties == null) {
@@ -116,10 +116,12 @@ public class PriorityPreemptionRequestTopology
 
                     final ZonedDateTime dateTime = properties.getTimeStamp();
                     final long timestamp = dateTime.toInstant().toEpochMilli();
+                    final long ingestTime = properties.getOdeReceivedAt().toInstant().toEpochMilli();
+                    final int requestSequenceNumber = properties.getSequenceNumber();
 
                     for (final ProcessedSignalRequest processedRequest : requests) {
-                        var requestKey = new IntersectionVehicleRequestKey(vehicleId, processedRequest);
-                        var request = new SrmRequest(vehicleId, vehicleType, timestamp, processedRequest);
+                        var requestKey = new IntersectionVehicleRequestSequenceKey(vehicleId, processedRequest, requestSequenceNumber);
+                        var request = new SrmRequest(vehicleId, vehicleType, timestamp, ingestTime, processedRequest);
                         requestList.add(new KeyValue<>(requestKey, request));
                     }
 
@@ -128,8 +130,8 @@ public class PriorityPreemptionRequestTopology
                 .repartition(
                         // Partition by Intersection ID
                         Repartitioned
-                                .streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SrmRequest>())
-                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                                .streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestSequenceKey, SrmRequest>())
+                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
                                 .withValueSerde(JsonSerdes.SrmRequest())
                 );
 
@@ -139,15 +141,15 @@ public class PriorityPreemptionRequestTopology
 
         // Put each SRM request in a KTable to store the latest request with a given
         // intersectionId, region, vehicleId, and requestId
-        KTable<IntersectionVehicleRequestKey, SrmRequest> srmRequestTable =
+        KTable<IntersectionVehicleRequestSequenceKey, SrmRequest> srmRequestTable =
                 srmRequestStream.toTable(
                         // Use versioned state store for the SRM table to be able to deal with out-of-order messages easily
                         // and automatically remove old entries after the retention time
-                        Materialized.<IntersectionVehicleRequestKey, SrmRequest>as(
+                        Materialized.<IntersectionVehicleRequestSequenceKey, SrmRequest>as(
                                         Stores.persistentVersionedKeyValueStore(
                                                 requestStoreName,
                                                 retentionTime))
-                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
                                 .withValueSerde(JsonSerdes.SrmRequest())
                 );
 
@@ -175,19 +177,20 @@ public class PriorityPreemptionRequestTopology
                     final Integer region = processedSsm.getRegion();
                     final ZonedDateTime dateTime = processedSsm.getTimeStamp();
                     final long timestamp = dateTime.toInstant().toEpochMilli();
-                    List<KeyValue<IntersectionVehicleRequestKey, SsmStatus>> responseList = new ArrayList<>();
+                    final long ingestTime = processedSsm.getOdeReceivedAt().toInstant().toEpochMilli();
+                    List<KeyValue<IntersectionVehicleRequestSequenceKey, SsmStatus>> responseList = new ArrayList<>();
                     List<ProcessedSignalStatus> statusList = processedSsm.getStatusList();
                     for (ProcessedSignalStatus status : statusList) {
-                        var key = new IntersectionVehicleRequestKey(intersectionId, region, status);
-                        var ssmStatus = new SsmStatus(intersectionId, region, timestamp, status);
+                        var key = new IntersectionVehicleRequestSequenceKey(intersectionId, region, status);
+                        var ssmStatus = new SsmStatus(intersectionId, region, timestamp, ingestTime, status);
                         responseList.add(new KeyValue<>(key, ssmStatus));
                     }
                     return responseList;
                 })
                 .repartition(
                         // Partition by Intersection ID
-                        Repartitioned.streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestKey, SsmStatus>())
-                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                        Repartitioned.streamPartitioner(new IntersectionIdPartitioner<IntersectionVehicleRequestSequenceKey, SsmStatus>())
+                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
                                 .withValueSerde(JsonSerdes.SsmStatus())
                 );
 
@@ -197,11 +200,11 @@ public class PriorityPreemptionRequestTopology
 
         var ssmStatusTable =
                 ssmStatusStream.toTable(
-                        Materialized.<IntersectionVehicleRequestKey, SsmStatus>as(
+                        Materialized.<IntersectionVehicleRequestSequenceKey, SsmStatus>as(
                                         Stores.persistentVersionedKeyValueStore(
                                                 statusStoreName,
                                                 retentionTime))
-                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestKey())
+                                .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
                                 .withValueSerde(JsonSerdes.SsmStatus())
                 );
 
@@ -217,6 +220,7 @@ public class PriorityPreemptionRequestTopology
                         // ValueJoiner
                         (ssmStatus, srmRequest) -> new JoinedRequestStatus(srmRequest, ssmStatus)
                 );
+
 
         var joinedStream = joinedTable.toStream();
 
@@ -244,7 +248,7 @@ public class PriorityPreemptionRequestTopology
         }
 
         // Check for events from joined stream
-        KStream<IntersectionVehicleRequestKey, PriorityPreemptionRequestEvent> eventStream = joinedStream
+        KStream<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> eventStream = joinedStream
                 .filter((key, value) -> {
 
                     // Filter null SSMs
@@ -287,28 +291,28 @@ public class PriorityPreemptionRequestTopology
 
         // Count SSM Responses with granted status for fulfillment metric
         // Include timeout events without a final status in the metrics
-        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
-                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+//        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
+//                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
 
         // Write to event topic
         mergedEventStream.to(parameters.getOutputEventTopic(),
                 Produced.with(
-                        JsonSerdes.IntersectionVehicleRequestKey(),
+                        JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                         JsonSerdes.PriorityPreemptionRequestEvent(),
                         new IntersectionIdPartitioner<>()));
 
 
 
-        if (parameters.isDebug()) {
-            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
-        }
-
-        // Write to metrics topic
-        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
-                Produced.with(
-                        JsonSerdes.IntersectionVehicleTypeKey(),
-                        JsonSerdes.PriorityRequestMetrics(),
-                        new IntersectionIdPartitioner<>()));
+//        if (parameters.isDebug()) {
+//            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
+//        }
+//
+//        // Write to metrics topic
+//        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
+//                Produced.with(
+//                        JsonSerdes.IntersectionVehicleTypeKey(),
+//                        JsonSerdes.PriorityRequestMetrics(),
+//                        new IntersectionIdPartitioner<>()));
 
         return builder.build();
     }

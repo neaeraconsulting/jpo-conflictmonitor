@@ -22,10 +22,12 @@ public class SsmStatus {
 
     public SsmStatus() {}
 
-    public SsmStatus(Integer intersectionId, Integer region, long timestamp, ProcessedSignalStatus signalStatus) {
+    public SsmStatus(Integer intersectionId, Integer region, long timestamp, long ingestTime,
+                     ProcessedSignalStatus signalStatus) {
         this.intersectionId = intersectionId != null ? intersectionId : -1;
         this.region = region != null ? region : -1;
         this.timestamp = timestamp;
+        this.ingestTime = ingestTime;
         vehicleId = signalStatus.getVehicleID();
         vehicleType = signalStatus.getRequesterRole();
         requestId = signalStatus.getRequestID() != null ? signalStatus.getRequestID() : -1;
@@ -41,6 +43,7 @@ public class SsmStatus {
     private String vehicleId;
     private ProcessedBasicVehicleRole vehicleType;
     private long timestamp;
+    private long ingestTime;
     private int intersectionId;
     private int region;
     private int requestId;

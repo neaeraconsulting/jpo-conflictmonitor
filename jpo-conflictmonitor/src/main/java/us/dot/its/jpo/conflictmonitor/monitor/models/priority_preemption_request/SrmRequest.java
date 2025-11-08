@@ -18,9 +18,10 @@ public class SrmRequest {
     public SrmRequest() {}
 
     public SrmRequest(final String vehicleId, final ProcessedBasicVehicleRole vehicleType,
-                      final long timestamp, final ProcessedSignalRequest request) {
+                      final long timestamp, final long ingestTime, final ProcessedSignalRequest request) {
         this.vehicleId = vehicleId;
         this.timestamp = timestamp;
+        this.ingestTime = ingestTime;
         this.vehicleType = vehicleType;
         intersectionId = request.getIntersectionId() != null ? request.getIntersectionId() : -1;
         region = request.getRegion() != null ? request.getRegion() : -1;
@@ -37,6 +38,7 @@ public class SrmRequest {
     private String vehicleId;
     private ProcessedBasicVehicleRole vehicleType;
     private long timestamp;
+    private long ingestTime;
     private int intersectionId;
     private int region;
     private int requestId;
@@ -47,6 +49,7 @@ public class SrmRequest {
     private Integer outboundApproachId;
     private Integer outboundLaneConnectionId;
     private ProcessedPriorityRequestType requestType;
+
 
     @Override
     public String toString() {

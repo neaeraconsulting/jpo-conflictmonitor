@@ -33,11 +33,33 @@ public class JoinedRequestStatus {
             event.setOutboundApproachId(request.getOutboundApproachId());
             event.setOutboundLaneConnectionId(request.getOutboundLaneConnectionId());
             event.setRequestId(request.getRequestId());
+            event.setRequestIngestTime(request.getIngestTime());
+        } else {
+            event.setIntersectionID(0);
+            event.setRoadRegulatorID(0);
+            event.setVehicleId(null);
+            event.setRequestTimestamp(0L);
+            event.setPriorityRequestType(null);
+            event.setVehicleType(null);
+            event.setPriorityRequestType(null);
+            event.setInboundLaneId(null);
+            event.setInboundApproachId(null);
+            event.setInboundLaneConnectionId(null);
+            event.setOutboundLaneId(null);
+            event.setOutboundApproachId(null);
+            event.setOutboundLaneConnectionId(null);
+            event.setRequestId(0);
+            event.setRequestIngestTime(0L);
         }
         var status = getSsmStatus();
         if (status != null) {
             event.setTimeOfLastResponse(status.getTimestamp());
+            event.setResponseIngestTime(status.getIngestTime());
             event.setStatus(status.getStatus());
+        } else {
+            event.setTimeOfLastResponse(0L);
+            event.setResponseIngestTime(0L);
+            event.setStatus(null);
         }
         return event;
     }

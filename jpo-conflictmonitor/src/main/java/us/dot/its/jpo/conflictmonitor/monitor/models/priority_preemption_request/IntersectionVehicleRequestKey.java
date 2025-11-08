@@ -3,11 +3,17 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_reques
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import us.dot.its.jpo.asn.j2735.r2024.SignalRequestMessage.PriorityRequestType;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionKey;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
 
+/**
+ * Unique key for requests, with VehicleID and RequestID, but without request sequence number.
+ * This key is used to count unique requests for purposes of the fulfillment rate metric.
+ */
 @Data
 @Slf4j
 public class IntersectionVehicleRequestKey implements IntersectionKey {
@@ -30,6 +36,8 @@ public class IntersectionVehicleRequestKey implements IntersectionKey {
 
     private int intersectionId;
     private int region;
+
+
     private String vehicleId;
     private int requestId;
 

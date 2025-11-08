@@ -9,7 +9,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestSequenceKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.SrmRequest;
 
@@ -23,15 +23,15 @@ import java.util.ArrayList;
  */
 @Slf4j
 public class PriorityPreemptionRequestTimeoutProcessor
-    extends ContextualProcessor<IntersectionVehicleRequestKey, JoinedRequestStatus,
-        IntersectionVehicleRequestKey, PriorityPreemptionRequestEvent> {
+    extends ContextualProcessor<IntersectionVehicleRequestSequenceKey, JoinedRequestStatus,
+        IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> {
 
     private final String joinedStoreName;
     private final Duration maxTimeBetweenSrms;
     private final long maxTimeBetweenSrmsMillis;
-    private KeyValueStore<IntersectionVehicleRequestKey, JoinedRequestStatus> joinedStore;
+    private KeyValueStore<IntersectionVehicleRequestSequenceKey, JoinedRequestStatus> joinedStore;
     private final boolean isDebug;
-    ProcessorContext<IntersectionVehicleRequestKey, PriorityPreemptionRequestEvent> context;
+    ProcessorContext<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> context;
 
     public PriorityPreemptionRequestTimeoutProcessor(Duration maxTimeBetweenSrms, boolean isDebug, String joinedStoreName) {
         this.maxTimeBetweenSrms = maxTimeBetweenSrms;
@@ -41,7 +41,7 @@ public class PriorityPreemptionRequestTimeoutProcessor
     }
 
     @Override
-    public void init(ProcessorContext<IntersectionVehicleRequestKey, PriorityPreemptionRequestEvent> context) {
+    public void init(ProcessorContext<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> context) {
         super.init(context);
         this.context = context;
         joinedStore = context.getStateStore(joinedStoreName);
@@ -49,7 +49,7 @@ public class PriorityPreemptionRequestTimeoutProcessor
     }
 
     @Override
-    public void process(Record<IntersectionVehicleRequestKey, JoinedRequestStatus> record) {
+    public void process(Record<IntersectionVehicleRequestSequenceKey, JoinedRequestStatus> record) {
 
         if (isDebug) {
             log.debug("process JoinedRequestStatus key: {}, value: {}", record.key(), record.value());
@@ -96,11 +96,11 @@ public class PriorityPreemptionRequestTimeoutProcessor
         if (isDebug) {
             log.trace("punctuate {}", timestamp);
         }
-        var keysToDelete = new ArrayList<IntersectionVehicleRequestKey>();
+        var keysToDelete = new ArrayList<IntersectionVehicleRequestSequenceKey>();
         try (var storeInterator = joinedStore.all()) {
             while (storeInterator.hasNext()) {
-                KeyValue<IntersectionVehicleRequestKey, JoinedRequestStatus> item = storeInterator.next();
-                IntersectionVehicleRequestKey key = item.key;
+                KeyValue<IntersectionVehicleRequestSequenceKey, JoinedRequestStatus> item = storeInterator.next();
+                IntersectionVehicleRequestSequenceKey key = item.key;
                 JoinedRequestStatus joined = item.value;
                 SrmRequest request = joined.getSrmRequest();
                 long requestTimestamp = request.getTimestamp();
@@ -120,7 +120,7 @@ public class PriorityPreemptionRequestTimeoutProcessor
             }
         }
         // Clean up
-        for (IntersectionVehicleRequestKey key : keysToDelete) {
+        for (IntersectionVehicleRequestSequenceKey key : keysToDelete) {
             joinedStore.delete(key);
         }
     }
