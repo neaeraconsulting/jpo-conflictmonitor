@@ -6,6 +6,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -19,6 +20,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicle
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 //import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestSequenceKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuVehicleIdKey;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
@@ -153,50 +155,56 @@ public class PriorityPreemptionRequestTopologyTest {
         }
     }
 
-//    /**
-//     * Test that a stream of SRMs emits an event if no SSM response is received* after a configured time,
-//     * so that unmatched SRMs are included in the calculation of the fulfillment rate metric.
-//     */
-//    @Test
-//    public void testPriorityPreemptionRequestEvent_NoSsm() {
-//        Topology topology = createTopology();
-//
-//        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 0,
-//                0, 0, ZoneOffset.UTC);
-//        final Instant startWallClock = start.toInstant();
-//        try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
-//            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
-//                    new JsonSerializer<RsuVehicleIdKey>(),
-//                    new JsonSerializer<ProcessedSrm>());
-//
-//            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
-//                    new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class),
-//                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
-//
-//            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
-//
-//            // send one srm every 5 seconds
-//            final int step = 5;
-//            for (int offset = 0; offset <= 60; offset += step) {
-//                final ZonedDateTime now = start.plusSeconds(offset);
-//                log.info("now: {}", now.format(DateTimeFormatter.ISO_INSTANT));
-//                final ProcessedSrm processedSrm = createSrm(now);
-//                inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
-//                driver.advanceWallClockTime(Duration.ofSeconds(step));
-//            }
-//
-//            // Don't send any SSMs
-//
-//            // Wait longer than max-time-between-srms
-//            driver.advanceWallClockTime(Duration.ofSeconds(maxSecondsBetweenSrms + 10));
-//
-//            // Should be one event
-//            var eventList = outputEventTopic.readKeyValuesToList();
-//            assertThat(eventList, hasSize(1));
-//
-//            // TODO check all properties
-//        }
-//    }
+    /**
+     * Test the {@link us.dot.its.jpo.conflictmonitor.monitor.processors.PriorityPreemptionRequestTimeoutProcessor}
+     * within the topology, so that unmatched SRMs are included in the calculation of the fulfillment rate metric.
+     * Tests that a stream of SRMs gets saved in the joined state store, and that if no SSM
+     * response is received after a configured time, gets deleted from the store.
+     */
+    @Test
+    public void testPriorityPreemptionRequestEvent_NoSsm() {
+        Topology topology = createTopology();
+
+        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 0,
+                0, 0, ZoneOffset.UTC);
+        final Instant startWallClock = start.toInstant();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
+
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final IntersectionVehicleRequestSequenceKey eventKey = getEventKey();
+            KeyValueStore<IntersectionVehicleRequestSequenceKey, JoinedRequestStatus> joinedStateStore
+                    = driver.getKeyValueStore(joinedStoreName);
+
+            // send one srm every 5 seconds
+            final int step = 5;
+            for (int offset = 0; offset <= 60; offset += step) {
+                final ZonedDateTime now = start.plusSeconds(offset);
+                log.info("now: {}", now.format(DateTimeFormatter.ISO_INSTANT));
+                final ProcessedSrm processedSrm = createSrm(now);
+                inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(step));
+                var value = joinedStateStore.get(eventKey);
+                assertThat(value, notNullValue());
+            }
+
+            // Wait longer than max-time-between-srms
+            driver.advanceWallClockTime(Duration.ofSeconds(maxSecondsBetweenSrms + 10));
+
+            // Store should be cleared now
+            var storedValue = joinedStateStore.get(eventKey);
+            assertThat(storedValue, nullValue());
+
+            var eventList = outputEventTopic.readKeyValuesToList();
+            assertThat("no events expected for SRM stream without SSM", eventList, hasSize(0));
+        }
+    }
 
     @SuppressWarnings("unchecked")
     private Topology createTopology() {
@@ -240,7 +248,15 @@ public class PriorityPreemptionRequestTopologyTest {
         return parameters;
     }
 
-
+    private IntersectionVehicleRequestSequenceKey getEventKey() {
+        final IntersectionVehicleRequestSequenceKey eventKey = new IntersectionVehicleRequestSequenceKey();
+        eventKey.setRequestId(requestId);
+        eventKey.setIntersectionId(intersectionId);
+        eventKey.setVehicleId(vehicleId);
+        eventKey.setRequestSequenceNumber(requestSequenceNumber);
+        eventKey.setRegion(roadRegulatorId);
+        return eventKey;
+    }
 
     private ProcessedSrm createSrm(ZonedDateTime timestamp) {
         var geometry = new Point(lon, lat);

@@ -68,7 +68,7 @@ public class PriorityPreemptionRequestTimeoutProcessor
 
         // SRM is present with final SSM, this processor doesn't care
         if (value.getSsmStatus() != null && value.getSsmStatus().isFinalStatus()) {
-            // Delete without event if final status (the main topology with emit the event)
+            // Delete without event if final status (the main topology will emit the event)
             joinedStore.delete(record.key());
             if (isDebug) {
                 log.debug("deleted final value");
