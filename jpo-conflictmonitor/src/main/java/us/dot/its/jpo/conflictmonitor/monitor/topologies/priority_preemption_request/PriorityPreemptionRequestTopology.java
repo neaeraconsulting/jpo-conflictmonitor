@@ -8,6 +8,12 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.PunctuationType;
+import org.apache.kafka.streams.processor.api.ContextualProcessor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -76,6 +82,16 @@ public class PriorityPreemptionRequestTopology
                         JsonSerdes.JoinedRequestStatus()
                 );
         builder.addStateStore(joinedStoreBuilder);
+
+        final String deduplicateEventsStoreName = parameters.getDeduplicateEventsStoreName();
+//        var deduplicateStoreBuilder =
+//                Stores.keyValueStoreBuilder(
+//                        Stores.persistentKeyValueStore(deduplicateEventsStoreName),
+//                        JsonSerdes.IntersectionVehicleRequestSequenceKey(),
+//                    Serdes.Long()
+//                );
+//        builder.addStateStore(deduplicateStoreBuilder);
+
 
 
         // Read ProcessedSrms
@@ -253,7 +269,6 @@ public class PriorityPreemptionRequestTopology
         // Check for events from joined stream
         KStream<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> eventStream = joinedStream
                 .filter((key, value) -> {
-
                     // Filter null SSMs
                     if (value.getSsmStatus() == null) {
                         return false;
@@ -264,13 +279,9 @@ public class PriorityPreemptionRequestTopology
                         return false;
                     }
 
-                    // Filter out SSM responses that don't have a final status
-                    if (!value.getSsmStatus().isFinalStatus()) {
-                        return false;
-                    }
-
-                    // Nothing missing and there is a final status: produce an event
-                    return true;
+                    // Filter out SSM responses that don't have a final status.
+                    // Otherwise, if nothing missing and there is a final status, produce an event
+                    return value.getSsmStatus().isFinalStatus();
                 })
 
                 // Produce Event
@@ -292,10 +303,7 @@ public class PriorityPreemptionRequestTopology
                         joinedStoreName)
                 .merge(eventStream);
 
-        // Count SSM Responses with granted status for fulfillment metric
-        // Include timeout events without a final status in the metrics
-//        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
-//                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, eventStream);
+
 
         // Filter out non-final events
         var filteredEventStream = mergedEventStream
@@ -307,39 +315,117 @@ public class PriorityPreemptionRequestTopology
         // Read in keys of events that were already sent to a KTable for deduplicating output events
         // Use versioned state store with the same retention time as the SRM and SSM KTables
         // to suppress duplicates during the retention time
-        final String deduplicateEventsStoreName = parameters.getDeduplicateEventsStoreName();
         var deduplicateTable = builder
                 .stream(parameters.getOutputEventTopic(),
                         Consumed.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                                 JsonSerdes.PriorityPreemptionRequestEvent()))
-                // Don't need to store the entire event, we only care about the key, convert value timestamp
-                .mapValues(event -> event.getEventGeneratedAt())
+
+                // Don't need to store the entire event, we only care about the key, convert the value to a timestamp.
+                // Use a contextual processor, instead of a simple mapValues function, to be able to get the system
+                // time from the processor context.
+                .process(() -> new ContextualProcessor<IntersectionVehicleRequestSequenceKey,
+                        PriorityPreemptionRequestEvent, IntersectionVehicleRequestSequenceKey, Long>() {
+                    @Override
+                    public void process(Record<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> record) {
+                        final var key = record.key();
+                        final var streamTime = record.timestamp();
+                        final var wallClockTime = context().currentSystemTimeMs();
+                        final var value = record.value();
+                        if (value == null) {
+                            // Pass tombstones through to clear the ktable store
+                            var tombstoneRecord = new Record<>(key, (Long)null, streamTime);
+                            if (parameters.isDebug()) {
+                                log.debug("Processor passing through tombstone record for key: {}", key);
+                            }
+                            context().forward(tombstoneRecord);
+                        } else {
+                            // Value of new record is wall clock timestamp
+                            var newRecord = new Record<>(key, wallClockTime, streamTime);
+                            context().forward(newRecord);
+                        }
+                    }
+                })
                 .toTable(
                     Materialized.<IntersectionVehicleRequestSequenceKey, Long>as(
                                 Stores.persistentKeyValueStore(
                                         deduplicateEventsStoreName))
                         .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
-                        .withValueSerde(Serdes.Long())
+                        .withValueSerde(Serdes.Long()
+                        )
                 );
 
 
         var deduplicatedEventStream = filteredEventStream
                 // Join with the table of previously sent events
                 .leftJoin(deduplicateTable,
-                        // Value Joiner
-                        (event, wasPreviousEvent) -> Pair.of(event, wasPreviousEvent),
+                        // Value Joiner.  Written as lambda, not method reference, for clarity
+                        (event, timeOfPreviousEvent) -> Pair.of(event, timeOfPreviousEvent),
                         // Join serdes with grace period for versioned store
                         Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
                                     JsonSerdes.PriorityPreemptionRequestEvent(),
                                     Serdes.Long())
                                 )
-                // Filer out events with keys already in the previous table
-                // that are that were sent within the retention time
-                .filter((key, eventPair)
-                        -> eventPair.getRight() == null ||
-                                Instant.ofEpochMilli(eventPair.getRight()).plus(retentionTime).isBefore(Instant.now()))
-                // Extract the event
-                .mapValues(Pair::getLeft);
+                // Filer out events with keys already in the previous table that were sent within the retention time
+                // And extract the event.  Use a contextual processor to get the system time from the processor context,
+                // instead of using Instant.noew(), to be able to mock the wall clock time in tests.
+                .process(() -> new ContextualProcessor<IntersectionVehicleRequestSequenceKey,
+                        Pair<PriorityPreemptionRequestEvent, Long>,
+                        IntersectionVehicleRequestSequenceKey,
+                        PriorityPreemptionRequestEvent>() {
+
+                    KeyValueStore<IntersectionVehicleRequestSequenceKey, Long> dedupStore;
+
+                    @Override
+                    public void init(ProcessorContext<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> context) {
+                        super.init(context);
+                        context().schedule(retentionTime, PunctuationType.WALL_CLOCK_TIME, this::punctuate);
+                        dedupStore = context().getStateStore(deduplicateEventsStoreName);
+                        if (dedupStore == null) {
+                            log.error("Dedup store not found in processor");
+                        }
+                    }
+
+                    @Override
+                    public void process(Record<IntersectionVehicleRequestSequenceKey, Pair<PriorityPreemptionRequestEvent, Long>> record) {
+                        Pair<PriorityPreemptionRequestEvent, Long> timestampedEvent = record.value();
+                        final Long eventTimestamp = timestampedEvent.getRight();
+                        final Instant eventTime = eventTimestamp != null ? Instant.ofEpochMilli(eventTimestamp) : null;
+                        final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
+                        // Forward the record if it doesn't have an entry in the deduplicate table, or if the entry
+                        // has a timestamp longer ago than the retention time
+                        if (eventTime == null || eventTime.plus(retentionTime).isBefore(wallClockTime)) {
+                            var newRecord = new Record<>(record.key(), record.value().getLeft(), record.timestamp());
+                            context().forward(newRecord);
+                        }
+                    }
+
+                    // Punctuator checks if retention time is passed for each key and sends a tombstone to the topic
+                    // to clear the deduplicator ktable store
+                    private void punctuate(long punctuationTime) {
+                        var keysToDelete = new ArrayList<IntersectionVehicleRequestSequenceKey>();
+                        try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, Long> iterator = dedupStore.all()) {
+                            while (iterator.hasNext()) {
+                                KeyValue<IntersectionVehicleRequestSequenceKey, Long> item = iterator.next();
+                                final IntersectionVehicleRequestSequenceKey key = item.key;
+                                final Instant eventTime = Instant.ofEpochMilli(item.value);
+                                final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
+                                if (eventTime.plus(retentionTime).isBefore(wallClockTime)) {
+                                    if (parameters.isDebug()) {
+                                        log.debug("punctuator will delete key {}.  eventTime {} plus retentionTime {} is before wallClockTime {}",
+                                                key, eventTime, retentionTime, wallClockTime);
+                                    }
+                                    keysToDelete.add(key);
+                                }
+                            }
+                        }
+                        for (IntersectionVehicleRequestSequenceKey key : keysToDelete) {
+                            var tombstoneRecord = new Record<>(key, (PriorityPreemptionRequestEvent)null, punctuationTime);
+                            context().forward(tombstoneRecord);
+                        }
+                    }
+                },
+                deduplicateEventsStoreName
+                );
 
         // Produce deduplicated Event
         if (parameters.isDebug()) {
@@ -356,18 +442,35 @@ public class PriorityPreemptionRequestTopology
                         JsonSerdes.PriorityPreemptionRequestEvent(),
                         new IntersectionIdPartitioner<>()));
 
+        // Metrics
 
+        // Count SSM Responses with granted status for fulfillment metric
+        // Include timeout events without a final status in the metrics
+        // Rekey stream for metrics
+        var rekeyedEventStream = mergedEventStream.selectKey(new KeyValueMapper<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent, IntersectionVehicleRequestKey>() {
+            @Override
+            public IntersectionVehicleRequestKey apply(IntersectionVehicleRequestSequenceKey key, PriorityPreemptionRequestEvent event) {
+                var newKey = new IntersectionVehicleRequestKey();
+                newKey.setIntersectionId(key.getIntersectionId());
+                newKey.setRegion(key.getRegion());
+                newKey.setVehicleId(key.getVehicleId());
+                newKey.setRegion(key.getRequestId());
+                return newKey;
+            }
+        });
+        KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
+                priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, rekeyedEventStream);
 
-//        if (parameters.isDebug()) {
-//            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
-//        }
-//
-//        // Write to metrics topic
-//        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
-//                Produced.with(
-//                        JsonSerdes.IntersectionVehicleTypeKey(),
-//                        JsonSerdes.PriorityRequestMetrics(),
-//                        new IntersectionIdPartitioner<>()));
+        if (parameters.isDebug()) {
+            metricsStream.process(() -> new DiagnosticProcessor<>("Priority Request Metrics Stream", log));
+        }
+
+        // Write to metrics topic
+        metricsStream.to(priorityRequestMetricsStreamsAlgorithm.getParameters().getOutputMetricTopic(),
+                Produced.with(
+                        JsonSerdes.IntersectionVehicleTypeKey(),
+                        JsonSerdes.PriorityRequestMetrics(),
+                        new IntersectionIdPartitioner<>()));
 
         return builder.build();
     }

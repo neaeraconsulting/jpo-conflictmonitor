@@ -213,7 +213,7 @@ public class PriorityPreemptionRequestTopologyTest {
         PriorityRequestMetricsParameters priorityRequestMetricsParameters = new PriorityRequestMetricsParameters();
         priorityRequestMetricsParameters.setOutputMetricTopic(outputMetricTopicName);
         when(mockMetricsTopology.getParameters()).thenReturn(priorityRequestMetricsParameters);
-//        when(mockMetricsTopology.getCommonParameters()).thenReturn(commonMetricsParameters);
+
         // Ignore unchecked warning here
         doNothing().when(mockMetricsStream).to(anyString(), any(Produced.class));
         topology.setPriorityRequestMetricsAlgorithm(mockMetricsTopology);
