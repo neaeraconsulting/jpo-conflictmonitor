@@ -15,6 +15,7 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
@@ -373,7 +374,8 @@ public class PriorityPreemptionRequestTopology
                         IntersectionVehicleRequestSequenceKey,
                         PriorityPreemptionRequestEvent>() {
 
-                    KeyValueStore<IntersectionVehicleRequestSequenceKey, Long> dedupStore;
+                    // KTable store is value-and-timestamp store
+                    KeyValueStore<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> dedupStore;
 
                     @Override
                     public void init(ProcessorContext<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> context) {
@@ -402,12 +404,16 @@ public class PriorityPreemptionRequestTopology
                     // Punctuator checks if retention time is passed for each key and sends a tombstone to the topic
                     // to clear the deduplicator ktable store
                     private void punctuate(long punctuationTime) {
+                        log.info("punctuate");
                         var keysToDelete = new ArrayList<IntersectionVehicleRequestSequenceKey>();
-                        try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, Long> iterator = dedupStore.all()) {
+                        try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> iterator = dedupStore.all()) {
                             while (iterator.hasNext()) {
-                                KeyValue<IntersectionVehicleRequestSequenceKey, Long> item = iterator.next();
-                                final IntersectionVehicleRequestSequenceKey key = item.key;
-                                final Instant eventTime = Instant.ofEpochMilli(item.value);
+                                KeyValue<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> item = iterator.next();
+                                final var key = item.key;
+                                final var value = item.value;
+                                final Long storedTimestamp = value != null ? value.value() : null;
+                                if (storedTimestamp == null) continue;
+                                final Instant eventTime = Instant.ofEpochMilli(storedTimestamp);
                                 final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
                                 if (eventTime.plus(retentionTime).isBefore(wallClockTime)) {
                                     if (parameters.isDebug()) {

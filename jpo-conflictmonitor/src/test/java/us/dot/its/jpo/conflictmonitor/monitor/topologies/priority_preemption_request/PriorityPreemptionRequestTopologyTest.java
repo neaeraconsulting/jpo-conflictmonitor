@@ -7,6 +7,8 @@ import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.TimestampedKeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -52,6 +54,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestConstants.DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
+import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.REJECTED;
 
 @Slf4j
 @RunWith(MockitoJUnitRunner.class)
@@ -152,6 +155,7 @@ public class PriorityPreemptionRequestTopologyTest {
             assertThat(resultValue.getFinalStatus(), equalTo(GRANTED));
             assertThat(resultValue.getRequestSequenceNumber(), equalTo(requestSequenceNumber));
 
+
         }
     }
 
@@ -159,7 +163,7 @@ public class PriorityPreemptionRequestTopologyTest {
      * Test the {@link us.dot.its.jpo.conflictmonitor.monitor.processors.PriorityPreemptionRequestTimeoutProcessor}
      * within the topology, so that unmatched SRMs are included in the calculation of the fulfillment rate metric.
      * Tests that a stream of SRMs gets saved in the joined state store, and that if no SSM
-     * response is received after a configured time, gets deleted from the store.
+     * response is received after a configured time, the joined messages gets deleted from the store.
      */
     @Test
     public void testPriorityPreemptionRequestEvent_NoSsm() {
@@ -203,6 +207,71 @@ public class PriorityPreemptionRequestTopologyTest {
 
             var eventList = outputEventTopic.readKeyValuesToList();
             assertThat("no events expected for SRM stream without SSM", eventList, hasSize(0));
+        }
+    }
+
+    /**
+     * Test tha a series of SRMs with the same key and more than one SSM matching the same SRM emits
+     * only one event within the retention time.
+     */
+    @Test
+    public void testPriorityPreemptionRequestEvent_Deduplication() {
+        Topology topology = createTopology();
+
+        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 0,
+                0, 0, ZoneOffset.UTC);
+        final Instant startWallClock = start.toInstant();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
+
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
+                    new JsonSerializer<RsuIntersectionKey>(),
+                    new JsonSerializer<ProcessedSsm>());
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
+
+            // send an SRM followed by an SSM repeatedly with the same key
+            final int step = 10;
+            final int halfStep = step / 2;
+            for (int offset = 0; offset <= 60; offset += step) {
+
+                final ZonedDateTime srmTime = start.plusSeconds(offset);
+                log.info("srmTime: {}", srmTime.format(DateTimeFormatter.ISO_INSTANT));
+                final ProcessedSrm processedSrm = createSrm(srmTime);
+                inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, srmTime.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(halfStep));
+
+                final ZonedDateTime ssmTime = srmTime.plusSeconds(halfStep);
+                log.info("ssmTime: {}", ssmTime.format(DateTimeFormatter.ISO_INSTANT));
+                final ProcessedSsm processedSsm = createSsm(ssmTime, GRANTED);
+                inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, ssmTime.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(halfStep));
+
+            }
+
+            var eventList = outputEventTopic.readKeyValuesToList();
+            assertThat("Expect 1 deduplicated event", eventList, hasSize(1));
+
+            // Advance clock past retention time and verify dedup store is cleared
+            log.info("getting dedup store");
+            KeyValueStore<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> dedupStore
+                    = driver.getTimestampedKeyValueStore(deduplicateStoreName);
+            log.info("got dedup store");
+            final IntersectionVehicleRequestSequenceKey eventKey = getEventKey();
+            final ValueAndTimestamp<Long> storedValueAndTimestamp = dedupStore.get(eventKey);
+            assertThat(storedValueAndTimestamp, notNullValue());
+            final Long storedValue = storedValueAndTimestamp.value();
+            assertThat("expect stored timestamp within retention time", storedValue, notNullValue());
+            driver.advanceWallClockTime(Duration.ofMinutes(storeRetentionTimeMinutes).plus(Duration.ofMinutes(1)));
+            final var storedTimestampLater = dedupStore.get(eventKey);
+            assertThat("expect removed timestamp withing retention time", storedTimestampLater, nullValue());
         }
     }
 
