@@ -1,13 +1,10 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_request;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.api.Processor;
-import org.apache.kafka.streams.processor.api.ProcessorSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
@@ -24,11 +21,13 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicle
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.PriorityRequestMetricsTickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 
 import java.time.Duration;
+import java.util.HashSet;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsConstants.DEFAULT_PRIORITY_REQUEST_METRICS_ALGORITHM;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
@@ -106,8 +105,8 @@ public class PriorityRequestMetricsTopology
                                 .withStreamPartitioner(new IntersectionIdPartitioner<>()))
 
                 // Insert ticks to keep stream time moving if we stop receiving events
-                .process(() -> new TickProcessor<IntersectionVehicleTypeKey, IntersectionVehicleRequestStatus>(commonParameters,
-                                parameters.isDebug(), new PriorityRequestMetrics().getName(), timestampStoreName),
+                .process(() -> new PriorityRequestMetricsTickProcessor(commonParameters,
+                                parameters.isDebug(), timestampStoreName),
                         timestampStoreName)
 
                 // Group by key for aggregation
@@ -130,20 +129,30 @@ public class PriorityRequestMetricsTopology
                         (key, status, metrics) -> {
                             metrics.setKey(key);
 
-                            // Don't count ticks in the metric
-                            if (TickProcessor.TICK.equals(status)) {
+                            // Don't count tombstones or ticks in the metric
+                            if (status == null || TickProcessor.TICK.equals(status.status())) {
                                 if (parameters.isDebug()) {
                                     log.debug("Ignore TICK in metric aggregation: {}", metrics);
                                 }
                                 return metrics;
                             }
 
+                            final var requestKey = status.requestKey();
+                            if (requestKey == null) {
+                                log.error("requestKey is null, but the status is not a tick.  This should not happen.  For metric aggregation: {}",
+                                        metrics);
+                                return metrics;
+                            }
+
                             // Anything other than a tick counts towards the total
-                            metrics.setNumberOfDistinctSrmRequests(metrics.getNumberOfDistinctSrmRequests() + 1);
+                            //metrics.setNumberOfDistinctSrmRequests(metrics.getNumberOfDistinctSrmRequests() + 1);
+                            metrics.addDistinctSrmRequestKeys(requestKey);
+
+
 
                             // Granted goes in numerator
-                            if (GRANTED.getName().equals(status)) {
-                                metrics.setNumberOfGrantedSsmResponses(metrics.getNumberOfGrantedSsmResponses() + 1);
+                            if (GRANTED.getName().equals(status.status())) {
+                                metrics.addDistinctSsmResponseKeys(requestKey);
                             }
 
                             if (parameters.isDebug()) {

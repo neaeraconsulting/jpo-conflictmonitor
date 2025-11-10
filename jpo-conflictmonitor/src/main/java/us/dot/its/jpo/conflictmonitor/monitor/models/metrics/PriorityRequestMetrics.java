@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -29,25 +30,39 @@ public class PriorityRequestMetrics
      * Distinct SRM Request IDs are only counted once.
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private long getNumberOfDistinctSrmRequests() {
+    public long getNumberOfDistinctSrmRequests() {
         if (distinctSrmRequestKeys != null) return distinctSrmRequestKeys.size();
         return 0L;
     }
 
     private Set<IntersectionVehicleRequestKey> distinctSrmRequestKeys;
 
+    public void addDistinctSrmRequestKeys(IntersectionVehicleRequestKey key) {
+        if (distinctSrmRequestKeys == null) {
+            distinctSrmRequestKeys = new HashSet<>();
+        }
+        distinctSrmRequestKeys.add(key);
+    }
+
     /**
      * The number of SSM "granted" responses for the intersection and vehicle type during the
      * time period.
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private long getNumberOfGrantedSsmResponses() {
+    public long getNumberOfGrantedSsmResponses() {
         if (distinctSrmRequestKeys != null) return distinctSrmRequestKeys.size();
         return 0L;
     }
 
 
     private Set<IntersectionVehicleRequestKey> distinctSsmResponseKeys;
+
+    public void addDistinctSsmResponseKeys(IntersectionVehicleRequestKey key) {
+        if (distinctSsmResponseKeys == null) {
+            distinctSsmResponseKeys = new HashSet<>();
+        }
+        distinctSsmResponseKeys.add(key);
+    }
 
     /**
      * @return The priority request fulfillment rate.  Fraction of unique requests fulfilled with a final

@@ -1,6 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.monitor.processors.metrics;
 
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -15,7 +14,6 @@ import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeseriali
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.HashSet;
 
 /**
