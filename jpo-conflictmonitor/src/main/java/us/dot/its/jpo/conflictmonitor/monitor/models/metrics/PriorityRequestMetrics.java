@@ -50,7 +50,7 @@ public class PriorityRequestMetrics
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public long getNumberOfGrantedSsmResponses() {
-        if (distinctSrmRequestKeys != null) return distinctSrmRequestKeys.size();
+        if (distinctSsmResponseKeys != null) return distinctSsmResponseKeys.size();
         return 0L;
     }
 

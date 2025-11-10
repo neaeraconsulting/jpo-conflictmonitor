@@ -49,7 +49,7 @@ public class PriorityRequestMetricsTopologyTest {
     private static final String vehicleId = "ABCD0102";
     private static final int intersectionId = 12115;
     private static final int roadRegulatorId = 22100;
-    private static final int requestId = 10;
+    private static final int requestSequenceNumber = 1;
     private static final int inboundLaneId = 15;
     private static final int outboundLaneId = 22;
     private static final ProcessedBasicVehicleRole vehicleType = ProcessedBasicVehicleRole.PUBLICTRANSPORT;
@@ -65,26 +65,34 @@ public class PriorityRequestMetricsTopologyTest {
 
         final long startTimestamp = startWallClock.toEpochMilli();
         try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
+
             var inputEventTopic = driver.createInputTopic(inputEventTopicName,
                     new JsonSerializer<IntersectionVehicleRequestKey>(),
                     new JsonSerializer<PriorityPreemptionRequestEvent>());
+
             var outputMetricsTopic = driver.createOutputTopic(outputMetricsTopicName,
                     new JsonDeserializer<>(IntersectionVehicleTypeKey.class),
                     new JsonDeserializer<>(PriorityRequestMetrics.class));
-            final var eventKey = getEventKey();
 
-            // Send 50/50 ratio granted/rejected events
+
+            // Send 50/50 ratio granted/rejected events for different request IDs
             final int step = 500;
             final Duration stepDuration = Duration.ofMillis(500);
             final int times = 10;
-            for (int offset = 0; offset < 2*times*step; offset += 2*step) {
+            for (int offset = 0, requestId = 10; offset < 2*times*step; offset += 2*step, requestId += 2) {
+                // Send rejected event
                 final long rejectedTimestamp = startTimestamp + offset;
-                final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED);
-                inputEventTopic.pipeInput(eventKey, rejectedEvent, rejectedTimestamp);
+                final var rejectedEventKey = getEventKey(requestId);
+                final var rejectedEvent = getEvent(rejectedTimestamp, REJECTED, requestId);
+                inputEventTopic.pipeInput(rejectedEventKey, rejectedEvent, rejectedTimestamp);
                 driver.advanceWallClockTime(stepDuration);
+
+                // Send granted event
                 final long grantedTimestamp = startTimestamp + offset + step;
-                final var grantedEvent = getEvent(grantedTimestamp, GRANTED);
-                inputEventTopic.pipeInput(eventKey, grantedEvent, grantedTimestamp);
+                final int grantedRequestId = requestId + 1;
+                final var grantedEventKey = getEventKey(grantedRequestId);
+                final var grantedEvent = getEvent(grantedTimestamp, GRANTED, grantedRequestId);
+                inputEventTopic.pipeInput(grantedEventKey, grantedEvent, grantedTimestamp);
                 driver.advanceWallClockTime(stepDuration);
             }
 
@@ -140,7 +148,7 @@ public class PriorityRequestMetricsTopologyTest {
         return builder.build();
     }
 
-    private IntersectionVehicleRequestKey getEventKey() {
+    private IntersectionVehicleRequestKey getEventKey(final int requestId) {
         final var eventKey = new IntersectionVehicleRequestKey();
         eventKey.setIntersectionId(intersectionId);
         eventKey.setRegion(roadRegulatorId);
@@ -149,7 +157,8 @@ public class PriorityRequestMetricsTopologyTest {
         return eventKey;
     }
 
-    private PriorityPreemptionRequestEvent getEvent(long timestamp, ProcessedPrioritizationResponseStatus status) {
+    private PriorityPreemptionRequestEvent getEvent(long timestamp, ProcessedPrioritizationResponseStatus status,
+                                                    final int requestId) {
         final var event = new PriorityPreemptionRequestEvent();
         event.setEventGeneratedAt(timestamp);
         event.setTimeOfLastResponse(timestamp);
@@ -158,6 +167,7 @@ public class PriorityRequestMetricsTopologyTest {
         event.setVehicleId(vehicleId);
         event.setVehicleType(vehicleType);
         event.setRequestId(requestId);
+        event.setRequestSequenceNumber(requestSequenceNumber);
         event.setPriorityRequestType(requestType);
         event.setInboundLaneId(inboundLaneId);
         event.setOutboundLaneId(outboundLaneId);

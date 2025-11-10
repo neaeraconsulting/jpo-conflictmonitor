@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.monitor.processors;
+package us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request;
 
 
 import lombok.extern.slf4j.Slf4j;

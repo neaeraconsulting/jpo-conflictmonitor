@@ -28,7 +28,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicle
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
-import us.dot.its.jpo.conflictmonitor.monitor.processors.PriorityPreemptionRequestTimeoutProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityPreemptionRequestTimeoutProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;

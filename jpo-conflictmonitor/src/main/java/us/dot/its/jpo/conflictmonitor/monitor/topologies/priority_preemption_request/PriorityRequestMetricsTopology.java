@@ -21,13 +21,12 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicle
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
-import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.PriorityRequestMetricsTickProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityRequestMetricsTickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 
 import java.time.Duration;
-import java.util.HashSet;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsConstants.DEFAULT_PRIORITY_REQUEST_METRICS_ALGORITHM;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
@@ -145,10 +144,7 @@ public class PriorityRequestMetricsTopology
                             }
 
                             // Anything other than a tick counts towards the total
-                            //metrics.setNumberOfDistinctSrmRequests(metrics.getNumberOfDistinctSrmRequests() + 1);
                             metrics.addDistinctSrmRequestKeys(requestKey);
-
-
 
                             // Granted goes in numerator
                             if (GRANTED.getName().equals(status.status())) {

@@ -7,7 +7,6 @@ import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.TimestampedKeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,6 +22,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetr
 //import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestSequenceKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityPreemptionRequestTimeoutProcessor;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuVehicleIdKey;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
@@ -54,7 +54,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestConstants.DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM;
 import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
-import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.REJECTED;
 
 @Slf4j
 @RunWith(MockitoJUnitRunner.class)
@@ -160,7 +159,7 @@ public class PriorityPreemptionRequestTopologyTest {
     }
 
     /**
-     * Test the {@link us.dot.its.jpo.conflictmonitor.monitor.processors.PriorityPreemptionRequestTimeoutProcessor}
+     * Test the {@link PriorityPreemptionRequestTimeoutProcessor}
      * within the topology, so that unmatched SRMs are included in the calculation of the fulfillment rate metric.
      * Tests that a stream of SRMs gets saved in the joined state store, and that if no SSM
      * response is received after a configured time, the joined messages gets deleted from the store.
