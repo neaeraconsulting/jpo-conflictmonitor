@@ -8,14 +8,7 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.PunctuationType;
-import org.apache.kafka.streams.processor.api.ContextualProcessor;
-import org.apache.kafka.streams.processor.api.ProcessorContext;
-import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
-import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
@@ -39,7 +32,6 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,13 +79,6 @@ public class PriorityPreemptionRequestTopology
         builder.addStateStore(joinedStoreBuilder);
 
         final String deduplicateEventsStoreName = parameters.getDeduplicateEventsStoreName();
-//        var deduplicateStoreBuilder =
-//                Stores.keyValueStoreBuilder(
-//                        Stores.persistentKeyValueStore(deduplicateEventsStoreName),
-//                        JsonSerdes.IntersectionVehicleRequestSequenceKey(),
-//                    Serdes.Long()
-//                );
-//        builder.addStateStore(deduplicateStoreBuilder);
 
 
 
