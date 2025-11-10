@@ -28,7 +28,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicle
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityPreemptionEventDeduplicationProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityPreemptionRequestTimeoutProcessor;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityPremptionExtractTimestampProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
@@ -324,28 +326,7 @@ public class PriorityPreemptionRequestTopology
                 // Don't need to store the entire event, we only care about the key, convert the value to a timestamp.
                 // Use a contextual processor, instead of a simple mapValues function, to be able to get the system
                 // time from the processor context.
-                .process(() -> new ContextualProcessor<IntersectionVehicleRequestSequenceKey,
-                        PriorityPreemptionRequestEvent, IntersectionVehicleRequestSequenceKey, Long>() {
-                    @Override
-                    public void process(Record<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> record) {
-                        final var key = record.key();
-                        final var streamTime = record.timestamp();
-                        final var wallClockTime = context().currentSystemTimeMs();
-                        final var value = record.value();
-                        if (value == null) {
-                            // Pass tombstones through to clear the ktable store
-                            var tombstoneRecord = new Record<>(key, (Long)null, streamTime);
-                            if (parameters.isDebug()) {
-                                log.debug("Processor passing through tombstone record for key: {}", key);
-                            }
-                            context().forward(tombstoneRecord);
-                        } else {
-                            // Value of new record is wall clock timestamp
-                            var newRecord = new Record<>(key, wallClockTime, streamTime);
-                            context().forward(newRecord);
-                        }
-                    }
-                })
+                .process(() -> new PriorityPremptionExtractTimestampProcessor(parameters))
                 .toTable(
                     Materialized.<IntersectionVehicleRequestSequenceKey, Long>as(
                                 Stores.persistentKeyValueStore(
@@ -368,70 +349,10 @@ public class PriorityPreemptionRequestTopology
                                 )
                 // Filer out events with keys already in the previous table that were sent within the retention time
                 // And extract the event.  Use a contextual processor to get the system time from the processor context,
-                // instead of using Instant.noew(), to be able to mock the wall clock time in tests.
-                .process(() -> new ContextualProcessor<IntersectionVehicleRequestSequenceKey,
-                        Pair<PriorityPreemptionRequestEvent, Long>,
-                        IntersectionVehicleRequestSequenceKey,
-                        PriorityPreemptionRequestEvent>() {
-
-                    // KTable store is value-and-timestamp store
-                    KeyValueStore<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> dedupStore;
-
-                    @Override
-                    public void init(ProcessorContext<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> context) {
-                        super.init(context);
-                        context().schedule(retentionTime, PunctuationType.WALL_CLOCK_TIME, this::punctuate);
-                        dedupStore = context().getStateStore(deduplicateEventsStoreName);
-                        if (dedupStore == null) {
-                            log.error("Dedup store not found in processor");
-                        }
-                    }
-
-                    @Override
-                    public void process(Record<IntersectionVehicleRequestSequenceKey, Pair<PriorityPreemptionRequestEvent, Long>> record) {
-                        Pair<PriorityPreemptionRequestEvent, Long> timestampedEvent = record.value();
-                        final Long eventTimestamp = timestampedEvent.getRight();
-                        final Instant eventTime = eventTimestamp != null ? Instant.ofEpochMilli(eventTimestamp) : null;
-                        final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
-                        // Forward the record if it doesn't have an entry in the deduplicate table, or if the entry
-                        // has a timestamp longer ago than the retention time
-                        if (eventTime == null || eventTime.plus(retentionTime).isBefore(wallClockTime)) {
-                            var newRecord = new Record<>(record.key(), record.value().getLeft(), record.timestamp());
-                            context().forward(newRecord);
-                        }
-                    }
-
-                    // Punctuator checks if retention time is passed for each key and sends a tombstone to the topic
-                    // to clear the deduplicator ktable store
-                    private void punctuate(long punctuationTime) {
-                        log.info("punctuate");
-                        var keysToDelete = new ArrayList<IntersectionVehicleRequestSequenceKey>();
-                        try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> iterator = dedupStore.all()) {
-                            while (iterator.hasNext()) {
-                                KeyValue<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> item = iterator.next();
-                                final var key = item.key;
-                                final var value = item.value;
-                                final Long storedTimestamp = value != null ? value.value() : null;
-                                if (storedTimestamp == null) continue;
-                                final Instant eventTime = Instant.ofEpochMilli(storedTimestamp);
-                                final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
-                                if (eventTime.plus(retentionTime).isBefore(wallClockTime)) {
-                                    if (parameters.isDebug()) {
-                                        log.debug("punctuator will delete key {}.  eventTime {} plus retentionTime {} is before wallClockTime {}",
-                                                key, eventTime, retentionTime, wallClockTime);
-                                    }
-                                    keysToDelete.add(key);
-                                }
-                            }
-                        }
-                        for (IntersectionVehicleRequestSequenceKey key : keysToDelete) {
-                            var tombstoneRecord = new Record<>(key, (PriorityPreemptionRequestEvent)null, punctuationTime);
-                            context().forward(tombstoneRecord);
-                        }
-                    }
-                },
-                deduplicateEventsStoreName
-                );
+                // instead of using Instant.now(), to be able to mock the wall clock time in tests.
+                .process(() -> new PriorityPreemptionEventDeduplicationProcessor(parameters),
+                            // Processor needs access to the store
+                            deduplicateEventsStoreName);
 
         // Produce deduplicated Event
         if (parameters.isDebug()) {
