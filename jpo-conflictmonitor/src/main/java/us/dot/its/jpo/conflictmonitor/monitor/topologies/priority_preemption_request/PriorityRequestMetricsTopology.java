@@ -19,6 +19,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_reques
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.TimestampExtractors.PriorityPreemptionRequestEventTimestampExtractor;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
@@ -91,25 +92,26 @@ public class PriorityRequestMetricsTopology
                     // Re-key: use Intersection and Vehicle type
                     var newKey = new IntersectionVehicleTypeKey(key.getIntersectionId(), key.getRegion(), value.getVehicleType());
                     // We only care about counting granted vs. not-granted statuses per vehicle type and intersection,
-                    // so select the status as the value.
+                    // so select the status as the value, and need to know the original key, so select only necessary/ info.
                     // Use "unknown" type if missing to avoid creating a tombstone
                     String status = value.getStatus() != null ? value.getStatus().getName() : UNKNOWN.getName();
-                    return new KeyValue<>(newKey, status);
+                    IntersectionVehicleRequestStatus requestStatus = new IntersectionVehicleRequestStatus(key, status);
+                    return new KeyValue<>(newKey, requestStatus);
                 })
 
                 // Make sure stream remains partitioned by intersection after rekey
                 .repartition(
                         Repartitioned
-                                .with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String())
+                                .with(JsonSerdes.IntersectionVehicleTypeKey(), JsonSerdes.IntersectionVehicleRequestStatus())
                                 .withStreamPartitioner(new IntersectionIdPartitioner<>()))
 
                 // Insert ticks to keep stream time moving if we stop receiving events
-                .process(() -> new TickProcessor<IntersectionVehicleTypeKey>(commonParameters,
+                .process(() -> new TickProcessor<IntersectionVehicleTypeKey, IntersectionVehicleRequestStatus>(commonParameters,
                                 parameters.isDebug(), new PriorityRequestMetrics().getName(), timestampStoreName),
                         timestampStoreName)
 
                 // Group by key for aggregation
-                .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), Serdes.String()))
+                .groupByKey(Grouped.with(JsonSerdes.IntersectionVehicleTypeKey(), JsonSerdes.IntersectionVehicleRequestStatus()))
 
                 // Tumbling window
                 .windowedBy(

@@ -453,17 +453,16 @@ public class PriorityPreemptionRequestTopology
         // Count SSM Responses with granted status for fulfillment metric
         // Include timeout events without a final status in the metrics
         // Rekey stream for metrics
-        var rekeyedEventStream = mergedEventStream.selectKey(new KeyValueMapper<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent, IntersectionVehicleRequestKey>() {
-            @Override
-            public IntersectionVehicleRequestKey apply(IntersectionVehicleRequestSequenceKey key, PriorityPreemptionRequestEvent event) {
-                var newKey = new IntersectionVehicleRequestKey();
-                newKey.setIntersectionId(key.getIntersectionId());
-                newKey.setRegion(key.getRegion());
-                newKey.setVehicleId(key.getVehicleId());
-                newKey.setRegion(key.getRequestId());
-                return newKey;
-            }
-        });
+        var rekeyedEventStream = mergedEventStream
+                .selectKey((key, event) -> {
+                    var newKey = new IntersectionVehicleRequestKey();
+                    newKey.setIntersectionId(key.getIntersectionId());
+                    newKey.setRegion(key.getRegion());
+                    newKey.setVehicleId(key.getVehicleId());
+                    newKey.setRegion(key.getRequestId());
+                    return newKey;
+                });
+
         KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> metricsStream =
                 priorityRequestMetricsStreamsAlgorithm.buildTopology(builder, rekeyedEventStream);
 

@@ -23,13 +23,15 @@ import java.util.HashSet;
  * to metrics to prevent windows with sparse events from not closing and being missed.
  */
 @Slf4j
-public class TickProcessor<TKey>
-    extends ContextualProcessor<TKey, String, TKey, String> {
+public abstract class TickProcessor<TKey, TValue>
+    extends ContextualProcessor<TKey, TValue, TKey, TValue> {
 
     /**
      * String constant representing a tick to advance event stream time
      */
     public static String TICK = "TICK";
+
+    public abstract TValue tickValue();
 
     final Duration metricsInterval;
     final Duration punctuateInterval;
@@ -49,7 +51,7 @@ public class TickProcessor<TKey>
     }
 
     @Override
-    public void init(ProcessorContext<TKey, String> context) {
+    public void init(ProcessorContext<TKey, TValue> context) {
         super.init(context);
         this.timeStore = context.getStateStore(timestampStoreName);
         context.schedule(punctuateInterval, PunctuationType.WALL_CLOCK_TIME,
@@ -61,7 +63,7 @@ public class TickProcessor<TKey>
     }
 
     @Override
-    public void process(Record<TKey, String> record) {
+    public void process(Record<TKey, TValue> record) {
         // Keep track of stream time and clock time per key
         TKey key = record.key();
         long streamTime = context().currentStreamTimeMs();
@@ -114,7 +116,7 @@ public class TickProcessor<TKey>
                 if (timeSinceLastMessage.compareTo(metricsInterval) >= 0) {
                     // Advance stream time by the same amount of time that clock time has advanced
                     final long newStreamTime = streamTime + millisSinceLastMessage;
-                    final var record = new Record<>(key, TICK, newStreamTime);
+                    final var record = new Record<>(key, tickValue(), newStreamTime);
                     context().forward(record);
                     if (isDebug) {
                         log.info("emitted tick: key: {}, value {}, new stream time: {}",

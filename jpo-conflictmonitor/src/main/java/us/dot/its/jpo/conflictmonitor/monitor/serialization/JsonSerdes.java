@@ -43,6 +43,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_la
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.SpatTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapBoundingBox;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
@@ -606,5 +607,9 @@ public class JsonSerdes {
 
     public static Serde<IntersectionVehicleRequestSequenceKey> IntersectionVehicleRequestSequenceKey() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestStatus> IntersectionVehicleRequestStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestStatus.class));
     }
 }
