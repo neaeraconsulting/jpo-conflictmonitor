@@ -7,12 +7,13 @@ import lombok.Setter;
 
 import java.util.List;
 
-/**
- * SignalStateAssessment - Assessment object containing a list describing how far vehicles are from the centerline as they drive through a lane. 
+/*
+ * This class has been deprecated and should no longer be used. Use StopLinePassageAssessment instead.
  */
 @Getter
 @Setter
 @Generated
+@Deprecated
 public class SignalStateAssessment extends Assessment{
 
     /**

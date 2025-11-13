@@ -24,6 +24,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAgg
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.MisbehaviorAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.DefaultConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfigKey;
@@ -34,10 +35,6 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMini
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEventAggregation;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.MapMessageCountProgressionEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.BsmMessageCountProgressionEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.EventStateProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
@@ -307,6 +304,20 @@ public class JsonSerdes {
         return Serdes.serdeFrom(
             new JsonSerializer<TimeChangeDetailsNotification>(),
             new JsonDeserializer<>(TimeChangeDetailsNotification.class)
+        );
+    }
+
+    public static Serde<VehicleMisbehaviorEvent> VehicleMisbehaviorEvent() {
+        return Serdes.serdeFrom(
+            new JsonSerializer<VehicleMisbehaviorEvent>(),
+            new JsonDeserializer<>(VehicleMisbehaviorEvent.class)
+        );
+    }
+
+    public static Serde<MisbehaviorAggregator> MisbehaviorAggregator() {
+        return Serdes.serdeFrom(
+            new JsonSerializer<MisbehaviorAggregator>(),
+            new JsonDeserializer<>(MisbehaviorAggregator.class)
         );
     }
 

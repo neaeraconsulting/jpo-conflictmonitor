@@ -12,6 +12,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Generated
+@Deprecated
 public class SignalStateAssessmentGroup {
 
 
