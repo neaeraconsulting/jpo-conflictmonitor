@@ -8,10 +8,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorReason;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuLogKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
+
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
@@ -23,7 +26,7 @@ public class VehicleMisbehaviorTopologyTest {
     // Group 1, No event should be generated. Mostly identical BSMs
     String noEventBsm1 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
     String noEventBsm2 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.823Z\",\"timeStamp\":\"2025-04-14T17:27:01.100Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
-    
+
     // Group 2 Vehicle Misbehavior Event should be generated because vehicle is moving too fast.
     String speedEventBsm1 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":253,\"transmission\":\"FORWARDGEARS\"}}";
 
@@ -33,11 +36,11 @@ public class VehicleMisbehaviorTopologyTest {
 
     // Group 4 Vehicle Misbehavior Event should be generated because the Yaw Rate is too high. 
     String headingEventBsm1 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":690},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
-  
+
     // Group 5 Vehicle Misbehavior Event should be generated because Heading of Vehicle does not match the calculated yaw rate
     String mismatchedHeadingEventBsm1 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
     String mismatchedHeadingEventBsm2 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.823Z\",\"timeStamp\":\"2025-04-14T17:27:01.100Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":25,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
-    
+
     // Group 6 Vehicle Misbehavior Event should be generated because accelerations are too high.
     String accelerationEventBsm1 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":50,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
     String accelerationEventBsm2 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.100Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":50,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
@@ -99,7 +102,7 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, noEventBsm1);
             inputProcessedBsmTopic.pipeInput(key, noEventBsm2);
 
@@ -126,7 +129,7 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, mismatchedSpeedEventBsm1);
             inputProcessedBsmTopic.pipeInput(key, mismatchedSpeedEventBsm2);
 
@@ -134,7 +137,8 @@ public class VehicleMisbehaviorTopologyTest {
             assertEquals(1, eventResults.size());
             final var eventResult = eventResults.getFirst();
             assertEquals(Math.round(eventResult.value.getCalculatedSpeed()), 0);
-            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 16);
+            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 56);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.SPEED_DELTA_INVALID));
         }
     }
 
@@ -156,13 +160,14 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, speedEventBsm1);
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             final var eventResult = eventResults.getFirst();
-            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 157);
+            assertEquals(Math.round(eventResult.value.getReportedSpeed()), 566);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_SPEED));
 
         }
     }
@@ -185,7 +190,7 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, mismatchedHeadingEventBsm1);
             inputProcessedBsmTopic.pipeInput(key, mismatchedHeadingEventBsm2);
 
@@ -194,6 +199,7 @@ public class VehicleMisbehaviorTopologyTest {
             final var eventResult = eventResults.getFirst();
             assertEquals(Math.round(eventResult.value.getReportedYawRate()), 0);
             assertEquals(Math.round(eventResult.value.getCalculatedYawRate()), 38);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.YAW_DELTA_INVALID));
         }
     }
 
@@ -215,13 +221,14 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, headingEventBsm1);
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             final var eventResult = eventResults.getFirst();
             assertEquals(Math.round(eventResult.value.getReportedYawRate()), 690);
+            assertTrue(eventResult.value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_ROTATION));
         }
     }
 
@@ -243,13 +250,14 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, accelerationEventBsm1);
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             assertEquals(Math.round(eventResults.get(0).value.getReportedAccelerationLat()), 164);
+            assertTrue(eventResults.get(0).value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_LATERAL_ACCELERATION));
         }
     }
 
@@ -271,13 +279,14 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, accelerationEventBsm2);
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             assertEquals(Math.round(eventResults.get(0).value.getReportedAccelerationLon()), 164);
+            assertTrue(eventResults.get(0).value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_LONGITUDINAL_ACCELERATION));
         }
     }
 
@@ -299,15 +308,14 @@ public class VehicleMisbehaviorTopologyTest {
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
-            
+
             inputProcessedBsmTopic.pipeInput(key, accelerationEventBsm3);
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
             assertEquals(Math.round(eventResults.get(0).value.getReportedAccelerationVert()), 164);
+            assertTrue(eventResults.get(0).value.getMisbehaviorReasons().contains(VehicleMisbehaviorReason.EXCESSIVE_VERTICAL_ACCELERATION));
         }
     }
 }
-
-

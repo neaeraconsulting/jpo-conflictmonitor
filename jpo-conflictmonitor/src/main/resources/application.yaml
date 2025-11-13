@@ -553,9 +553,9 @@ vehicle.misbehavior:
   acceleration_range_lateral: 13.1
   acceleration_range_longitudinal: 39.4
   acceleration_range_vertical: 13.1
-  speed_range: 0 #10
+  speed_range: 10
   yaw_rate_range: 10 
-  allowable_max_speed: 0 #156.5 # miles per hour
+  allowable_max_speed: 156.5 # miles per hour
   allowable_max_heading_delta: 85.9 # degrees / second
   processedBsmStateStoreName: processedBsmVehicleMisbehaviorStateStore
   bsmInputTopicName: topic.ProcessedBsm
