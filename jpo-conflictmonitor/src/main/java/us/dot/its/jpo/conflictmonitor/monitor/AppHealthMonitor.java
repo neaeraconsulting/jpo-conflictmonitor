@@ -59,7 +59,7 @@ import javax.ws.rs.Produces;
  * REST controller providing health and configuration endpoints for the Conflict Monitor application.
  * <p>
  * Exposes endpoints for monitoring Kafka topics, streams, topologies, configuration, spatial indexes,
- * and window stores for SPaT and BSM data. Also provides links to connectors and application properties.
+ * and window stores for SPaT and BSM data. Also provides links to application properties.
  */
 @Getter
 @Setter
@@ -123,7 +123,6 @@ public class AppHealthMonitor {
                 "topics",
                 "properties",
                 "streams",
-                "connectors",
                 "spatial-indexes",
                 "spat-window-store",
                 "bsm-window-store",
