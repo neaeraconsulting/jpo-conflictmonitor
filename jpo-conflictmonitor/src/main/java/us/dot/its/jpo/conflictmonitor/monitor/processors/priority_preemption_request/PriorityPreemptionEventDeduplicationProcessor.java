@@ -1,15 +1,12 @@
 package us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
-import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.ValueAndTimestamp;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestSequenceKey;
@@ -22,7 +19,7 @@ import java.util.ArrayList;
 public class PriorityPreemptionEventDeduplicationProcessor
     extends ContextualProcessor<
             IntersectionVehicleRequestSequenceKey,
-            Pair<PriorityPreemptionRequestEvent, Long>,
+            PriorityPreemptionRequestEvent,
             IntersectionVehicleRequestSequenceKey,
             PriorityPreemptionRequestEvent
             > {
@@ -37,8 +34,7 @@ public class PriorityPreemptionEventDeduplicationProcessor
     private final Duration retentionTime;
     private final String deduplicateEventsStoreName;
 
-    // KTable store is value-and-timestamp store
-    KeyValueStore<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> dedupStore;
+    KeyValueStore<IntersectionVehicleRequestSequenceKey, Long> dedupStore;
 
     @Override
     public void init(ProcessorContext<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> context) {
@@ -51,18 +47,32 @@ public class PriorityPreemptionEventDeduplicationProcessor
     }
 
     @Override
-    public void process(org.apache.kafka.streams.processor.api.Record<IntersectionVehicleRequestSequenceKey, Pair<PriorityPreemptionRequestEvent, Long>> record) {
-        Pair<PriorityPreemptionRequestEvent, Long> timestampedEvent = record.value();
-        final Long eventTimestamp = timestampedEvent.getRight();
-        final Instant eventTime = eventTimestamp != null ? Instant.ofEpochMilli(eventTimestamp) : null;
+    public void process(org.apache.kafka.streams.processor.api.Record<IntersectionVehicleRequestSequenceKey, PriorityPreemptionRequestEvent> record) {
+        final IntersectionVehicleRequestSequenceKey key = record.key();
+        final Long storedTimestamp = dedupStore.get(key);
+        final boolean isStored = storedTimestamp != null;
+        final Instant storedTime = isStored ? Instant.ofEpochMilli(storedTimestamp) : null;
+        final long eventTimestamp = record.timestamp();
+        final Instant eventTime = Instant.ofEpochMilli(eventTimestamp);
         final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
-        // Forward the record if it doesn't have an entry in the deduplicate table, or if the entry
+        final boolean isStoredOld = isStored && storedTime.plus(retentionTime).isBefore(wallClockTime);
+
+        // Remove the key now if it's old
+        if (isStoredOld) {
+            dedupStore.delete(key);
+        }
+
+        // Store it if it isn't already
+        if (!isStored) {
+            dedupStore.put(key, eventTimestamp);
+        }
+
+        // Forward the record along if it doesn't have an entry in the deduplicate store, or if the entry
         // has a timestamp longer ago than the retention time
-        if (eventTime == null || eventTime.plus(retentionTime).isBefore(wallClockTime)) {
-            var newRecord = new org.apache.kafka.streams.processor.api.Record<>(record.key(), record.value().getLeft(), record.timestamp());
-            context().forward(newRecord);
+        if (!isStored || isStoredOld) {
+            context().forward(record);
             if (parameters.isDebug()) {
-                log.info("deduplicator forwarded {}", newRecord.key());
+                log.info("deduplicator forwarded {}", record.key());
             }
         } else {
             if (parameters.isDebug()) {
@@ -71,16 +81,14 @@ public class PriorityPreemptionEventDeduplicationProcessor
         }
     }
 
-    // Punctuator checks if retention time is passed for each key and sends a tombstone to the topic
-    // to clear the deduplicator ktable store
+    // Punctuator checks if retention time is passed for each key and removes old keys from the store
     private void punctuate(long punctuationTime) {
         var keysToDelete = new ArrayList<IntersectionVehicleRequestSequenceKey>();
-        try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> iterator = dedupStore.all()) {
+        try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, Long> iterator = dedupStore.all()) {
             while (iterator.hasNext()) {
-                KeyValue<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> item = iterator.next();
+                KeyValue<IntersectionVehicleRequestSequenceKey, Long> item = iterator.next();
                 final var key = item.key;
-                final var value = item.value;
-                final Long storedTimestamp = value != null ? value.value() : null;
+                final Long storedTimestamp = item.value;
                 if (storedTimestamp == null) continue;
                 final Instant eventTime = Instant.ofEpochMilli(storedTimestamp);
                 final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
@@ -94,8 +102,7 @@ public class PriorityPreemptionEventDeduplicationProcessor
             }
         }
         for (IntersectionVehicleRequestSequenceKey key : keysToDelete) {
-            var tombstoneRecord = new Record<>(key, (PriorityPreemptionRequestEvent)null, punctuationTime);
-            context().forward(tombstoneRecord);
+            dedupStore.delete(key);
         }
     }
 }

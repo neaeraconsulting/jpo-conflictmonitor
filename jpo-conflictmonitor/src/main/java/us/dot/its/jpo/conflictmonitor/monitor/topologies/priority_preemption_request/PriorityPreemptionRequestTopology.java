@@ -79,6 +79,13 @@ public class PriorityPreemptionRequestTopology
         builder.addStateStore(joinedStoreBuilder);
 
         final String deduplicateEventsStoreName = parameters.getDeduplicateEventsStoreName();
+        var deduplicateStoreBuilder =
+            Stores.keyValueStoreBuilder(
+                    Stores.persistentKeyValueStore(deduplicateEventsStoreName),
+                        JsonSerdes.IntersectionVehicleRequestSequenceKey(),
+                        Serdes.Long()
+            );
+        builder.addStateStore(deduplicateStoreBuilder);
 
 
 
@@ -301,35 +308,37 @@ public class PriorityPreemptionRequestTopology
 
 
         // Read in keys of events that were already sent to a KTable for deduplicating output events
-        var deduplicateTable = builder
-                .stream(parameters.getOutputEventTopic(),
-                        Consumed.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
-                                JsonSerdes.PriorityPreemptionRequestEvent()))
+//        var deduplicateTable = builder
+//                .stream(parameters.getOutputEventTopic(),
+//                        Consumed.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
+//                                JsonSerdes.PriorityPreemptionRequestEvent()))
+//
+//                // Don't need to store the entire event, we only care about the key, convert the value to a timestamp.
+//                // Use a contextual processor, instead of a simple mapValues function, to be able to get the system
+//                // time from the processor context.
+//                .process(() -> new PriorityPremptionExtractTimestampProcessor(parameters))
+//                .toTable(
+//                    Materialized.<IntersectionVehicleRequestSequenceKey, Long>as(
+//                                Stores.persistentKeyValueStore(
+//                                        deduplicateEventsStoreName))
+//                        .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
+//                        .withValueSerde(Serdes.Long()
+//                        )
+//                );
 
-                // Don't need to store the entire event, we only care about the key, convert the value to a timestamp.
-                // Use a contextual processor, instead of a simple mapValues function, to be able to get the system
-                // time from the processor context.
-                .process(() -> new PriorityPremptionExtractTimestampProcessor(parameters))
-                .toTable(
-                    Materialized.<IntersectionVehicleRequestSequenceKey, Long>as(
-                                Stores.persistentKeyValueStore(
-                                        deduplicateEventsStoreName))
-                        .withKeySerde(JsonSerdes.IntersectionVehicleRequestSequenceKey())
-                        .withValueSerde(Serdes.Long()
-                        )
-                );
+
 
 
         var deduplicatedEventStream = filteredEventStream
                 // Join with the table of previously sent events
-                .leftJoin(deduplicateTable,
-                        // Value Joiner.
-                        (event, timeOfPreviousEvent) -> Pair.of(event, timeOfPreviousEvent),
-                        // Join serdes with grace period for versioned store
-                        Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
-                                    JsonSerdes.PriorityPreemptionRequestEvent(),
-                                    Serdes.Long())
-                                )
+//                .leftJoin(deduplicateTable,
+//                        // Value Joiner.
+//                        (event, timeOfPreviousEvent) -> Pair.of(event, timeOfPreviousEvent),
+//                        // Join serdes with grace period for versioned store
+//                        Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
+//                                    JsonSerdes.PriorityPreemptionRequestEvent(),
+//                                    Serdes.Long())
+//                                )
                 // Filer out events with keys already in the previous table that were sent within the retention time
                 // And extract the event.  Use a contextual processor to get the system time from the processor context,
                 // instead of using Instant.now(), to be able to mock the wall clock time in tests.
