@@ -52,23 +52,15 @@ public class PriorityPreemptionEventDeduplicationProcessor
         final Long storedTimestamp = dedupStore.get(key);
         final boolean isStored = storedTimestamp != null;
         final Instant storedTime = isStored ? Instant.ofEpochMilli(storedTimestamp) : null;
-        final long eventTimestamp = record.timestamp();
-        final Instant eventTime = Instant.ofEpochMilli(eventTimestamp);
         final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
         final boolean isStoredOld = isStored && storedTime.plus(retentionTime).isBefore(wallClockTime);
 
-        // Remove the key now if it's old
-        if (isStoredOld) {
-            dedupStore.delete(key);
-        }
+        // Store key with the latest timestamp
+        final long eventTimestamp = record.timestamp();
+        dedupStore.put(key, eventTimestamp);
 
-        // Store it if it isn't already
-        if (!isStored) {
-            dedupStore.put(key, eventTimestamp);
-        }
-
-        // Forward the record along if it doesn't have an entry in the deduplicate store, or if the entry
-        // has a timestamp longer ago than the retention time
+        // Forward the record along if it doesn't have an entry in the deduplicate store, or if the stored entry
+        // had a timestamp longer ago than the retention time
         if (!isStored || isStoredOld) {
             context().forward(record);
             if (parameters.isDebug()) {
