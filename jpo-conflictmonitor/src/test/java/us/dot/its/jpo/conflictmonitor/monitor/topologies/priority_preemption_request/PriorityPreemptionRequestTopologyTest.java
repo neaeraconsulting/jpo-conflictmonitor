@@ -260,16 +260,14 @@ public class PriorityPreemptionRequestTopologyTest {
 
             // Advance clock past retention time and verify dedup store is cleared
             log.info("getting dedup store");
-            KeyValueStore<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> dedupStore
-                    = driver.getTimestampedKeyValueStore(deduplicateStoreName);
+            KeyValueStore<IntersectionVehicleRequestSequenceKey, Long> dedupStore
+                    = driver.getKeyValueStore(deduplicateStoreName);
             log.info("got dedup store");
             final IntersectionVehicleRequestSequenceKey eventKey = getEventKey();
-            final ValueAndTimestamp<Long> storedValueAndTimestamp = dedupStore.get(eventKey);
-            assertThat(storedValueAndTimestamp, notNullValue());
-            final Long storedValue = storedValueAndTimestamp.value();
-            assertThat("expect stored timestamp within retention time", storedValue, notNullValue());
+            final Long storedTimestamp = dedupStore.get(eventKey);
+            assertThat("expect stored timestamp within retention time", storedTimestamp, notNullValue());
             driver.advanceWallClockTime(Duration.ofMinutes(storeRetentionTimeMinutes).plus(Duration.ofMinutes(1)));
-            final var storedTimestampLater = dedupStore.get(eventKey);
+            final Long storedTimestampLater = dedupStore.get(eventKey);
             assertThat("expect removed timestamp withing retention time", storedTimestampLater, nullValue());
         }
     }
