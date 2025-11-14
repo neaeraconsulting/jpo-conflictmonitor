@@ -1,8 +1,10 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
+import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
 import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
 
@@ -39,4 +41,14 @@ public class IntersectionVehicleRequestSequenceKey extends IntersectionVehicleRe
     }
 
     private int requestSequenceNumber;
+
+    @Override
+    public String toString() {
+        try {
+            return DateJsonMapper.getInstance().writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            log.error("Exception serializing to JSON", e);
+        }
+        return "";
+    }
 }

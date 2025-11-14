@@ -61,13 +61,19 @@ public class PriorityPreemptionEventDeduplicationProcessor
         if (eventTime == null || eventTime.plus(retentionTime).isBefore(wallClockTime)) {
             var newRecord = new org.apache.kafka.streams.processor.api.Record<>(record.key(), record.value().getLeft(), record.timestamp());
             context().forward(newRecord);
+            if (parameters.isDebug()) {
+                log.info("deduplicator forwarded {}", newRecord.key());
+            }
+        } else {
+            if (parameters.isDebug()) {
+                log.info("deduplicator filtered out key {}", record.key());
+            }
         }
     }
 
     // Punctuator checks if retention time is passed for each key and sends a tombstone to the topic
     // to clear the deduplicator ktable store
     private void punctuate(long punctuationTime) {
-        log.info("punctuate");
         var keysToDelete = new ArrayList<IntersectionVehicleRequestSequenceKey>();
         try (KeyValueIterator<IntersectionVehicleRequestSequenceKey, ValueAndTimestamp<Long>> iterator = dedupStore.all()) {
             while (iterator.hasNext()) {
@@ -80,7 +86,7 @@ public class PriorityPreemptionEventDeduplicationProcessor
                 final Instant wallClockTime = Instant.ofEpochMilli(context().currentSystemTimeMs());
                 if (eventTime.plus(retentionTime).isBefore(wallClockTime)) {
                     if (parameters.isDebug()) {
-                        log.debug("punctuator will delete key {}.  eventTime {} plus retentionTime {} is before wallClockTime {}",
+                        log.info("punctuator will delete key {}.  eventTime {} plus retentionTime {} is before wallClockTime {}",
                                 key, eventTime, retentionTime, wallClockTime);
                     }
                     keysToDelete.add(key);

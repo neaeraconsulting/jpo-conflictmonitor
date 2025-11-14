@@ -301,8 +301,6 @@ public class PriorityPreemptionRequestTopology
 
 
         // Read in keys of events that were already sent to a KTable for deduplicating output events
-        // Use versioned state store with the same retention time as the SRM and SSM KTables
-        // to suppress duplicates during the retention time
         var deduplicateTable = builder
                 .stream(parameters.getOutputEventTopic(),
                         Consumed.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
@@ -325,7 +323,7 @@ public class PriorityPreemptionRequestTopology
         var deduplicatedEventStream = filteredEventStream
                 // Join with the table of previously sent events
                 .leftJoin(deduplicateTable,
-                        // Value Joiner.  Written as lambda, not method reference, for clarity
+                        // Value Joiner.
                         (event, timeOfPreviousEvent) -> Pair.of(event, timeOfPreviousEvent),
                         // Join serdes with grace period for versioned store
                         Joined.with(JsonSerdes.IntersectionVehicleRequestSequenceKey(),
