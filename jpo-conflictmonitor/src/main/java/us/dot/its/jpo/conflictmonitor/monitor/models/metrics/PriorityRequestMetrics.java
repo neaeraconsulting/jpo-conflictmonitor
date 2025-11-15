@@ -17,11 +17,11 @@ public class PriorityRequestMetrics
         extends Metrics<IntersectionVehicleTypeKey> {
 
     /**
-     * @return Top level intersection id needed form Mongo collection
+     * @return Top level intersection id needed for Mongo collection
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public Integer getIntersectionID() {
-        return key.getIntersectionId() != null ? key.getIntersectionId() : null;
+        return key != null ? key.getIntersectionId() : null;
     }
 
     /**
