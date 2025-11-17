@@ -1,6 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
 
@@ -31,16 +32,13 @@ public class PriorityRequestMetrics
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public long getNumberOfDistinctSrmRequests() {
-        if (distinctSrmRequestKeys != null) return distinctSrmRequestKeys.size();
-        return 0L;
+        return distinctSrmRequestKeys.size();
     }
 
-    private Set<IntersectionVehicleRequestKey> distinctSrmRequestKeys;
+    @NotNull
+    private Set<IntersectionVehicleRequestKey> distinctSrmRequestKeys = new HashSet<>();
 
     public void addDistinctSrmRequestKeys(IntersectionVehicleRequestKey key) {
-        if (distinctSrmRequestKeys == null) {
-            distinctSrmRequestKeys = new HashSet<>();
-        }
         distinctSrmRequestKeys.add(key);
     }
 
@@ -50,17 +48,13 @@ public class PriorityRequestMetrics
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public long getNumberOfGrantedSsmResponses() {
-        if (distinctSsmResponseKeys != null) return distinctSsmResponseKeys.size();
-        return 0L;
+        return distinctSsmResponseKeys.size();
     }
 
-
-    private Set<IntersectionVehicleRequestKey> distinctSsmResponseKeys;
+    @NotNull
+    private Set<IntersectionVehicleRequestKey> distinctSsmResponseKeys = new HashSet<>();
 
     public void addDistinctSsmResponseKeys(IntersectionVehicleRequestKey key) {
-        if (distinctSsmResponseKeys == null) {
-            distinctSsmResponseKeys = new HashSet<>();
-        }
         distinctSsmResponseKeys.add(key);
     }
 
