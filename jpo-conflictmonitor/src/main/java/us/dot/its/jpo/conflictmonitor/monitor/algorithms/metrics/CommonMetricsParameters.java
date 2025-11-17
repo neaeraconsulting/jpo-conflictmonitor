@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
+import us.dot.its.jpo.conflictmonitor.monitor.models.config.UnitsEnum;
 
 import java.time.temporal.ChronoUnit;
 
@@ -36,7 +37,8 @@ public class CommonMetricsParameters {
 
     @ConfigData(key = "metrics.common.gracePeriodMs",
             description = "Grace period for receiving out-of-order events to be used in calculating the metric",
-            updateType = READ_ONLY)
+            updateType = READ_ONLY,
+            units = UnitsEnum.MILLISECONDS)
     private long gracePeriodMs;
 
     @ConfigData(key = "metrics.common.checkInterval",
