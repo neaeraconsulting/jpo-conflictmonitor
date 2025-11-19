@@ -51,10 +51,14 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
@@ -355,7 +359,10 @@ public class MonitorServiceController {
             startSpatMessageCountProgressionAlgorithm();
             
             //Bsm Message Count Progression Topology
-            startBsmMessageCountProgressionAlgorithm(); 
+            startBsmMessageCountProgressionAlgorithm();
+
+            // Priority/Preemption Request Topology
+            startPriorityPreemptionRequestTopology();
 
             // Combined Event Topology
             final String event = "event";
@@ -585,6 +592,39 @@ public class MonitorServiceController {
 
         Runtime.getRuntime().addShutdownHook(new Thread(bsmMessageCountProgressionAlgo::stop));
         bsmMessageCountProgressionAlgo.start();
+    }
+
+    private void startPriorityPreemptionRequestTopology() {
+        final String name = "priorityPreemptionRequest";
+        final PriorityPreemptionRequestAlgorithmFactory factory = conflictMonitorProps.getPriorityPreemptionRequestAlgorithmFactory();
+        final PriorityPreemptionRequestParameters params = conflictMonitorProps.getPriorityPreemptionRequestParameters();
+        final String algorithmName = conflictMonitorProps.getPriorityPreemptionRequestAlgorithm();
+        final PriorityPreemptionRequestAlgorithm algorithm = factory.getAlgorithm(algorithmName);
+        configTopology.registerConfigListeners(params);
+        if (algorithm instanceof StreamsTopology streamsAlgo) {
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
+            algoMap.put(name, streamsAlgo);
+        }
+        algorithm.setParameters(params);
+        final PriorityRequestMetricsAlgorithm metricsAlgorithm = getPriorityRequestMetricsAlgorithm();
+        algorithm.setPriorityRequestMetricsAlgorithm(metricsAlgorithm);
+        Runtime.getRuntime().addShutdownHook(Thread.ofVirtual().unstarted(algorithm::stop));
+        algorithm.start();
+    }
+
+    private PriorityRequestMetricsAlgorithm getPriorityRequestMetricsAlgorithm() {
+        final var factory = conflictMonitorProps.getPriorityRequestMetricsAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getPriorityRequestMetricsAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getPriorityRequestMetricsParameters();
+        algorithm.setParameters(parameters);
+        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
+        logger.info("Get Common parameters: {}", commonParameters);
+        algorithm.setCommonParameters(commonParameters);
+        logger.info("Set Common parameters: {}", algorithm.getCommonParameters());
+        return algorithm;
     }
 
     private MapTimestampDeltaAlgorithm getMapTimestampDeltaAlgorithm() {

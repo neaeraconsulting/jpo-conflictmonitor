@@ -70,7 +70,8 @@ import lombok.Setter;
                 name = "MapMessageCountProgressionAggregation"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEvent.class, name = "RevocableEnabledLaneAlignment"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEventAggregation.class,
-                name = "RevocableEnabledLaneAlignmentAggregation")
+                name = "RevocableEnabledLaneAlignmentAggregation"),
+        @JsonSubTypes.Type(value = PriorityPreemptionRequestEvent.class, name = "PriorityPreemptionRequest")
 })
 @Getter
 @Setter

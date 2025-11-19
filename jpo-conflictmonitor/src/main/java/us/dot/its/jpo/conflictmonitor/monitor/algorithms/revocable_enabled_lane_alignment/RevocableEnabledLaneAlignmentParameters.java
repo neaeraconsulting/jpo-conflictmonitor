@@ -5,6 +5,7 @@ import lombok.Generated;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
+import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.DEFAULT;
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.READ_ONLY;
@@ -13,6 +14,7 @@ import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.RE
 @Generated
 @Component
 @ConfigurationProperties(prefix = "revocable.enabled.lane.alignment")
+@ConfigDataClass
 public class RevocableEnabledLaneAlignmentParameters {
 
     @ConfigData(key = "revocable.enabled.lane.alignment.algorithm",
