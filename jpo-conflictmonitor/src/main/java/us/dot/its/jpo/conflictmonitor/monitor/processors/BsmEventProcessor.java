@@ -292,33 +292,35 @@ public class BsmEventProcessor
                 var offset = timestamp - itemTimestamp;
                 if (offset > fSuppressTimeoutMillis) {
                     logger.info("Ending BSM Event, Time limit reached :"+ key.getIntersectionId());
-                    context().forward(new Record<>(key, value, timestamp), BsmEventTopology.BSM_SINK);
+                    
+                    Record<BsmIntersectionIdKey, BsmEvent> rec = new Record<>(key, value, timestamp);
+                    context().forward(rec, BsmEventTopology.BSM_SINK);
                     stateStore.delete(key);
                 }
             }
         } catch (Exception e) {
-            logger.error("Error in BsmEventProcessor.punctuate", e);
+            logger.warn("Error in BsmEventProcessor.punctuate", e);
         }
     }
 
     public static boolean validateBSM(ProcessedBsm<us.dot.its.jpo.geojsonconverter.pojos.geojson.Point> bsm){
         if (bsm == null) {
-            logger.error("Null BSM");
+            logger.warn("Null BSM");
             return false;
         }
 
         if (bsm.getGeometry() instanceof us.dot.its.jpo.geojsonconverter.pojos.geojson.Point pointGeom) {
             double[] coords = pointGeom.getCoordinates();
             if (coords == null) {
-                logger.error("BSM coordinates missing {}", bsm);
+                logger.warn("BSM coordinates missing {}", bsm);
                 return false;
             }
             if (coords.length < 2) {
-                logger.error("BSM coords array too small. {}", bsm);
+                logger.warn("BSM coords array too small. {}", bsm);
                 return false;
             }
         } else {
-            logger.error("ProcessedBsm geometry is not us.dot.its.jpo.geojsonconverter.pojos.geojson.Point, {}",
+            logger.warn("ProcessedBsm geometry is not us.dot.its.jpo.geojsonconverter.pojos.geojson.Point, {}",
                     bsm.getGeometry());
             return false;
         }
@@ -326,37 +328,37 @@ public class BsmEventProcessor
         BsmProperties props = bsm.getProperties();
 
         if(props.getId() == null){
-            logger.error("BSM id missing {}", bsm);
+            logger.warn("BSM id missing {}", bsm);
             return false;
         }
 
         if(props.getSecMark() == null){
-            logger.error("BSM secMark missing {}", bsm);
+            logger.warn("BSM secMark missing {}", bsm);
             return false;
         }
 
         if(props.getSpeed() == null){
-            logger.error("BSM speed missing {}", bsm);
+            logger.warn("BSM speed missing {}", bsm);
             return false;
         }
 
         if(props.getHeading() == null){
-            logger.error("BSM heading missing {}", bsm);
+            logger.warn("BSM heading missing {}", bsm);
             return false;
         }
 
         if(props.getLogName() == null && props.getOriginIp() == null){
-            logger.error("BSM source (log name or origin IP) missing {}", bsm);
+            logger.warn("BSM source (log name or origin IP) missing {}", bsm);
             return false;
         }
 
         if (props.getTimeStamp() == null){
-            logger.error("BSM timestamp missing {}", bsm);
+            logger.warn("BSM timestamp missing {}", bsm);
             return false;
         }
 
         if (props.getOdeReceivedAt() == null) {
-            logger.error("BSM odeReceivedAt missing {}", bsm);
+            logger.warn("BSM odeReceivedAt missing {}", bsm);
             return false;
         }
 
@@ -398,7 +400,7 @@ public class BsmEventProcessor
     public LineString simplifyPath(LineString path, double simplifyPathToleranceMeters) {
         MathTransformPair transforms = CoordinateConversion.findGcsToUtmTransforms(path);
         if (transforms == null) {
-            logger.error("Can't simplify path because coordinate transform wasn't found. Returning unsimplified path.");
+            logger.warn("Can't simplify path because coordinate transform wasn't found. Returning unsimplified path.");
             return path;
         }
         LineString utmPath = CoordinateConversion.transformLineString(path, transforms.getTransform());

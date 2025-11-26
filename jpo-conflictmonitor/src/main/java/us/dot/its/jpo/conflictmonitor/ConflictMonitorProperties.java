@@ -71,12 +71,17 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.lane_direction_of_trave
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.lane_direction_of_travel_assessment.LaneDirectionOfTravelAssessmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithmFactory;
@@ -233,6 +238,15 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private String revocableEnabledLaneAlignmentAlgorithm;
    private RevocableEnabledLaneAlignmentParameters revocableEnabledLaneAlignmentParameters;
 
+   private PriorityPreemptionRequestAlgorithmFactory priorityPreemptionRequestAlgorithmFactory;
+   private String priorityPreemptionRequestAlgorithm;
+   private PriorityPreemptionRequestParameters priorityPreemptionRequestParameters;
+
+   private CommonMetricsParameters commonMetricsParameters;
+   private PriorityRequestMetricsAlgorithmFactory priorityRequestMetricsAlgorithmFactory;
+   private String priorityRequestMetricsAlgorithm;
+   private PriorityRequestMetricsParameters priorityRequestMetricsParameters;
+
    private NotificationAlgorithmFactory notificationAlgorithmFactory;
    private String notificationAlgorithm;
    private NotificationParameters notificationAlgorithmParameters;
@@ -266,6 +280,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private MessageIngestAlgorithmFactory messageIngestAlgorithmFactory;
    private MessageIngestParameters messageIngestParameters;
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setAggregationParameters(AggregationParameters aggregationParameters) {
       this.aggregationParameters = aggregationParameters;
@@ -409,6 +424,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.spatValidationParameters = spatBroadcastRateParameters;
    }
 
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setRtcmValidationParameters(RtcmValidationParameters rtcmValidationParameters) {
       this.rtcmValidationParameters = rtcmValidationParameters;
@@ -484,6 +500,41 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
       this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
    }
+   @Autowired
+   public void setPriorityPreemptionRequestParameters(PriorityPreemptionRequestParameters priorityPreemptionRequestParameters) {
+      this.priorityPreemptionRequestParameters = priorityPreemptionRequestParameters;
+      this.priorityPreemptionRequestAlgorithm = priorityPreemptionRequestParameters.getAlgorithm();
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setPriorityRequestMetricsParameters(PriorityRequestMetricsParameters priorityRequestMetricsParameters) {
+      this.priorityRequestMetricsParameters = priorityRequestMetricsParameters;
+      this.priorityRequestMetricsAlgorithm = priorityRequestMetricsParameters.getAlgorithm();
+   }
+
+   @Autowired
+   public void setCommonMetricsParameters(CommonMetricsParameters commonMetricsParameters) {
+      this.commonMetricsParameters = commonMetricsParameters;
+   }
+
+   @Autowired
+   public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
+      this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setPriorityPreemptionRequestAlgorithmFactory(PriorityPreemptionRequestAlgorithmFactory factory) {
+      this.priorityPreemptionRequestAlgorithmFactory = factory;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setPriorityRequestMetricsAlgorithmFactory(PriorityRequestMetricsAlgorithmFactory factory) {
+      this.priorityRequestMetricsAlgorithmFactory = factory;
+   }
+
 
    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
@@ -803,7 +854,13 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   public NotificationAlgorithmFactory getNotificationAlgorithmFactory() {
+      return notificationAlgorithmFactory;
+   }
+
+
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setNotificationAlgorithmFactory(NotificationAlgorithmFactory notificationAlgorithmFactory) {
       this.notificationAlgorithmFactory = notificationAlgorithmFactory;
@@ -871,7 +928,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
     * General Properties
     */
    private String version;
-   // public static final int OUTPUT_SCHEMA_VERSION = 6;
    
    @Setter(AccessLevel.NONE)
    private String kafkaBrokers = null;
@@ -879,26 +935,9 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Setter(AccessLevel.NONE)
    private String hostId;
 
-   @Setter(AccessLevel.NONE)
-   private String connectURL = null;
-
-   // @Setter(AccessLevel.NONE)
-   // private String dockerHostIP = null;
 
    @Setter(AccessLevel.NONE)
    private String kafkaBrokerIP = null;
-
-   // No longer need a mongo DB connection for this service
-   // @Setter(AccessLevel.NONE)
-   // private String dbHostIP = null;
-
-
-
-   private static final String DEFAULT_CONNECT_PORT = "8083";
-
-  
-
-
 
    // BSM
    private String kafkaTopicOdeBsmJson;
@@ -984,15 +1023,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
                confluentKey = getEnvironmentVariable("CONFLUENT_KEY");
                confluentSecret = getEnvironmentVariable("CONFLUENT_SECRET");
          }
-      }
-
-      // Initialize the Kafka Connect URL
-      if (connectURL == null) {
-         String tempConnectURL = getEnvironmentVariable("CONNECT_URL");
-         if (tempConnectURL == null) {
-            tempConnectURL = String.format("http://%s:%s", "localhost", DEFAULT_CONNECT_PORT);
-         }
-         connectURL = tempConnectURL;
       }
 
       // List<String> asList = Arrays.asList(this.getKafkaTopicsDisabled());

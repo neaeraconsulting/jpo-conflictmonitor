@@ -15,7 +15,6 @@ public class SendMessageJob implements Runnable {
 
     private final static Logger logger = LoggerFactory.getLogger(SendMessageJob.class);
 
-   
     KafkaTemplate<String, String> kafkaTemplate;
     String messageType;
     long sendTime;
@@ -24,6 +23,9 @@ public class SendMessageJob implements Runnable {
     Integer intersectionId;
     String logId;
     String bsmId;
+    String rtcmId;
+    String srmId;
+    String ssmId;
 
     final String ProcessedMapTopic = "topic.ProcessedMap";
     final String ProcessedSpatTopic = "topic.ProcessedSpat";
@@ -43,6 +45,15 @@ public class SendMessageJob implements Runnable {
                     break;
                 case "BSM":
                     kafkaTemplate.send("topic.OdeBsmJson", message);
+                    break;
+                case "RTCM":
+                    kafkaTemplate.send("topic.OdeRtcmJson", message);
+                    break;
+                case "SRM":
+                    kafkaTemplate.send("topic.OdeSrmJson", message);
+                    break;
+                case "SSM":
+                    kafkaTemplate.send("topic.OdeSsmJson", message);
                     break;
                 case "ProcessedMap":
                     kafkaTemplate.send(ProcessedMapTopic, partitionForIntersection(intersectionId, ProcessedMapTopic), getKey(rsuId, intersectionId), message);

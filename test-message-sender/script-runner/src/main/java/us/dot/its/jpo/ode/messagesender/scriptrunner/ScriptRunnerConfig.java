@@ -15,7 +15,7 @@ public class ScriptRunnerConfig  {
     public ThreadPoolTaskScheduler threadPoolTaskScheduler() {
         var builder = new ThreadPoolTaskSchedulerBuilder();
         return builder
-            .poolSize(3)
+            .poolSize(16)
             .threadNamePrefix("ScriptRunner-")
             .awaitTermination(true)
             .build();

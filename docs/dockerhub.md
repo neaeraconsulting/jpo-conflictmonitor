@@ -13,7 +13,6 @@ The latest image can be pulled using the following command:
 ## Required environment variables
 	• DOCKER_HOST_IP
 	• KAFKA_BOOTSTRAP_SERVERS
-	• CONNECT_URL
 
 ## Direct Dependencies
 	- MongoDB
@@ -40,7 +39,6 @@ services:
     environment:
       DOCKER_HOST_IP: ${DOCKER_HOST_IP:?error}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:?error}
-      CONNECT_URL: ${CONNECT_URL:?error}
       spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:?error}
     logging:
       options:

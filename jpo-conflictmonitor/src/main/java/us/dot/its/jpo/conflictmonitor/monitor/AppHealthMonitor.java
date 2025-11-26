@@ -59,7 +59,7 @@ import javax.ws.rs.Produces;
  * REST controller providing health and configuration endpoints for the Conflict Monitor application.
  * <p>
  * Exposes endpoints for monitoring Kafka topics, streams, topologies, configuration, spatial indexes,
- * and window stores for SPaT and BSM data. Also provides links to connectors and application properties.
+ * and window stores for SPaT and BSM data. Also provides links to application properties.
  */
 @Getter
 @Setter
@@ -123,7 +123,6 @@ public class AppHealthMonitor {
                 "topics",
                 "properties",
                 "streams",
-                "connectors",
                 "spatial-indexes",
                 "spat-window-store",
                 "bsm-window-store",
@@ -341,20 +340,11 @@ public class AppHealthMonitor {
        
     }
 
-    /**
-     * Returns the status of Kafka Connect connectors.
+    /*
+     * Returns all items in the spatial index (quadtree).
      *
-     * @return response entity containing the connectors' status as a JSON string
+     * @return response entity containing a list of all spatial index items
      */
-    @GetMapping(value = "/connectors")
-    public @ResponseBody ResponseEntity<String> connectors() {
-        final var restTemplate = new RestTemplate();
-        final var url = String.format("%s/connectors?expand=status", 
-                conflictMonitorProperties.getConnectURL());
-        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-        return response;
-    }
-
     /**
      * Returns all items in the spatial index (quadtree).
      *

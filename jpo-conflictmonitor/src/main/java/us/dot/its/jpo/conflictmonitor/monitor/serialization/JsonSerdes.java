@@ -41,9 +41,13 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_la
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.SpatTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapBoundingBox;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleRequestStatus;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimeChangeDetailAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.RsuIntersectionSignalGroupKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
@@ -542,6 +546,69 @@ public class JsonSerdes {
         return Serdes.serdeFrom(
                 new JsonSerializer<>(),
                 new JsonDeserializer<>(TimeChangeDetailsNotificationAggregation.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentEvent> RevocableEnabledLaneAlignmentEvent() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<>(),
+                new JsonDeserializer<>(RevocableEnabledLaneAlignmentEvent.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentEventAggregation> RevocableEnabledLaneAlignmentEventAggregation() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<>(),
+                new JsonDeserializer<>(RevocableEnabledLaneAlignmentEventAggregation.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentAggregationKey> RevocableEnabledLaneAlignmentAggregationKey() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<>(),
+                new JsonDeserializer<>(RevocableEnabledLaneAlignmentAggregationKey.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentNotification> RevocableEnabledLaneAlignmentNotification() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotification.class));
+    }
+
+    public static Serde<RevocableEnabledLaneAlignmentNotificationAggregation> RevocableEnabledLaneAlignmentNotificationAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotificationAggregation.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestKey> IntersectionVehicleRequestKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestKey.class));
+    }
+
+
+    public static Serde<SrmRequest> SrmRequest() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SrmRequest.class));
+    }
+
+    public static Serde<SsmStatus> SsmStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SsmStatus.class));
+    }
+
+    public static Serde<JoinedRequestStatus> JoinedRequestStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(JoinedRequestStatus.class));
+    }
+
+    public static Serde<PriorityPreemptionRequestEvent>  PriorityPreemptionRequestEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+    }
+
+    public static Serde<PriorityRequestMetrics> PriorityRequestMetrics() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(PriorityRequestMetrics.class));
+    }
+
+    public static Serde<IntersectionVehicleTypeKey> IntersectionVehicleTypeKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleTypeKey.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestSequenceKey> IntersectionVehicleRequestSequenceKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestStatus> IntersectionVehicleRequestStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestStatus.class));
     }
 
     public static Serde<RevocableEnabledLaneAlignmentEvent> RevocableEnabledLaneAlignmentEvent() {

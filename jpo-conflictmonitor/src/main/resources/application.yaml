@@ -9,10 +9,7 @@ server.port: 8082
 spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 spring.kafka.producer.properties.max-request.size: 2097152
 
-logging.level.org.apache.kafka: INFO
-logging.level: INFO
-log4j.logger.kafka: OFF
-log4j.logger.org.apache.kafka: OFF
+logging.level.org.apache.kafka: WARN
 
 
 
@@ -240,6 +237,13 @@ kafka.topics:
       cleanupPolicy: compact
     - name: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
       cleanupPolicy: compact
+    - name: topic.CmPriorityPreemptionRequestEvent
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmPriorityRequestMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
+
 
 
 # Connection of Travel
@@ -639,5 +643,33 @@ rtcm.validation:
   upperBound: 11
   debug: true
   aggregateMinimumDataEvents: ${ENABLE_AGGREGATE_RTCM_MINIMUM_DATA_EVENTS:false}
+priority.preemption.request:
+  algorithm: defaultPriorityPreemptionRequestAlgorithm
+  debug: true
+  processed-srm-input-topic: topic.ProcessedSrm
+  processed-ssm-input-topic: topic.ProcessedSsm
+  output-event-topic: topic.CmPriorityPreemptionRequestEvent
+  srm-store-name: srm-request-store
+  ssm-store-name: ssm-status-store
+  joined-store-name: joined-srm-ssm-store
+  deduplicate-events-store-name: srm-ssm-event-deduplicate-store
+  store-retention-time: 1
+  retention-time-units: MINUTES
+  max-time-between-srms: 30
+  max-time-between-srms-units: SECONDS
 
+metrics:
+  common:
+    interval: 30
+    interval-units: SECONDS
+    grace-period-ms: 500
+    check-interval: 10
+    check-interval-units: SECONDS
+    retention-time: 1
+    retention-time-units: MINUTES
+  priority.request:
+    algorithm: defaultPriorityRequestMetricsAlgorithm
+    debug: true
+    input-event-topic: topic.CmPriorityPreemptionRequestEvent
+    output-metric-topic: topic.CmPriorityRequestMetrics
 

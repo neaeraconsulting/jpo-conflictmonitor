@@ -1,0 +1,372 @@
+package us.dot.its.jpo.conflictmonitor.monitor.topologies.priority_preemption_request;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.TopologyTestDriver;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.PriorityPreemptionRequestEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
+//import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.IntersectionVehicleRequestSequenceKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.JoinedRequestStatus;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityPreemptionRequestTimeoutProcessor;
+import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
+import us.dot.its.jpo.geojsonconverter.partitioner.RsuVehicleIdKey;
+import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedBasicVehicleRole;
+import us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedPriorityRequestType;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSignalRequest;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.ProcessedSrm;
+import us.dot.its.jpo.geojsonconverter.pojos.geojson.srm.SrmProperties;
+import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSignalStatus;
+import us.dot.its.jpo.geojsonconverter.pojos.ssm.ProcessedSsm;
+import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
+import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+
+import static java.time.temporal.ChronoUnit.MINUTES;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestConstants.DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM;
+import static us.dot.its.jpo.geojsonconverter.pojos.common.ProcessedPrioritizationResponseStatus.GRANTED;
+
+@Slf4j
+@RunWith(MockitoJUnitRunner.class)
+public class PriorityPreemptionRequestTopologyTest {
+
+    private static final String inputSrmTopicName = "topic.ProcessedSrm";
+    private static final String inputSsmTopicName = "topic.ProcessedSsm";
+    private static final String outputEventTopicName = "topic.CmPriorityPreemptionRequestEvent";
+    private static final String outputMetricTopicName = "topic.CmPriorityRequestMetrics";
+    private static final String rsuId = "127.0.0.1";
+    private static final String vehicleId = "ABCD0102";
+    private static final double lon = -104.0;
+    private static final double lat = 40.0;
+
+    private static final int intersectionId = 12115;
+    private static final int roadRegulatorId = 22100;
+    private static final int requestId = 10;
+    private static final int requestSequenceNumber = 7;
+    private static final int inboundLaneId = 15;
+    private static final int outboundLaneId = 22;
+    private static final long secondsLatency = 2L;
+    private static final ProcessedBasicVehicleRole vehicleType = ProcessedBasicVehicleRole.PUBLICTRANSPORT;
+    private static final ProcessedPriorityRequestType requestType = ProcessedPriorityRequestType.PRIORITYREQUEST;
+    private static final int maxSecondsBetweenSrms = 30;
+    private static final int storeRetentionTimeMinutes = 10;
+    private static final String srmStoreName = "srm-request-store";
+    private static final String ssmStoreName = "ssm-status-store";
+    private static final String joinedStoreName = "joined-store";
+    private static final String deduplicateStoreName = "deduplicate-store";
+
+    // Mock the metrics subtopology
+    @Mock PriorityRequestMetricsTopology mockMetricsTopology;
+    @Mock KStream<IntersectionVehicleTypeKey, PriorityRequestMetrics> mockMetricsStream;
+
+
+    /**
+     * Test that a matched SRM and SSM emit an event
+     */
+    @Test
+    public void testPriorityPreemptionRequestEvent() {
+        Topology topology = createTopology();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
+
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
+
+            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
+                    new JsonSerializer<RsuIntersectionKey>(),
+                    new JsonSerializer<ProcessedSsm>());
+
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            // Not testing metrics here
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
+            final ZonedDateTime now = ZonedDateTime.of(2025, 9, 30, 9, 46,
+                    55, 0, ZoneOffset.UTC);
+            final long srmTimestamp = now.toInstant().toEpochMilli();
+            final ZonedDateTime nowPlus1 = now.plusSeconds(1);
+            final long ssmTimestamp = nowPlus1.toInstant().toEpochMilli();
+            final ProcessedSrm processedSrm = createSrm(now);
+            final ProcessedSsm processedSsm = createSsm(nowPlus1, GRANTED);
+
+            inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
+            inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, nowPlus1.toInstant());
+
+            var eventList = outputEventTopic.readKeyValuesToList();
+            assertThat(eventList, hasSize(1));
+            var keyEvent = eventList.getFirst();
+
+            var resultKey = keyEvent.key;
+            assertThat(resultKey, notNullValue());
+            assertThat(resultKey.getRequestId(), equalTo(requestId));
+            assertThat(resultKey.getIntersectionId(), equalTo(intersectionId));
+            assertThat(resultKey.getRegion(), equalTo(roadRegulatorId));
+            assertThat(resultKey.getVehicleId(), equalTo(vehicleId));
+            assertThat(resultKey.getRequestSequenceNumber(), equalTo(requestSequenceNumber));
+
+            var resultValue = keyEvent.value;
+            assertThat(resultValue, notNullValue());
+            assertThat(resultValue.getRequestId(), equalTo(requestId));
+            assertThat(resultValue.getPriorityRequestType(), equalTo(requestType));
+            assertThat(resultValue.getEventGeneratedAt(), greaterThan(0L));
+            assertThat(resultValue.getRequestTimestamp(), equalTo(srmTimestamp));
+            assertThat(resultValue.getTimeOfLastResponse(), equalTo(ssmTimestamp));
+            assertThat(resultValue.getInboundLaneId(), equalTo(inboundLaneId));
+            assertThat(resultValue.getOutboundLaneId(), equalTo(outboundLaneId));
+            assertThat(resultValue.getVehicleId(), equalTo(vehicleId));
+            assertThat(resultValue.getVehicleType(), equalTo(vehicleType));
+            assertThat(resultValue.getIntersectionID(), equalTo(intersectionId));
+            assertThat(resultValue.getRoadRegulatorID(), equalTo(roadRegulatorId));
+            assertThat(resultValue.getStatus(), equalTo(GRANTED));
+            assertThat(resultValue.hasFinalStatus(), equalTo(true));
+            assertThat(resultValue.getFinalStatus(), equalTo(GRANTED));
+            assertThat(resultValue.getRequestSequenceNumber(), equalTo(requestSequenceNumber));
+
+
+        }
+    }
+
+    /**
+     * Test the {@link PriorityPreemptionRequestTimeoutProcessor}
+     * within the topology, so that unmatched SRMs are included in the calculation of the fulfillment rate metric.
+     * Tests that a stream of SRMs gets saved in the joined state store, and that if no SSM
+     * response is received after a configured time, the joined messages gets deleted from the store.
+     */
+    @Test
+    public void testPriorityPreemptionRequestEvent_NoSsm() {
+        Topology topology = createTopology();
+
+        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 0,
+                0, 0, ZoneOffset.UTC);
+        final Instant startWallClock = start.toInstant();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
+
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final IntersectionVehicleRequestSequenceKey eventKey = getEventKey();
+            KeyValueStore<IntersectionVehicleRequestSequenceKey, JoinedRequestStatus> joinedStateStore
+                    = driver.getKeyValueStore(joinedStoreName);
+
+            // send one srm every 5 seconds
+            final int step = 5;
+            for (int offset = 0; offset <= 60; offset += step) {
+                final ZonedDateTime now = start.plusSeconds(offset);
+                log.info("now: {}", now.format(DateTimeFormatter.ISO_INSTANT));
+                final ProcessedSrm processedSrm = createSrm(now);
+                inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, now.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(step));
+                var value = joinedStateStore.get(eventKey);
+                assertThat(value, notNullValue());
+            }
+
+            // Wait longer than max-time-between-srms
+            driver.advanceWallClockTime(Duration.ofSeconds(maxSecondsBetweenSrms + 10));
+
+            // Store should be cleared now
+            var storedValue = joinedStateStore.get(eventKey);
+            assertThat(storedValue, nullValue());
+
+            var eventList = outputEventTopic.readKeyValuesToList();
+            assertThat("no events expected for SRM stream without SSM", eventList, hasSize(0));
+        }
+    }
+
+    /**
+     * Test tha a series of SRMs with the same key and more than one SSM matching the same SRM emits
+     * only one event within the retention time.
+     */
+    @Test
+    public void testPriorityPreemptionRequestEvent_Deduplication() {
+        Topology topology = createTopology();
+
+        final ZonedDateTime start = ZonedDateTime.of(2025, 9, 30, 9, 0,
+                0, 0, ZoneOffset.UTC);
+        final Instant startWallClock = start.toInstant();
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, startWallClock)) {
+            var inputSrmTopic = driver.createInputTopic(inputSrmTopicName,
+                    new JsonSerializer<RsuVehicleIdKey>(),
+                    new JsonSerializer<ProcessedSrm>());
+
+            var outputEventTopic = driver.createOutputTopic(outputEventTopicName,
+                    new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class),
+                    new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+
+            var inputSsmTopic = driver.createInputTopic(inputSsmTopicName,
+                    new JsonSerializer<RsuIntersectionKey>(),
+                    new JsonSerializer<ProcessedSsm>());
+
+            final RsuVehicleIdKey rsuVehicleIdKey = new RsuVehicleIdKey(rsuId, vehicleId);
+            final RsuIntersectionKey rsuIntersectionKey = new RsuIntersectionKey(rsuId, intersectionId, roadRegulatorId);
+
+            // send an SRM followed by an SSM repeatedly with the same key
+            final int step = 10;
+            final int halfStep = step / 2;
+            for (int offset = 0; offset <= 60; offset += step) {
+
+                final ZonedDateTime srmTime = start.plusSeconds(offset);
+                log.info("srmTime: {}", srmTime.format(DateTimeFormatter.ISO_INSTANT));
+                final ProcessedSrm processedSrm = createSrm(srmTime);
+                inputSrmTopic.pipeInput(rsuVehicleIdKey, processedSrm, srmTime.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(halfStep));
+
+                final ZonedDateTime ssmTime = srmTime.plusSeconds(halfStep);
+                log.info("ssmTime: {}", ssmTime.format(DateTimeFormatter.ISO_INSTANT));
+                final ProcessedSsm processedSsm = createSsm(ssmTime, GRANTED);
+                inputSsmTopic.pipeInput(rsuIntersectionKey, processedSsm, ssmTime.toInstant());
+                driver.advanceWallClockTime(Duration.ofSeconds(halfStep));
+
+            }
+
+            var eventList = outputEventTopic.readKeyValuesToList();
+            assertThat("Expect 1 deduplicated event", eventList, hasSize(1));
+
+            // Advance clock past retention time and verify dedup store is cleared
+            log.info("getting dedup store");
+            KeyValueStore<IntersectionVehicleRequestSequenceKey, Long> dedupStore
+                    = driver.getKeyValueStore(deduplicateStoreName);
+            log.info("got dedup store");
+            final IntersectionVehicleRequestSequenceKey eventKey = getEventKey();
+            final Long storedTimestamp = dedupStore.get(eventKey);
+            assertThat("expect stored timestamp within retention time", storedTimestamp, notNullValue());
+            driver.advanceWallClockTime(Duration.ofMinutes(storeRetentionTimeMinutes).plus(Duration.ofMinutes(1)));
+            final Long storedTimestampLater = dedupStore.get(eventKey);
+            assertThat("expect removed timestamp withing retention time", storedTimestampLater, nullValue());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Topology createTopology() {
+        var parameters = getParameters();
+        var topology = new PriorityPreemptionRequestTopology();
+        topology.setParameters(parameters);
+
+        // Mock metrics subtopology
+
+        // Ignore unchecked warning here
+        when(mockMetricsTopology.buildTopology(any(StreamsBuilder.class), any(KStream.class)))
+                .thenReturn(mockMetricsStream);
+        CommonMetricsParameters commonMetricsParameters = new CommonMetricsParameters();
+        PriorityRequestMetricsParameters priorityRequestMetricsParameters = new PriorityRequestMetricsParameters();
+        priorityRequestMetricsParameters.setOutputMetricTopic(outputMetricTopicName);
+        when(mockMetricsTopology.getParameters()).thenReturn(priorityRequestMetricsParameters);
+
+        // Ignore unchecked warning here
+        doNothing().when(mockMetricsStream).to(anyString(), any(Produced.class));
+        topology.setPriorityRequestMetricsAlgorithm(mockMetricsTopology);
+
+
+        return topology.buildTopology();
+    }
+
+    private PriorityPreemptionRequestParameters getParameters() {
+        var parameters = new PriorityPreemptionRequestParameters();
+        parameters.setAlgorithm(DEFAULT_PRIORITY_PREEMPTION_REQUEST_ALGORITHM);
+        parameters.setDebug(true);
+        parameters.setOutputEventTopic(outputEventTopicName);
+        parameters.setSrmStoreName(srmStoreName);
+        parameters.setSsmStoreName(ssmStoreName);
+        parameters.setJoinedStoreName(joinedStoreName);
+        parameters.setDeduplicateEventsStoreName(deduplicateStoreName);
+        parameters.setStoreRetentionTime(storeRetentionTimeMinutes);
+        parameters.setRetentionTimeUnits(MINUTES);
+        parameters.setMaxTimeBetweenSrms(maxSecondsBetweenSrms);
+        parameters.setMaxTimeBetweenSrmsUnits(SECONDS);
+        parameters.setProcessedSrmInputTopic(inputSrmTopicName);
+        parameters.setProcessedSsmInputTopic(inputSsmTopicName);
+        return parameters;
+    }
+
+    private IntersectionVehicleRequestSequenceKey getEventKey() {
+        final IntersectionVehicleRequestSequenceKey eventKey = new IntersectionVehicleRequestSequenceKey();
+        eventKey.setRequestId(requestId);
+        eventKey.setIntersectionId(intersectionId);
+        eventKey.setVehicleId(vehicleId);
+        eventKey.setRequestSequenceNumber(requestSequenceNumber);
+        eventKey.setRegion(roadRegulatorId);
+        return eventKey;
+    }
+
+    private ProcessedSrm createSrm(ZonedDateTime timestamp) {
+        var geometry = new Point(lon, lat);
+        var props = new SrmProperties();
+        props.setTimeStamp(timestamp);
+        props.setOdeReceivedAt(timestamp.plusSeconds(secondsLatency));
+        props.setLongitude(lon);
+        props.setLatitude(lat);
+        props.setVehicleID(vehicleId);
+        props.setRole(vehicleType);
+        props.setSequenceNumber(requestSequenceNumber);
+        var requests = new ArrayList<ProcessedSignalRequest>();
+        var request = new ProcessedSignalRequest();
+        request.setPriorityRequestType(requestType);
+        request.setRequestID(requestId);
+        request.setIntersectionId(intersectionId);
+        request.setRegion(roadRegulatorId);
+        request.setInboundLaneID(inboundLaneId);
+        request.setOutboundLaneID(outboundLaneId);
+        requests.add(request);
+        props.setRequests(requests);
+        return new ProcessedSrm(geometry, props);
+    }
+
+    private ProcessedSsm createSsm(final ZonedDateTime timestamp,
+                                   final ProcessedPrioritizationResponseStatus signalStatus) {
+        var ssm =  new ProcessedSsm();
+        ssm.setIntersectionId(intersectionId);
+        ssm.setRegion(roadRegulatorId);
+        ssm.setTimeStamp(timestamp);
+        ssm.setOdeReceivedAt(timestamp.plusSeconds(secondsLatency));
+        var statusList = new ArrayList<ProcessedSignalStatus>();
+        var status = new ProcessedSignalStatus();
+        status.setRequestID(requestId);
+        status.setVehicleID(vehicleId);
+        status.setInboundOnLaneID(inboundLaneId);
+        status.setOutboundOnLaneID(outboundLaneId);
+        status.setRequesterRole(vehicleType);
+        status.setRequesterSequenceNumber(requestSequenceNumber);
+        status.setStatus(signalStatus);
+        statusList.add(status);
+        ssm.setStatusList(statusList);
+        return ssm;
+    }
+
+
+}

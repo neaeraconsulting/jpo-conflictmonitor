@@ -24,7 +24,7 @@ public class ScriptRunner {
     private final static Logger logger = LoggerFactory.getLogger(ScriptRunner.class);
 
     private final static Pattern linePattern =
-            Pattern.compile("^(?<messageType>BSM|SPAT|MAP|ProcessedMap|ProcessedSpat)(;(?<rsuId>[A-Za-z0-9.]+);(?<intersectionId>\\d+))?,(?<time>\\d+),(?<message>.+)$");
+            Pattern.compile("^(?<messageType>BSM|SPAT|MAP|ProcessedMap|ProcessedSpat|RTCM|SRM|SSM)(;(?<rsuId>[A-Za-z0-9.]+);(?<intersectionId>\\d+))?,(?<time>\\d+),(?<message>.+)$");
 
     private final static Pattern processedBsmLinePattern =
             Pattern.compile("^ProcessedBsm;(?<rsuId>[A-Za-z0-9.]+)?;(?<logId>[A-Za-z0-9.]+)?,(?<time>\\d+),(?<message>.+)$");
