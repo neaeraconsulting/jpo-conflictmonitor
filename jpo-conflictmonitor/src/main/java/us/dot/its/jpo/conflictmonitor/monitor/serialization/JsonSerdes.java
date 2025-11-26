@@ -611,32 +611,6 @@ public class JsonSerdes {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestStatus.class));
     }
 
-    public static Serde<RevocableEnabledLaneAlignmentEvent> RevocableEnabledLaneAlignmentEvent() {
-        return Serdes.serdeFrom(
-                new JsonSerializer<>(),
-                new JsonDeserializer<>(RevocableEnabledLaneAlignmentEvent.class));
-    }
-
-    public static Serde<RevocableEnabledLaneAlignmentEventAggregation> RevocableEnabledLaneAlignmentEventAggregation() {
-        return Serdes.serdeFrom(
-                new JsonSerializer<>(),
-                new JsonDeserializer<>(RevocableEnabledLaneAlignmentEventAggregation.class));
-    }
-
-    public static Serde<RevocableEnabledLaneAlignmentAggregationKey> RevocableEnabledLaneAlignmentAggregationKey() {
-        return Serdes.serdeFrom(
-                new JsonSerializer<>(),
-                new JsonDeserializer<>(RevocableEnabledLaneAlignmentAggregationKey.class));
-    }
-
-    public static Serde<RevocableEnabledLaneAlignmentNotification> RevocableEnabledLaneAlignmentNotification() {
-        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotification.class));
-    }
-
-    public static Serde<RevocableEnabledLaneAlignmentNotificationAggregation> RevocableEnabledLaneAlignmentNotificationAggregation() {
-        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotificationAggregation.class));
-    }
-
     public static Serde<RtcmMinimumDataEvent> RtcmMinimumDataEvent() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEvent.class));
     }

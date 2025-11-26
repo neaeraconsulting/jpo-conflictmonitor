@@ -75,10 +75,6 @@ import lombok.Setter;
         @JsonSubTypes.Type(value = RtcmMessageCountProgressionEventAggregation.class, name = "RtcmMessageCountProgressionAggregation"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEvent.class, name = "RevocableEnabledLaneAlignment"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEventAggregation.class,
-                name = "RevocableEnabledLaneAlignmentAggregation")
-                name = "MapMessageCountProgressionAggregation"),
-        @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEvent.class, name = "RevocableEnabledLaneAlignment"),
-        @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEventAggregation.class,
                 name = "RevocableEnabledLaneAlignmentAggregation"),
         @JsonSubTypes.Type(value = PriorityPreemptionRequestEvent.class, name = "PriorityPreemptionRequest")
 })

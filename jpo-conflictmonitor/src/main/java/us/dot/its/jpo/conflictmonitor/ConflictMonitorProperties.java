@@ -518,11 +518,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.commonMetricsParameters = commonMetricsParameters;
    }
 
-   @Autowired
-   public void setRevocableEnabledLaneAlignmentAlgorithmFactory(RevocableEnabledLaneAlignmentAlgorithmFactory factory) {
-      this.revocableEnabledLaneAlignmentAlgorithmFactory = factory;
-   }
-
    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
    @Autowired
    public void setPriorityPreemptionRequestAlgorithmFactory(PriorityPreemptionRequestAlgorithmFactory factory) {
