@@ -33,6 +33,8 @@ public abstract class BaseRtcmValidationTopologyTest {
 
     protected final int lowerBound = 9;
     protected final int upperBound = 11;
+    protected final int msmLowerBound = 9;
+    protected final int msmUpperBound = 110;
     protected final boolean debug = true;
 
     protected final String validationMsg = "Validation Message";
@@ -66,6 +68,8 @@ public abstract class BaseRtcmValidationTopologyTest {
         parameters.setGracePeriodMilliseconds(gracePeriod);
         parameters.setLowerBound(lowerBound);
         parameters.setUpperBound(upperBound);
+        parameters.setMsmLowerBound(msmLowerBound);
+        parameters.setMsmUpperBound(msmUpperBound);
         parameters.setDebug(debug);
         return parameters;
     }

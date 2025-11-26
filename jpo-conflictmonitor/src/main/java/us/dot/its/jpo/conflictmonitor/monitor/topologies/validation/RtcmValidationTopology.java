@@ -97,7 +97,7 @@ public class RtcmValidationTopology
                 })
                 .peek((key,  value) -> {
                     if (parameters.isDebug()) {
-                        log.info("RtcmMinimumDataEvent for key {}", key);
+                        log.debug("RtcmMinimumDataEvent for key {}", key);
                     }
                 });
 

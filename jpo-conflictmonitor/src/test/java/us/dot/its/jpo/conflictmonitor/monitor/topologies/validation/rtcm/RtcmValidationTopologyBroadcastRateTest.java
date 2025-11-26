@@ -33,11 +33,11 @@ public class RtcmValidationTopologyBroadcastRateTest extends BaseRtcmValidationT
                 {"rtcm basic message types slow broadcast rate, .5 Hz", false, 2000, 13, true, false,},
                 {"rtcm basic message types fast broadcast rate 2 Hz", false, 500, 11, false, true},
                 {"rtcm basic message types correct broadcast rate 1Hz", false, 1000, 11, false, false},
-                {"rtcm MSM 4 message types slow broadcast rate, .5 Hz", false, 2000, 13, true, false},
-                {"rtcm MSM 4 message types fast broadcast rate 20 Hz", false, 50, 11, false, true},
-                {"rtcm MSM 4 message types correct broadcast rate 1 Hz", false, 1000, 11, false, false},
-                {"rtcm MSM 4 message types correct broadcast rate 5 Hz", false, 200, 11, false, false},
-                {"rtcm MSM 4 message types correct broadcast rate 10 Hz", false, 100, 11, false, false}
+                {"rtcm MSM 4 message types slow broadcast rate, .5 Hz", true, 2000, 13, true, false},
+                {"rtcm MSM 4 message types fast broadcast rate 20 Hz", true, 50, 11, false, true},
+                {"rtcm MSM 4 message types correct broadcast rate 1 Hz", true, 1000, 11, false, false},
+                {"rtcm MSM 4 message types correct broadcast rate 5 Hz", true, 200, 11, false, false},
+                {"rtcm MSM 4 message types correct broadcast rate 10 Hz", true, 100, 11, false, false}
         };
         return Arrays.asList(args);
     }
@@ -45,7 +45,7 @@ public class RtcmValidationTopologyBroadcastRateTest extends BaseRtcmValidationT
     private final String description;
     private final boolean includeMsm;
     private final int periodMillis;
-    private final int totalTimeSeconds;gi
+    private final int totalTimeSeconds;
     private final boolean expectLow;
     private final boolean expectHigh;
 
@@ -98,10 +98,12 @@ public class RtcmValidationTopologyBroadcastRateTest extends BaseRtcmValidationT
                 assertThat("broadcast rate device id", bcValue.getSource(), equalTo(source));
                 assertThat("broadcast rate stationId", bcValue.getStationId(), equalTo(stationId));
                 assertThat("broadcast rate topic name", bcValue.getTopicName(), equalTo(inputTopicName));
+                final int expectLower = includeMsm ? msmLowerBound : lowerBound;
+                final int expectUpper = includeMsm ? msmUpperBound : upperBound;
                 if (expectLow) {
-                    assertThat("expect low broadcast rate number of messages", bcValue.getNumberOfMessages(), lessThan(lowerBound));
+                    assertThat("expect low broadcast rate number of messages", bcValue.getNumberOfMessages(), lessThan(expectLower));
                 } else {
-                    assertThat("expect high number of messages", bcValue.getNumberOfMessages(), greaterThan(upperBound));
+                    assertThat("expect high number of messages", bcValue.getNumberOfMessages(), greaterThan(expectUpper));
                 }
                 assertThat("broadcast rate time period null", bcValue.getTimePeriod(), notNullValue());
                 assertThat("broadcast rate time period", bcValue.getTimePeriod().periodMillis(), equalTo(10000L));
