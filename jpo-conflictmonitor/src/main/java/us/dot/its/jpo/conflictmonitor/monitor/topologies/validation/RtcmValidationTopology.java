@@ -21,6 +21,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.RtcmMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.RtcmUtils;
+import us.dot.its.jpo.geojsonconverter.partitioner.RsuIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuStationIdKey;
 import us.dot.its.jpo.geojsonconverter.pojos.ProcessedValidationMessage;
 
@@ -83,8 +85,8 @@ public class RtcmValidationTopology
 
         // Extract validation info for Minimum Data events
         var minDataStream = processedRtcmStream
-                .filter((key, value) -> value.getProperties() != null
-                        && !value.getProperties().isCti4501Conformant())
+                .filter((key, processedRtcm) -> processedRtcm.getProperties() != null
+                        && !processedRtcm.getProperties().isCti4501Conformant())
                 .map((key, value) -> {
                     var minDataEvent = new RtcmMinimumDataEvent();
                     var valMsgList = value.getProperties().getValidationMessages();
@@ -120,13 +122,25 @@ public class RtcmValidationTopology
                         Produced.with(
                                 us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
                                 JsonSerdes.RtcmBroadcastRateEvent()
-                        ));
+                        ).withStreamPartitioner(new RsuIdPartitioner<>()));
 
         var countStream =
                 processedRtcmStream
+                        .filter((key, rtcm) -> rtcm != null)
+                        // Include a flag for MSM 4 messages in the key, since they need to be counted with different
+                        // limits
+                        .selectKey((key, rtcm) -> {
+                            var newKey = new RsuStationIdRtcmTypeKey(key);
+                            newKey.setIncludesMSMTypes(RtcmUtils.hasMSMTypes(rtcm));
+                            return newKey;
+                        })
+                        .repartition(
+                                Repartitioned.with(JsonSerdes.RsuStationIdRtcmTypeKey(),
+                                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedRTCM())
+                                        .withStreamPartitioner(new RsuIdPartitioner<>())) // Force repartitioning to keep same partition
                         .mapValues((value) -> 1)
                         .groupByKey(
-                                Grouped.with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
+                                Grouped.with(JsonSerdes.RsuStationIdRtcmTypeKey(),
                                         Serdes.Integer())
                         )
                         .windowedBy(
@@ -134,8 +148,8 @@ public class RtcmValidationTopology
                                         Duration.ofSeconds(parameters.getRollingPeriodSeconds()),
                                         Duration.ofMillis(parameters.getGracePeriodMilliseconds())))
                         .count(
-                                Materialized.<RsuStationIdKey, Long, WindowStore<Bytes, byte[]>>as("rtcm-counts")
-                                        .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey())
+                                Materialized.<RsuStationIdRtcmTypeKey, Long, WindowStore<Bytes, byte[]>>as("rtcm-counts")
+                                        .withKeySerde(JsonSerdes.RsuStationIdRtcmTypeKey())
                                         .withValueSerde(Serdes.Long())
                         )
                         .suppress(
@@ -152,8 +166,13 @@ public class RtcmValidationTopology
         var eventStream = countStream
                 .filter((windowedKey, value) -> {
                     if (value != null) {
-                        long counts = value.longValue();
-                        return (counts < parameters.getLowerBound() || counts > parameters.getUpperBound());
+                        long counts = value;
+                        // Use different bounds depending on whether any of the RTCMs contains MSMs
+                        if (windowedKey.key().isIncludesMSMTypes()) {
+                            return (counts < parameters.getMsmLowerBound() || counts > parameters.getMsmUpperBound());
+                        } else {
+                            return (counts < parameters.getLowerBound() || counts > parameters.getUpperBound());
+                        }
                     }
                     return false;
                 })
@@ -169,7 +188,7 @@ public class RtcmValidationTopology
                     timePeriod.setEndTimestamp(windowedKey.window().endTime().toEpochMilli());
                     event.setTimePeriod(timePeriod);
                     event.setNumberOfMessages(counts != null ? counts.intValue() : -1);
-                    return KeyValue.pair(windowedKey.key(), event);
+                    return KeyValue.pair(windowedKey.key().rsuStationIdKey(), event);
                 });
 
         if (parameters.isDebug()) {
@@ -182,7 +201,7 @@ public class RtcmValidationTopology
                 Produced.with(
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
                         JsonSerdes.RtcmBroadcastRateEvent()
-                ));
+                ).withStreamPartitioner(new RsuIdPartitioner<>()));
 
         return builder.build();
 

@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.Set;
 
 public abstract class BaseRtcmValidationTopologyTest {
 
@@ -69,12 +70,24 @@ public abstract class BaseRtcmValidationTopologyTest {
         return parameters;
     }
 
-    protected ProcessedRTCM createRtcm(Instant timestamp) {
+    /**
+     * Create a sample ProcessedRTCM
+     * @param timestamp the timestamp
+     * @param includeMsm true to include MSM4 message types (eg 1074), false to
+     * include basic message types (1005/1006, 1013, 1033).
+     * @return the test Processed RTCM
+     */
+    protected ProcessedRTCM createRtcm(Instant timestamp, boolean includeMsm) {
         var geometry = new Point(-105.0, 40.0);
         var properties = new RTCMProperties();
         properties.setOdeReceivedAt(timestamp.atZone(ZoneOffset.UTC));
         properties.setCti4501Conformant(false);
         properties.setStationId(stationId);
+        if (includeMsm) {
+            properties.setMessageTypes(Set.of(1074, 1084, 1124));
+        } else {
+            properties.setMessageTypes(Set.of(1004, 1005, 1012));
+        }
         var valMsgList = new ArrayList<ProcessedValidationMessage>();
         var msg = new ProcessedValidationMessage();
         msg.setMessage(validationMsg);

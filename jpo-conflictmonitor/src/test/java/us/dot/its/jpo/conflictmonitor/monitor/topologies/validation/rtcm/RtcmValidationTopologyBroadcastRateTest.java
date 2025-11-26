@@ -30,21 +30,29 @@ public class RtcmValidationTopologyBroadcastRateTest extends BaseRtcmValidationT
     @Parameters(name = "{index}: {0}")
     public static Collection<Object[]> data() {
         var args = new Object[][]{
-                {"rtcm slow broadcast rate, .5 Hz", 2000, 13, true, false},
-                {"rtcm fast broadcast rate 2 Hz", 500, 11, false, true},
-                {"rtcm correct broadcast rate 1Hz", 1000, 11, false, false}
+                {"rtcm basic message types slow broadcast rate, .5 Hz", false, 2000, 13, true, false,},
+                {"rtcm basic message types fast broadcast rate 2 Hz", false, 500, 11, false, true},
+                {"rtcm basic message types correct broadcast rate 1Hz", false, 1000, 11, false, false},
+                {"rtcm MSM 4 message types slow broadcast rate, .5 Hz", false, 2000, 13, true, false},
+                {"rtcm MSM 4 message types fast broadcast rate 20 Hz", false, 50, 11, false, true},
+                {"rtcm MSM 4 message types correct broadcast rate 1 Hz", false, 1000, 11, false, false},
+                {"rtcm MSM 4 message types correct broadcast rate 5 Hz", false, 200, 11, false, false},
+                {"rtcm MSM 4 message types correct broadcast rate 10 Hz", false, 100, 11, false, false}
         };
         return Arrays.asList(args);
     }
 
     private final String description;
+    private final boolean includeMsm;
     private final int periodMillis;
-    private final int totalTimeSeconds;
+    private final int totalTimeSeconds;gi
     private final boolean expectLow;
     private final boolean expectHigh;
 
-    public RtcmValidationTopologyBroadcastRateTest(String description, int periodMillis, int totalTimeSeconds, boolean expectLow, boolean expectHigh) {
+    public RtcmValidationTopologyBroadcastRateTest(String description, boolean includeMsm, int periodMillis, int totalTimeSeconds,
+         boolean expectLow, boolean expectHigh) {
         this.description = description;
+        this.includeMsm = includeMsm;
         this.periodMillis = periodMillis;
         this.totalTimeSeconds = totalTimeSeconds;
         this.expectLow = expectLow;
@@ -75,7 +83,7 @@ public class RtcmValidationTopologyBroadcastRateTest extends BaseRtcmValidationT
             List<Instant> instants = TopologyTestUtils.getInstants(startTime, periodMillis, totalTimeSeconds);
             log.info("num instants {}", instants.size());
             for (var currentInstant : instants) {
-                var rtcm = createRtcm(currentInstant);
+                var rtcm = createRtcm(currentInstant, includeMsm);
                 inputTopic.pipeInput(key, rtcm, currentInstant);
             }
 

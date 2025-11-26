@@ -38,9 +38,9 @@ public class RtcmValidationTopologyTest extends BaseRtcmValidationTopologyTest {
             key.setRsuId(rsuId);
             key.setStationId(stationId);
 
-            var rtcm1 = createRtcm(startTime);
+            var rtcm1 = createRtcm(startTime, false);
             var instant2 = startTime.plusMillis(100);
-            var rtcm2 = createRtcm(instant2);
+            var rtcm2 = createRtcm(instant2, false);
             inputTopic.pipeInput(key, rtcm1, startTime);
             inputTopic.pipeInput(key, rtcm2, instant2);
 

@@ -53,6 +53,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.Rsu
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.deserialization.GenericJsonDeserializer;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.RsuStationIdRtcmTypeKey;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
@@ -621,5 +622,9 @@ public class JsonSerdes {
 
     public static Serde<RtcmMinimumDataEventAggregation> RtcmMinimumDataEventAggregation() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEventAggregation.class));
+    }
+
+    public static Serde<RsuStationIdRtcmTypeKey> RsuStationIdRtcmTypeKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RsuStationIdRtcmTypeKey.class));
     }
 }

@@ -633,16 +633,19 @@ revocable.enabled.lane.alignment:
 
 rtcm.validation:
   algorithm: defaultRtcmValidationAlgorithm
-  inputTopicName: topic.ProcessedRtcm
-  broadcastRateTopicName: topic.CmRtcmBroadcastRateEvents
-  minimumDataTopicName: topic.CmRtcmMinimumDataEvents
-  rollingPeriodSeconds: 10
-  outputIntervalSeconds: 5
-  gracePeriodMilliseconds: 5000
-  lowerBound: 9
-  upperBound: 11
+  lower-bound: 9
+  upper-bound: 11
+  msm-lower-bound: 9
+  msm-upper-bound: 110
   debug: true
-  aggregateMinimumDataEvents: ${ENABLE_AGGREGATE_RTCM_MINIMUM_DATA_EVENTS:false}
+  grace-period-milliseconds: 5000
+  output-interval-seconds: 5
+  rolling-period-seconds: 10
+  minimum-data-topic-name: topic.CmRtcmMinimumDataEvents
+  broadcast-rate-topic-name: topic.CmRtcmBroadcastRateEvents
+  input-topic-name: topic.ProcessedRtcm
+  aggregate-minimum-data-events: ${ENABLE_AGGREGATE_RTCM_MINIMUM_DATA_EVENTS:false}
+
 priority.preemption.request:
   algorithm: defaultPriorityPreemptionRequestAlgorithm
   debug: true

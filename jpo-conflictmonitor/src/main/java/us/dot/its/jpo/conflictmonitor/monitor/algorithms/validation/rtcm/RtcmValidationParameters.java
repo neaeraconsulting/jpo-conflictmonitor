@@ -57,15 +57,31 @@ public class RtcmValidationParameters {
 
     @ConfigData(key = "rtcm.validation.lowerBound",
             units = PER_PERIOD,
-            description = "Exclusive minimum counts per period",
+            description = "Exclusive minimum counts per period for basic message types. Configure with some slack as" +
+                    " needed, nominally should be equivalent to 1 Hz per CTI-4501 4.3.3.5.2.2",
             updateType = INTERSECTION)
     volatile int lowerBound;
 
     @ConfigData(key = "rtcm.validation.upperBound",
             units = PER_PERIOD,
-            description = "Exclusive maximum counts per period",
+            description = "Exclusive maximum counts per period for basic message types. Configure with some slack as" +
+                    " needed, nominally should be equivalent to 1 Hz per CTI-4501 4.3.3.5.2.2",
             updateType = INTERSECTION)
     volatile int upperBound;
+
+    @ConfigData(key = "rtcm.validation.msmLowerBound",
+        units = PER_PERIOD,
+        description = "Exclusive minimum counts per period for MSM 4 message types.  Configure with some slack as" +
+                " needed, nominally should be equivalent to 1 Hz per CTI-4501 4.3.3.5.2.2",
+        updateType = INTERSECTION)
+    volatile int msmLowerBound;
+
+    @ConfigData(key = "rtcm.validation.msmUpperBound",
+        units = PER_PERIOD,
+        description = "Exclusive maximum counts per period for MSM message types. Configure with some slack as" +
+                " needed, nominally should be equivalent to 10 Hz per CTI-4501 4.3.3.5.2.2",
+        updateType = INTERSECTION)
+    volatile int msmUpperBound;
 
     @ConfigData(key = "rtcm.validation.debug",
             description = "Whether to log diagnostic info",
