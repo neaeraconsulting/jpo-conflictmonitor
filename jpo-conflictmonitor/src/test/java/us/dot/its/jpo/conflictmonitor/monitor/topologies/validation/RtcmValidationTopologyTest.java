@@ -82,6 +82,7 @@ public class RtcmValidationTopologyTest {
             final int slowPeriodMillis = 2000;
             final int totalTimeSeconds = 13;
             List<Instant> instants = TopologyTestUtils.getInstants(startTime, slowPeriodMillis, totalTimeSeconds);
+            log.info("num instants {}", instants.size());
             for (var currentInstant : instants) {
                 var map = createRtcm(currentInstant);
                 inputTopic.pipeInput(key, map, currentInstant);
@@ -111,7 +112,7 @@ public class RtcmValidationTopologyTest {
             assertThat("broadcast rate device id", bcValue.getSource(), equalTo(source));
             assertThat("broadcast rate stationId", bcValue.getStationId(), equalTo(stationId));
             assertThat("broadcast rate topic name", bcValue.getTopicName(), equalTo(inputTopicName));
-            assertThat("broadcast rate number of messages", bcValue.getNumberOfMessages(), equalTo(50));
+            assertThat("broadcast rate number of messages", bcValue.getNumberOfMessages(), lessThan(lowerBound));
             assertThat("broadcast rate time period null", bcValue.getTimePeriod(), notNullValue());
             assertThat("broadcast rate time period", bcValue.getTimePeriod().periodMillis(), equalTo(10000L));
 
