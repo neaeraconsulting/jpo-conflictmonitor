@@ -1,3 +1,4 @@
+
 {
   "type": "Feature",
   "geometry": {
@@ -10,10 +11,10 @@
   "properties": {
     "schemaVersion": 9,
     "messageType": "RTCM",
-    "odeReceivedAt": "2025-07-28T19:59:00.138Z",
+    "odeReceivedAt": "2025-07-28T20:02:00.138Z",
     "originIp": "172.18.0.1",
-    "asn1": "001C6D25244028D2D4B29BC25EC0C12C418D300133ED980037BDD1A80C6358121DD4E499FFC6712E91F0D10F4C00F90266005105115939553131053951153939048081393D391400003551492535093114810531313D64513985D880D4B8D0D080BC8109BDBDD080D4B8D0D0023197E4",
-    "msgCnt": 82,
+    "asn1": "001C6D25344028D2D4B29BC25EC0C12C418D300133ED980037BDD1A80C6358121DD4E499FFC6712E91F0D10F4C00F90266005105115939553131053951153939048081393D391400003551492535093114810531313D64513985D880D4B8D0D080BC8109BDBDD080D4B8D0D0023197E4",
+    "msgCnt": 83,
     "rev": "rtcmRev3",
     "longitude": -111.50943489999999,
     "latitude": 40.660336,
@@ -25,7 +26,7 @@
     "stationId": 2432,
     "messages": [
       {
-        "hex": "D300133ED98002FBDD1A80C7358121DD4F499FFC67131D3129",
+        "hex": "D300133ED980037BDD1A80C6358121DD4E499FFC6712E91F0D",
         "decodedMessage": {
           "class": "RTCM3",
           "device": "stdin",
@@ -34,17 +35,17 @@
           "station_id": 2432,
           "system": [
             "GPS",
-            "GALILEO"
+            "GLONASS"
           ],
           "refstation": true,
           "sro": false,
-          "x": -1776533.4841,
-          "y": -4507816.0049,
-          "z": 4133882.4467
+          "x": -1776533.4842,
+          "y": -4507816.005,
+          "z": 4133882.4466
         }
       },
       {
-        "hex": "D3003E409980944144564E554C4C414E54454E4E4120204E4F4E4500000D5452494D424C4520414C4C4F59144E617620352E3434202F20426F6F7420312E3434000589E1",
+        "hex": "D3003E409980144144564E554C4C414E54454E4E4120204E4F4E4500000D5452494D424C4520414C4C4F59144E617620352E3434202F20426F6F7420352E3434008C65F9",
         "decodedMessage": {
           "class": "RTCM3",
           "device": "stdin",
@@ -54,8 +55,8 @@
           "desc": "ADVNULLANTENNA  NONE",
           "setup_id": 0,
           "serial": "",
-          "receiver": "",
-          "firmware": ""
+          "receiver": "TRIMBLE ALLOY",
+          "firmware": "Nav 5.44 / Bo"
         }
       }
     ],

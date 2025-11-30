@@ -1,0 +1,69 @@
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      -111.5097,
+      40.6604
+    ]
+  },
+  "properties": {
+    "schemaVersion": 9,
+    "messageType": "RTCM",
+    "odeReceivedAt": "2025-07-28T19:59:00.138Z",
+    "originIp": "172.18.0.1",
+    "asn1": "001C6D25244028D2CA579BC263C0C118418D300133ED98002FBDD1A80C7358121DD4F499FFC67131D312910F4C00F90266025105115939553131053951153939048081393D391400003551492535093114810531313D64513985D880D4B8D0D080BC8109BDBDD080C4B8D0D000162784",
+    "msgCnt": 82,
+    "rev": "rtcmRev3",
+    "longitude": -111.5097,
+    "latitude": 40.6604,
+    "elevation": 2062.0,
+    "messageTypes": [
+      1005,
+      1033
+    ],
+    "stationId": 2432,
+    "messages": [
+      {
+        "hex": "D300133ED98002FBDD1A80C7358121DD4F499FFC67131D3129",
+        "decodedMessage": {
+          "class": "RTCM3",
+          "device": "stdin",
+          "type": 1005,
+          "length": 19,
+          "station_id": 2432,
+          "system": [
+            "GPS",
+            "GALILEO"
+          ],
+          "refstation": true,
+          "sro": false,
+          "x": -1776533.4841,
+          "y": -4507816.0049,
+          "z": 4133882.4467
+        }
+      },
+      {
+        "hex": "D3003E409980944144564E554C4C414E54454E4E4120204E4F4E4500000D5452494D424C4520414C4C4F59144E617620352E3434202F20426F6F7420312E3434000589E1",
+        "decodedMessage": {
+          "class": "RTCM3",
+          "device": "stdin",
+          "type": 1033,
+          "length": 62,
+          "station_id": 2432,
+          "desc": "ADVNULLANTENNA  NONE",
+          "setup_id": 0,
+          "serial": "",
+          "receiver": "",
+          "firmware": ""
+        }
+      }
+    ],
+    "validationMessages": [
+      {
+        "message": "CTI-4501 conformance issue: anchorPoint (DF_FullPositionVector) 'utcTime' field: DDateTime is missing."
+      }
+    ],
+    "cti4501Conformant": false
+  }
+}

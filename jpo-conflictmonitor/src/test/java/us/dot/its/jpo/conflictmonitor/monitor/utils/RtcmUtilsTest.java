@@ -12,8 +12,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.ProcessedRTCM;
 
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 
 @Slf4j
 public class RtcmUtilsTest {
@@ -22,12 +21,22 @@ public class RtcmUtilsTest {
 
     @Test
     public void testCompare_Different() throws JsonProcessingException {
-        ProcessedRTCM rtcm1 = getProcessedRTCM("processed-rtcm1.json");
-        ProcessedRTCM rtcm2 = getProcessedRTCM("processed-rtcm2.json");
+        ProcessedRTCM rtcm1 = getProcessedRTCM("processed-rtcm.json");
+        ProcessedRTCM rtcm2 = getProcessedRTCM("processed-rtcm-different-value-same-msg-cnt.json");
         DiffResult<ProcessedRTCM> diffs = RtcmUtils.compare(rtcm1, rtcm2);
-        log.info("diffs: {}", diffs);
-        assertThat(diffs.getNumberOfDiffs(), greaterThan(0));
         var diffList = diffs.getDiffs();
+        diffList.forEach(d -> log.info("{} differs", d.getFieldName()));
+        assertThat(diffs.getNumberOfDiffs(), greaterThan(0));
+    }
+
+    @Test
+    public void testCompare_Same() throws JsonProcessingException {
+        ProcessedRTCM rtcm1 = getProcessedRTCM("processed-rtcm.json");
+        ProcessedRTCM rtcm1copy = getProcessedRTCM("processed-rtcm-same-value-different-msg-cnt.json");
+        DiffResult<ProcessedRTCM> diffs = RtcmUtils.compare(rtcm1, rtcm1copy);
+        var diffList = diffs.getDiffs();
+        diffList.forEach(d -> log.info("{} differs", d.getFieldName()));
+        assertThat(diffs.getNumberOfDiffs(), equalTo(0));
 
     }
 
