@@ -35,8 +35,8 @@ public class RtcmUtils {
      * @param rtcmB A following RTCM
      * @return DiffResult with differences for each field
      */
-    public DiffResult<ProcessedRTCM> compare(ProcessedRTCM rtcmA, ProcessedRTCM rtcmB) {
-        var builder = new ReflectionDiffBuilder<ProcessedRTCM>(rtcmA, rtcmB, ToStringStyle.MULTI_LINE_STYLE)
+    public static DiffResult<ProcessedRTCM> compare(ProcessedRTCM rtcmA, ProcessedRTCM rtcmB) {
+        var builder = new ReflectionDiffBuilder<ProcessedRTCM>(rtcmA, rtcmB, ToStringStyle.SHORT_PREFIX_STYLE)
                 .setExcludeFieldNames("odeReceivedAt", "utcTime", "schemaVersion", "messageType", "originIp", "asn1",
                         "validationMessages", "cti4501Conformant");
         var result = builder.build();
