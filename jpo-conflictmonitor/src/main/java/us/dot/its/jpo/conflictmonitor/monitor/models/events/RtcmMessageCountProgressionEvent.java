@@ -45,8 +45,8 @@ public class RtcmMessageCountProgressionEvent extends Event {
     /**
      * The SDD states this is "The address of the first data frame or data element where a change in value was observed.
      * If all data remains the same, this value is null."
-     * Using the ProcessedRTSM JSON objects consumed by this application, we instead report a list of the names and
-     * indices of all data elements that are changed, or an empty list if there were no changes.
+     * Using the ProcessedRTSM JSON objects consumed by this application, we instead report a list of the names of all
+     * data elements that are changed, or an empty list if there were no changes.
      */
     private List<String> change = new ArrayList<String>();
 

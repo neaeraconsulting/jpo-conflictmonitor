@@ -607,6 +607,7 @@ aggregation:
     BsmMessageCountProgressionAggregation: topic.CmBsmMessageCountProgressionEventAggregation
     MapMessageCountProgressionAggregation: topic.CmMapMessageCountProgressionEventAggregation
     SpatMessageCountProgressionAggregation: topic.CmSpatMessageCountProgressionEventAggregation
+    RtcmMessageCountProgressionAggregation: topic.CmRtcmMessageCountProgressionEventAggregation
     RevocableEnabledLaneAlignmentAggregation: topic.CmRevocableEnabledLaneAlignmentEventAggregation
   eventAlgorithmMap:
     SpatMinimumDataAggregation: defaultSpatMinimumDataAggregationAlgorithm
@@ -620,6 +621,7 @@ aggregation:
     BsmMessageCountProgressionAggregation: defaultBsmMessageCountProgressionAggregationAlgorithm
     MapMessageCountProgressionAggregation: defaultMapMessageCountProgressionAggregationAlgorithm
     SpatMessageCountProgressionAggregation: defaultSpatMessageCountProgressionAggregationAlgorithm
+    RtcmMessageCountProgressionAggregation: defaultRtcmMessageCountProgressionAggregationAlgorithm
     RevocableEnabledLaneAlignmentAggregation: defaultRevocableEnabledLaneAlignmentAggregationAlgorithm
 
 
@@ -645,6 +647,17 @@ rtcm.validation:
   broadcast-rate-topic-name: topic.CmRtcmBroadcastRateEvents
   input-topic-name: topic.ProcessedRtcm
   aggregate-minimum-data-events: ${ENABLE_AGGREGATE_RTCM_MINIMUM_DATA_EVENTS:false}
+
+rtcm.message.count.progression:
+  algorithm: defaultRtcmMessageCountProgressionAlgorithm
+  debug: false
+  rtcm-input-topic-name: topic.ProcessedRtcm
+  rtcm-message-count-progression-output-topic-name: topic.CmRtcmMessageCountProgressionEvents
+  processed-rtcm-state-store-name: processedRtcmStateStore
+  latest-rtcm-state-store-name: latestRtcmStateStore
+  bufferTimeMs: 500
+  bufferGracePeriodMs: 50
+  aggregateEvents: ${ENABLE_AGGREGATE_RTCM_MESSAGE_COUNT_PROGRESSION:false}
 
 priority.preemption.request:
   algorithm: defaultPriorityPreemptionRequestAlgorithm

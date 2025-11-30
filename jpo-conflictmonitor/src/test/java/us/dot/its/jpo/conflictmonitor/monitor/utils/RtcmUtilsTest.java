@@ -24,6 +24,7 @@ public class RtcmUtilsTest {
         ProcessedRTCM rtcm1 = getProcessedRTCM("processed-rtcm.json");
         ProcessedRTCM rtcm2 = getProcessedRTCM("processed-rtcm-different-value-same-msg-cnt.json");
         DiffResult<ProcessedRTCM> diffs = RtcmUtils.compare(rtcm1, rtcm2);
+        log.debug(diffs.toString());
         var diffList = diffs.getDiffs();
         diffList.forEach(d -> log.info("{} differs", d.getFieldName()));
         assertThat(diffs.getNumberOfDiffs(), greaterThan(0));
@@ -34,6 +35,7 @@ public class RtcmUtilsTest {
         ProcessedRTCM rtcm1 = getProcessedRTCM("processed-rtcm.json");
         ProcessedRTCM rtcm1copy = getProcessedRTCM("processed-rtcm-same-value-different-msg-cnt.json");
         DiffResult<ProcessedRTCM> diffs = RtcmUtils.compare(rtcm1, rtcm1copy);
+        log.debug(diffs.toString());
         var diffList = diffs.getDiffs();
         diffList.forEach(d -> log.info("{} differs", d.getFieldName()));
         assertThat(diffs.getNumberOfDiffs(), equalTo(0));
