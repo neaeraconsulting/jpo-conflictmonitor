@@ -9,6 +9,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.DecodedRTCMmessage;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.ProcessedRTCM;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.RTCMProperties;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -125,5 +126,9 @@ public class RtcmUtils {
         }
 
         return rtcmDiffBuilder.build();
+    }
+
+    public static List<String> listDifferingFields(DiffResult<ProcessedRTCM> diffResult) {
+        return diffResult.getDiffs().stream().map(Diff::getFieldName).toList();
     }
 }

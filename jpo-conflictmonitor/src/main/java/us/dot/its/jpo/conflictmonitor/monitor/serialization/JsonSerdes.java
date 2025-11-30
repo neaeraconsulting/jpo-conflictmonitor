@@ -8,6 +8,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.event_state
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationKey;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
@@ -626,5 +627,13 @@ public class JsonSerdes {
 
     public static Serde<RsuStationIdRtcmTypeKey> RsuStationIdRtcmTypeKey() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RsuStationIdRtcmTypeKey.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionEvent> RtcmMessageCountProgressionEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEvent.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionAggregationKey> RtcmMessageCountProgressionAggregationKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionAggregationKey.class));
     }
 }

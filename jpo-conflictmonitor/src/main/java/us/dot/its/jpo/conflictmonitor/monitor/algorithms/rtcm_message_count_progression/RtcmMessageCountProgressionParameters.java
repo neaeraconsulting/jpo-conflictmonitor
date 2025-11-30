@@ -22,27 +22,43 @@ public class RtcmMessageCountProgressionParameters {
             updateType = READ_ONLY)
     String algorithm;
 
-    @ConfigData(key = "rtcm.message.count.progression.debug", description = "", updateType = DEFAULT)
+    @ConfigData(key = "rtcm.message.count.progression.debug",
+            description = "",
+            updateType = DEFAULT)
     private volatile boolean debug;
 
-    @ConfigData(key = "rtcm.message.count.progression.rtcmInputTopicName", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.rtcmInputTopicName",
+            description = "",
+            updateType = READ_ONLY)
     private String rtcmInputTopicName;
 
-    @ConfigData(key = "rtcm.message.count.progression.rtcmMessageCountProgressionOutputTopicName", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.rtcmMessageCountProgressionOutputTopicName",
+            description = "",
+            updateType = READ_ONLY)
     private String rtcmMessageCountProgressionOutputTopicName;
 
-    @ConfigData(key = "rtcm.message.count.progression.processedRtcmStateStoreName", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.processedRtcmStateStoreName",
+            description = "",
+            updateType = READ_ONLY)
     private String processedRtcmStateStoreName;
 
-    @ConfigData(key = "rtcm.message.count.progression.latestRtcmStateStoreName", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.latestRtcmStateStoreName",
+            description = "",
+            updateType = READ_ONLY)
     private String latestRtcmStateStoreName;
 
-    @ConfigData(key = "rtcm.message.count.progression.bufferTimeMs", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.bufferTimeMs",
+            description = "",
+            updateType = READ_ONLY)
     private int bufferTimeMs;
 
-    @ConfigData(key = "rtcm.message.count.progression.bufferGracePeriodMs", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.bufferGracePeriodMs",
+            description = "",
+            updateType = READ_ONLY)
     private int bufferGracePeriodMs;
 
-    @ConfigData(key = "rtcm.message.count.progression.aggregateEvents", description = "", updateType = READ_ONLY)
+    @ConfigData(key = "rtcm.message.count.progression.aggregateEvents",
+            description = "",
+            updateType = READ_ONLY)
     private boolean aggregateEvents;
 }
