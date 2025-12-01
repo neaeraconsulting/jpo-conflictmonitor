@@ -636,4 +636,8 @@ public class JsonSerdes {
     public static Serde<RtcmMessageCountProgressionAggregationKey> RtcmMessageCountProgressionAggregationKey() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionAggregationKey.class));
     }
+
+    public static Serde<RtcmMessageCountProgressionEventAggregation> RtcmMessageCountProgressionEventAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEventAggregation.class));
+    }
 }

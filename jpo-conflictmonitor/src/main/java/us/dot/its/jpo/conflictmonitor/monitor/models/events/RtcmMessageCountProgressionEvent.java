@@ -30,6 +30,11 @@ public class RtcmMessageCountProgressionEvent extends Event {
     private String source;
 
     /**
+     * RTCM station ID
+     */
+    private int stationId;
+
+    /**
      * The message type, always "RTCM"
      */
     private final String messageType = "RTCM";

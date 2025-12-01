@@ -20,6 +20,7 @@ public class RtcmMessageCountProgressionEventAggregation
 
     private final String messageType = "RTCM";
     private final String dataFrame = "MSG_RTCMcorrections";
+    private int stationId;
     private List<String> change;
 
     @Override
