@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.*;
 
 @Slf4j
 public class RtcmMessageCountProgressionAggregationTopologyTest
@@ -27,10 +27,25 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
                 RtcmMessageCountProgressionAggregationTopology>{
 
     private final int stationId = 2432;
+    private final List<String> change = List.of("x", "y", "z");
 
     @Test
     public void testTopology() {
-        assertThat(true, equalTo(false));
+        var resultList = runTestTopology();
+        assertThat("Should have produced 1 aggregated event", resultList, hasSize(1));
+        var result = resultList.getFirst();
+        log.info("Agg result: {}", result);
+        var resultKey = result.key;
+        assertThat(resultKey.getRsuId(), equalTo(rsuId));
+        assertThat(resultKey.getStationId(), equalTo(stationId));
+        assertThat(resultKey.getChange(), equalTo(change));
+        var resultValue = result.value;
+        assertThat(resultValue.getNumberOfEvents(), equalTo(numberOfEvents));
+        assertThat(resultValue.getChange(), equalTo(change));
+        var period = resultValue.getTimePeriod();
+        assertThat(period, notNullValue());
+        assertThat(period.getBeginTimestamp(), equalTo(initialWallClock.toEpochMilli()));
+        assertThat(period.getEndTimestamp(), equalTo(initialWallClock.toEpochMilli() + intervalSeconds*1000));
     }
 
     @Override
@@ -76,7 +91,7 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
         event.setMessageCountB(1);
         event.setTimestampA(initialWallClock.plusMillis(1).toEpochMilli());
         event.setTimestampB(initialWallClock.plusMillis(10).toEpochMilli());
-        event.setChange(List.of("x", "y"));
+        event.setChange(change);
         return event;
     }
 
