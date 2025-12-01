@@ -7,7 +7,11 @@ import org.junit.Test;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.RtcmMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.RtcmMessageCountProgressionEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuStationIdKey;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -22,6 +26,8 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
                 RtcmMessageCountProgressionEventAggregation,
                 RtcmMessageCountProgressionAggregationTopology>{
 
+    private final int stationId = 2432;
+
     @Test
     public void testTopology() {
         assertThat(true, equalTo(false));
@@ -29,46 +35,65 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
 
     @Override
     String outputTopicName() {
-        return "";
+        return "topic.CmRevocableEnabledLaneAlignmentEventAggregation";
     }
 
     @Override
     Serde<RsuStationIdKey> eventKeySerde() {
-        return null;
+        return us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey();
     }
 
     @Override
     Serde<RtcmMessageCountProgressionEvent> eventSerde() {
-        return null;
+        return JsonSerdes.RtcmMessageCountProgressionEvent();
     }
 
     @Override
     Serde<RtcmMessageCountProgressionAggregationKey> aggKeySerde() {
-        return null;
+        return JsonSerdes.RtcmMessageCountProgressionAggregationKey();
     }
 
     @Override
     Serde<RtcmMessageCountProgressionEventAggregation> aggEventSerde() {
-        return null;
+        return JsonSerdes.RtcmMessageCountProgressionEventAggregation();
     }
 
     @Override
     RsuStationIdKey createKey() {
-        return null;
+        var key = new RsuStationIdKey();
+        key.setRsuId(rsuId);
+        key.setStationId(stationId);
+        return key;
     }
 
     @Override
     RtcmMessageCountProgressionEvent createEvent() {
-        return null;
+        var event = new RtcmMessageCountProgressionEvent();
+        event.setSource(rsuId);
+        event.setIntersectionID(-1);
+        event.setRoadRegulatorID(-1);
+        event.setMessageCountA(1);
+        event.setMessageCountB(1);
+        event.setTimestampA(initialWallClock.plusMillis(1).toEpochMilli());
+        event.setTimestampB(initialWallClock.plusMillis(10).toEpochMilli());
+        event.setChange(List.of("x", "y"));
+        return event;
     }
 
     @Override
     RtcmMessageCountProgressionAggregationTopology createTopology() {
-        return null;
+        return new RtcmMessageCountProgressionAggregationTopology();
     }
 
     @Override
-    KStream<RtcmMessageCountProgressionAggregationKey, RtcmMessageCountProgressionEvent> selectAggKey(KStream<RsuStationIdKey, RtcmMessageCountProgressionEvent> instream) {
-        return null;
+    KStream<RtcmMessageCountProgressionAggregationKey, RtcmMessageCountProgressionEvent>
+    selectAggKey(KStream<RsuStationIdKey, RtcmMessageCountProgressionEvent> instream) {
+        return instream.selectKey((key, value) -> {
+            var aggKey = new RtcmMessageCountProgressionAggregationKey();
+            aggKey.setRsuId(key.getRsuId());
+            aggKey.setStationId(key.getStationId());
+            aggKey.setChange(new ArrayList<>());
+            return aggKey;
+        });
     }
 }
