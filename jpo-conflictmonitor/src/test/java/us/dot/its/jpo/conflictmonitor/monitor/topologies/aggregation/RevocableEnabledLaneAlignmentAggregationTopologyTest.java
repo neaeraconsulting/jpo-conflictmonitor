@@ -81,7 +81,11 @@ public class RevocableEnabledLaneAlignmentAggregationTopologyTest
 
     @Override
     RsuIntersectionKey createKey() {
-        return new RsuIntersectionKey();
+        var key = new RsuIntersectionKey();
+        key.setRsuId(rsuId);
+        key.setIntersectionId(intersectionId);
+        key.setRegion(region);
+        return key;
     }
 
     @Override
