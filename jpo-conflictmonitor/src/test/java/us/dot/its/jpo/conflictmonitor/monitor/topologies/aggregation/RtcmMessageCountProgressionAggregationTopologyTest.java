@@ -42,15 +42,17 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
         var resultValue = result.value;
         assertThat(resultValue.getNumberOfEvents(), equalTo(numberOfEvents));
         assertThat(resultValue.getChange(), equalTo(change));
+        assertThat(resultValue.getStationId(), equalTo(stationId));
         var period = resultValue.getTimePeriod();
         assertThat(period, notNullValue());
         assertThat(period.getBeginTimestamp(), equalTo(initialWallClock.toEpochMilli()));
         assertThat(period.getEndTimestamp(), equalTo(initialWallClock.toEpochMilli() + intervalSeconds*1000));
+
     }
 
     @Override
     String outputTopicName() {
-        return "topic.CmRevocableEnabledLaneAlignmentEventAggregation";
+        return "topic.CmRtcmMessageCountProgressionEventAggregation";
     }
 
     @Override
@@ -85,6 +87,7 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
     RtcmMessageCountProgressionEvent createEvent() {
         var event = new RtcmMessageCountProgressionEvent();
         event.setSource(rsuId);
+        event.setStationId(stationId);
         event.setIntersectionID(-1);
         event.setRoadRegulatorID(-1);
         event.setMessageCountA(1);
@@ -107,7 +110,7 @@ public class RtcmMessageCountProgressionAggregationTopologyTest
             var aggKey = new RtcmMessageCountProgressionAggregationKey();
             aggKey.setRsuId(key.getRsuId());
             aggKey.setStationId(key.getStationId());
-            aggKey.setChange(new ArrayList<>());
+            aggKey.setChange(change);
             return aggKey;
         });
     }

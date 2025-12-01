@@ -7,7 +7,7 @@
 			<pattern>%date{"yyyy-MM-dd HH:mm:ss.SSS", UTC} [%thread] %-5level %logger{0} - %msg %n</pattern>
 		</encoder>
 	</appender>
-	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="DEBUG"/>
+	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="ERROR"/>
 	<logger name="us.dot.its.jpo.conflictmonitor" level="ERROR"/>
 	<root level="ERROR">
 		<appender-ref ref="STDOUT" />
