@@ -77,9 +77,12 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
 
     public static long extractTimestamp(ProcessedRTCM rtcm) {
         try{
+            Long utcTime = rtcm.getProperties().getUtcTime();
+            if (utcTime != null) {
+                return utcTime;
+            }
             ZonedDateTime zdt = rtcm.getProperties().getOdeReceivedAt();
-            long timestamp =  zdt.toInstant().toEpochMilli();
-            return timestamp;
+            return zdt.toInstant().toEpochMilli();
         } catch (Exception e){
             logger.error("Timestamp Parsing Failed", e);
             return -1;

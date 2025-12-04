@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.processors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.DiffResult;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -14,16 +15,14 @@ import org.apache.kafka.streams.state.VersionedRecord;
 import org.apache.kafka.streams.state.VersionedRecordIterator;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.RtcmMessageCountProgressionEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampExtractorForBroadcastRate;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.RtcmUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuStationIdKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.ProcessedRTCM;
-import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.RTCMProperties;
 
 import java.time.Instant;
-import java.time.ZonedDateTime;
 
-import static org.apache.kafka.streams.query.MultiVersionedKeyQuery.withKey;
-
+@Slf4j
 public class RtcmMessageCountProgressionProcessor
         extends ContextualProcessor<RsuStationIdKey, ProcessedRTCM, RsuStationIdKey, RtcmMessageCountProgressionEvent> {
 
@@ -45,6 +44,7 @@ public class RtcmMessageCountProgressionProcessor
     @Override
     public void process(Record<RsuStationIdKey, ProcessedRTCM> record) {
         final RsuStationIdKey key = record.key();
+        log.info("processing key {}", key);
         final ProcessedRTCM value = record.value();
         final long timestamp = record.timestamp();
 
@@ -56,9 +56,13 @@ public class RtcmMessageCountProgressionProcessor
                         .minusMillis(parameters.getBufferGracePeriodMs());
 
         final ProcessedRTCM lastProcessed = lastProcessedStore.get(key);
+
+        final Long lastProcessedTimestamp = lastProcessed != null ? TimestampExtractorForBroadcastRate.extractTimestamp(lastProcessed) : null;
+
         Instant startTime;
-        if (lastProcessed != null && lastProcessed.getProperties() != null && lastProcessed.getProperties().getOdeReceivedAt() != null) {
-            startTime = lastProcessed.getProperties().getOdeReceivedAt().toInstant();
+
+        if (lastProcessedTimestamp != null && lastProcessedTimestamp > 0) {
+            startTime = Instant.ofEpochMilli(lastProcessedTimestamp);
         } else {
             // There haven't been any transitions yes, use stream time minus buffer time
             startTime = Instant.ofEpochMilli(context().currentStreamTimeMs())
@@ -89,18 +93,21 @@ public class RtcmMessageCountProgressionProcessor
                 final ProcessedRTCM thisState = state.value();
                 recordCount++;
 
+                final long thisTimestamp = TimestampExtractorForBroadcastRate.extractTimestamp(thisState);
+                final Instant thisTime = Instant.ofEpochMilli(thisTimestamp);
+
+                log.info("this time: {}, last processed time: {}", thisTimestamp, lastProcessedTimestamp);
+
                 // Skip records older than the last processed state
                 if (lastProcessed != null) {
-                    final ZonedDateTime lastReceivedAt = lastProcessed.getProperties().getOdeReceivedAt();
-                    final ZonedDateTime thisReceivedAt = thisState.getProperties().getOdeReceivedAt();
-                    if (thisReceivedAt.isBefore(lastReceivedAt)) {
+                    final Instant lastProcessedTime = Instant.ofEpochMilli(lastProcessedTimestamp);
+                    if (thisTime.isBefore(lastProcessedTime)) {
                         continue;
                     }
                 }
 
                 if (previousState != null) {
-                    final long thisTimestamp = thisState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
-                    final long previousTimestamp = previousState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
+                    final long previousTimestamp = TimestampExtractorForBroadcastRate.extractTimestamp(previousState);
                     final long timeDifference = thisTimestamp - previousTimestamp;
                     if (timeDifference < parameters.getBufferTimeMs()) {
                         DiffResult<ProcessedRTCM> diffResult = RtcmUtils.compare(previousState, thisState);
@@ -116,6 +123,7 @@ public class RtcmMessageCountProgressionProcessor
                             event.setSource(thisState.getProperties().getOriginIp());
                             event.setTimestampA(previousTimestamp);
                             event.setTimestampB(thisTimestamp);
+                            event.setStationId(thisState.getProperties().getStationId());
                             event.setChange(RtcmUtils.listDifferingFields(diffResult));
                             context().forward(new Record<>(key, event, state.timestamp()));
                         }

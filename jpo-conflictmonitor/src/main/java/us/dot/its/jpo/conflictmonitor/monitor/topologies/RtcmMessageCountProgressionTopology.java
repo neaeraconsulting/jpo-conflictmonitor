@@ -17,6 +17,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_prog
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.RtcmMessageCountProgressionProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampExtractorForBroadcastRate;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIdPartitioner;
 
 import java.time.Duration;
@@ -59,8 +60,9 @@ public class RtcmMessageCountProgressionTopology
         var eventStream = builder
                 .stream(parameters.getRtcmInputTopicName(),
                         Consumed.with(
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedRTCM()))
+                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
+                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedRTCM())
+                                .withTimestampExtractor(new TimestampExtractorForBroadcastRate()))
                 .process(() -> new RtcmMessageCountProgressionProcessor(parameters), processedRtcmStateStore, latestRtcmStateStore);
 
         if (parameters.isAggregateEvents()) {
