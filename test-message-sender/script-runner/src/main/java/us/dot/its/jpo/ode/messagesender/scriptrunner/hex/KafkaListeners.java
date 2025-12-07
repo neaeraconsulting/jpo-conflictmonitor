@@ -203,11 +203,13 @@ public class KafkaListeners {
 //                        intersectionObj.put("timeStamp", MILLI_OF_MINUTE);
 //                    }
 //                }
+                substituteSpatPlaceholders(node);
             } else if (DSRCmsgID.BSM.equals(msgId)) {
 //                JsonNode coreData = node.at("/payload/data/coreData");
 //                ObjectNode coreDataObj = (ObjectNode) coreData;
 //                coreDataObj.put("secMark", MILLI_OF_MINUTE);
 //                coreDataObj.put("id", TEMP_ID);
+                substituteBsmPlaceholders(node);
             } else if (DSRCmsgID.RTCM.equals(msgId)) {
                 substituteRtcmPlaceholders(node);
             } else if (DSRCmsgID.SRM.equals(msgId)) {
@@ -219,6 +221,12 @@ public class KafkaListeners {
         } catch (JsonProcessingException e) {
             return message;
         }
+    }
+
+    private void substituteSpatPlaceholders(JsonNode node) {
+    }
+
+    private void substituteBsmPlaceholders(JsonNode node) {
     }
 
     private void substituteSrmPlaceholders(JsonNode node) {
