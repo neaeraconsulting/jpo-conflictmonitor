@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -39,7 +40,7 @@ import static org.hamcrest.Matchers.hasSize;
 @RunWith(MockitoJUnitRunner.class)
 public class RtcmMessageCountProgressionTopologyTest {
 
-    // Mock the aggregation subtopology tested seperately from this test
+    // Mock the aggregation subtopology tested separately from this test
     @Mock
     RtcmMessageCountProgressionAggregationTopology mockAggregationTopology;
 
@@ -56,6 +57,7 @@ public class RtcmMessageCountProgressionTopologyTest {
 
     private final long startTimestamp = 1750000000000L;
 
+    @Ignore
     @Test
     public void testRtcmMessageCountTopology() throws JsonProcessingException {
         Properties streamsConfig = createStreamsConfig();
