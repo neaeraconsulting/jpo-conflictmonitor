@@ -48,7 +48,7 @@ public class RtcmMessageCountProgressionTopologyTest {
     private final String eventOutputTopicName = "topic.CmRtcmMessageCountProgressionEvents";
     private final String processedRtcmStateStoreName = "processedRtcmStateStore";
     private final String latestRtcmStateStoreName = "latestRtcmStateStore";
-    private final int bufferTimeMs = 500;
+    private final int bufferTimeMs = 3000;
     private final int bufferGracePriodMs = 50;
 
     private final String rsuId = "127.0.0.1";
@@ -57,7 +57,6 @@ public class RtcmMessageCountProgressionTopologyTest {
 
     private final long startTimestamp = 1750000000000L;
 
-    @Ignore
     @Test
     public void testRtcmMessageCountTopology() throws JsonProcessingException {
         Properties streamsConfig = createStreamsConfig();
@@ -82,13 +81,18 @@ public class RtcmMessageCountProgressionTopologyTest {
             final int msgCntB = 11;
 
             Instant nextTime = startTime.plusSeconds(1);
+            Instant nextTime2 = nextTime.plusSeconds(1);
             final long nextTimestamp = nextTime.toEpochMilli();
+            final long nextTimestamp2 = nextTime2.toEpochMilli();
+
             var rtcm1 = getProcessedRTCM_type1004(msgCntA, 123.4, startTimestamp);
             var rtcm2 = getProcessedRTCM_type1004(msgCntB, 123.4, nextTimestamp);
+            var rtcm3 = getProcessedRTCM_type1004(msgCntB, 123.4, nextTimestamp2);
             rtcmInputTopic.pipeInput(key, rtcm1, startTime);
-
             rtcmInputTopic.pipeInput(key, rtcm2, nextTime);
+            rtcmInputTopic.pipeInput(key, rtcm3, nextTime2);
             Duration timeDiff = Duration.between(startTime, nextTime);
+            driver.advanceWallClockTime(timeDiff);
             driver.advanceWallClockTime(timeDiff);
             driver.advanceWallClockTime(timeDiff);
 
