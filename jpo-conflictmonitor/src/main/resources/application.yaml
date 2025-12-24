@@ -655,9 +655,11 @@ rtcm.message.count.progression:
   rtcm-message-count-progression-output-topic-name: topic.CmRtcmMessageCountProgressionEvents
   processed-rtcm-state-store-name: processedRtcmStateStore
   latest-rtcm-state-store-name: latestRtcmStateStore
-  bufferTimeMs: 500
-  bufferGracePeriodMs: 50
+  latest-event-state-store-name: latestRtcmMessageCountProgressionEventStore
+  buffer-time-ms: 3000
+  buffer-grace-period-ms: 500
   aggregateEvents: ${ENABLE_AGGREGATE_RTCM_MESSAGE_COUNT_PROGRESSION:false}
+  check-interval-ms: 500
 
 priority.preemption.request:
   algorithm: defaultPriorityPreemptionRequestAlgorithm

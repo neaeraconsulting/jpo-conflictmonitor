@@ -10,6 +10,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.Timestamps;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
@@ -138,15 +139,4 @@ public abstract class TickProcessor<TKey, TValue>
 
     }
 
-    /**
-     * Record to store stream time and clock time for one same message
-     * @param streamTime The stream time
-     * @param clockTime The clock time
-     */
-    public record Timestamps(long streamTime, long clockTime){
-    }
-
-    public static Serde<Timestamps> TimestampsSerdes() {
-        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(Timestamps.class));
-    }
 }

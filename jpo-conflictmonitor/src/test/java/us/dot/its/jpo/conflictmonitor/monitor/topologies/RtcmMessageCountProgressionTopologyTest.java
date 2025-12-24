@@ -48,8 +48,10 @@ public class RtcmMessageCountProgressionTopologyTest {
     private final String eventOutputTopicName = "topic.CmRtcmMessageCountProgressionEvents";
     private final String processedRtcmStateStoreName = "processedRtcmStateStore";
     private final String latestRtcmStateStoreName = "latestRtcmStateStore";
-    private final int bufferTimeMs = 3000;
-    private final int bufferGracePriodMs = 50;
+    private final String latestEventStateStoreName = "latestEventStateStore";
+    private final int bufferTimeMs = 5000;
+    private final int bufferGracePriodMs = 500;
+    private final int checkIntervalMs = 500;
 
     private final String rsuId = "127.0.0.1";
     private final int stationId = 2432;
@@ -80,22 +82,27 @@ public class RtcmMessageCountProgressionTopologyTest {
             final int msgCntA = 10;
             final int msgCntB = 11;
 
-            Instant nextTime = startTime.plusSeconds(1);
-            Instant nextTime2 = nextTime.plusSeconds(1);
+            final long diffMs = 1000;
+            final Duration timeDiff = Duration.ofMillis(diffMs);
+            final Instant nextTime = startTime.plus(timeDiff);
             final long nextTimestamp = nextTime.toEpochMilli();
-            final long nextTimestamp2 = nextTime2.toEpochMilli();
 
             var rtcm1 = getProcessedRTCM_type1004(msgCntA, 123.4, startTimestamp);
             var rtcm2 = getProcessedRTCM_type1004(msgCntB, 123.4, nextTimestamp);
-            var rtcm3 = getProcessedRTCM_type1004(msgCntB, 123.4, nextTimestamp2);
+
             rtcmInputTopic.pipeInput(key, rtcm1, startTime);
-            rtcmInputTopic.pipeInput(key, rtcm2, nextTime);
-            rtcmInputTopic.pipeInput(key, rtcm3, nextTime2);
-            Duration timeDiff = Duration.between(startTime, nextTime);
-            driver.advanceWallClockTime(timeDiff);
-            driver.advanceWallClockTime(timeDiff);
+
+            long time = 0L;
+            time += diffMs;
             driver.advanceWallClockTime(timeDiff);
 
+            rtcmInputTopic.pipeInput(key, rtcm2, nextTime);
+
+            // Run out the clock to get an event out
+            while (time < bufferTimeMs + bufferGracePriodMs) {
+                time += diffMs;
+                driver.advanceWallClockTime(timeDiff);
+            }
 
             var eventList = eventOutputTopic.readKeyValuesToList();
             assertThat(eventList, hasSize(equalTo(1)));
@@ -133,8 +140,10 @@ public class RtcmMessageCountProgressionTopologyTest {
         parameters.setRtcmMessageCountProgressionOutputTopicName(eventOutputTopicName);
         parameters.setProcessedRtcmStateStoreName(processedRtcmStateStoreName);
         parameters.setLatestRtcmStateStoreName(latestRtcmStateStoreName);
+        parameters.setLatestEventStateStoreName(latestEventStateStoreName);
         parameters.setBufferTimeMs(bufferTimeMs);
         parameters.setBufferGracePeriodMs(bufferGracePriodMs);
+        parameters.setCheckIntervalMs(checkIntervalMs);
         parameters.setAggregateEvents(false);
         return parameters;
     }

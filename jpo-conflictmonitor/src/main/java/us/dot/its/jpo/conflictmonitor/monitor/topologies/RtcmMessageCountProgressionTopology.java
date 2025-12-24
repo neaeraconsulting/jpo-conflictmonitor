@@ -18,6 +18,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_prog
 import us.dot.its.jpo.conflictmonitor.monitor.processors.RtcmMessageCountProgressionProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampExtractorForBroadcastRate;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.Timestamps;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIdPartitioner;
 
 import java.time.Duration;
@@ -43,6 +44,7 @@ public class RtcmMessageCountProgressionTopology
 
         final String processedRtcmStateStore = parameters.getProcessedRtcmStateStoreName();
         final String latestRtcmStateStore = parameters.getLatestRtcmStateStoreName();
+        final String latestEventStateStore = parameters.getLatestEventStateStoreName();
         final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
 
         builder.addStateStore(
@@ -55,7 +57,13 @@ public class RtcmMessageCountProgressionTopology
                 Stores.keyValueStoreBuilder(
                         Stores.persistentKeyValueStore(latestRtcmStateStore),
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
-                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedRTCM()));
+                        RtcmMessageCountProgressionProcessor.TimestampeddProcessedRTCMSerdes()));
+
+        builder.addStateStore(
+                Stores.keyValueStoreBuilder(
+                        Stores.persistentKeyValueStore(latestEventStateStore),
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
+                        Timestamps.TimestampsSerdes()));
 
         var eventStream = builder
                 .stream(parameters.getRtcmInputTopicName(),
@@ -63,7 +71,8 @@ public class RtcmMessageCountProgressionTopology
                                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
                                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedRTCM())
                                 .withTimestampExtractor(new TimestampExtractorForBroadcastRate()))
-                .process(() -> new RtcmMessageCountProgressionProcessor(parameters), processedRtcmStateStore, latestRtcmStateStore);
+                .process(() -> new RtcmMessageCountProgressionProcessor(parameters), processedRtcmStateStore,
+                        latestRtcmStateStore, latestEventStateStore);
 
         if (parameters.isAggregateEvents()) {
             // Aggregate events

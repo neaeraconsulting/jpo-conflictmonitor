@@ -24,6 +24,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.priority_preemption_request.PriorityRequestMetricsTickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.Timestamps;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 
 import java.time.Duration;
@@ -75,7 +76,7 @@ public class PriorityRequestMetricsTopology
                 Stores.keyValueStoreBuilder(
                         Stores.persistentKeyValueStore(timestampStoreName),
                         JsonSerdes.IntersectionVehicleTypeKey(),
-                        TickProcessor.TimestampsSerdes());
+                        Timestamps.TimestampsSerdes());
         builder.addStateStore(timestampStoreBuilder);
 
         var metricsStream = builder
