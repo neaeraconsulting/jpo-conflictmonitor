@@ -75,7 +75,10 @@ public class RtcmMessageCountProgressionProcessor
         // Check for events here in case clock time doesn't advance
         checkForEvents(timestamp, key);
 
-
+        var timestamps = new Timestamps(context().currentStreamTimeMs(), context().currentSystemTimeMs());
+        var timestampedRtcm = new TimestampedProcessedRTCM(value, timestamps);
+        log.info("Adding key {} value {} to lastProcessedStore", key, timestampedRtcm);
+        lastProcessedStore.put(key, timestampedRtcm);
     }
 
     /**
@@ -108,6 +111,7 @@ public class RtcmMessageCountProgressionProcessor
 
         log.info("result: {}", result);
 
+
         if (result.isSuccess() && result.getResult() instanceof VersionedRecordIterator<ProcessedRTCM> iterator && iterator.hasNext()) {
             VersionedRecord<ProcessedRTCM> previousState = null;
             int recordCount = 0;
@@ -115,18 +119,16 @@ public class RtcmMessageCountProgressionProcessor
                 final VersionedRecord<ProcessedRTCM> state = iterator.next();
                 final ProcessedRTCM thisState = state.value();
                 log.info("====this state: {}", thisState);
+
+
+
+
                 recordCount++;
 
                 final long thisTimestamp = state.timestamp();
                 final Instant thisTime = Instant.ofEpochMilli(thisTimestamp);
 
-                // Enforce skip records older than the start time - query isn't trustworthy
-                if (thisTime.isBefore(startTime)) {
-                    log.info("Skipping item at {} earlier than last processed time {}", thisTime.toEpochMilli(), startTime.toEpochMilli());
-                    continue;
-                }
-
-                // Enforce that the upper query bound here - query isn't trustworthy
+                // Enforce the upper query bound here to avoid sending within grace period if query toTime doesn't work as expected
                 if (thisTime.isAfter(endTime)) {
                     log.info("Skipping item at {} after the grace period time {}", thisTime.toEpochMilli(), endTime.toEpochMilli());
                     continue;
@@ -174,13 +176,12 @@ public class RtcmMessageCountProgressionProcessor
                 log.info("previous state set to {}", previousState);
             }
             log.info("record count: {}", recordCount);
-            if (previousState != null && previousState.value() != null) {
-                var timestamps = new Timestamps(context().currentStreamTimeMs(), context().currentSystemTimeMs());
-                var timestampedRtcm = new TimestampedProcessedRTCM(previousState.value(), timestamps);
-                log.info("Adding key {} value {} to lastProcessedStore", key, timestampedRtcm);
-                lastProcessedStore.put(key, timestampedRtcm);
-            }
+
         }
+
+
+
+
 
 
     }
@@ -191,6 +192,7 @@ public class RtcmMessageCountProgressionProcessor
      * @param punctuateTime Clock time millis
      */
     private void punctuate(final long punctuateTime) {
+        log.info("punctuate {}", punctuateTime);
         try (KeyValueIterator<RsuStationIdKey, TimestampedProcessedRTCM> iterator = lastProcessedStore.all()) {
             while (iterator.hasNext()) {
                 final var keyValue = iterator.next();
