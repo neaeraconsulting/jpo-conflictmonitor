@@ -163,7 +163,7 @@ public class RtcmMessageCountProgressionProcessor
                                 event.setChange(RtcmUtils.listDifferingFields(diffResult));
                                 context().forward(new Record<>(key, event, state.timestamp()));
                                 lastEventStore.put(key, new Timestamps(thisTimestamp, context().currentSystemTimeMs()));
-                                log.info("forwarded event key {}, timestamp {}", key, state.timestamp());
+                                log.info("forwarded event key {}, timestamp {}, event {}", key, state.timestamp(), event);
                             }
                         } else {
                             log.info("values don't differ, not forwarding event");

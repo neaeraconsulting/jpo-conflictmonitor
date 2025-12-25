@@ -36,8 +36,7 @@ import java.util.Collection;
 import java.util.Properties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 
 
 @Slf4j
@@ -53,33 +52,53 @@ public class RtcmMessageCountProgressionTopologyTest {
     RtcmMessageCountProgressionAggregationTopology mockAggregationTopology;
 
     // Test various combinations of buffer time, grace period and punctuate time
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name =
+            "{index}: buf={0} grace={1} check={2} msgCntA={3} msgCntB={4} propA={5} propB={6}")
     public static Collection<Object[]> testParams() {
+        final double prop1 = 123.4d;
+        final double prop2 = 321.0d;
         return Arrays.asList(new Object[][] {
-                {5000, 1200, 500, 10, 11},
-                {5000, 500, 500, 10, 11},
-                {5000, 500, 1000, 10, 11},
-                {5000, 500, 2500, 10, 11},
-                {2000, 500, 500, 10, 11},
-                {5000, 0, 500, 10, 11},
-                {5000, 1200, 500, 2, 2},
-                {5000, 500, 500, 2, 2},
-                {5000, 500, 1000, 2, 2},
-                {5000, 500, 2500, 2, 2},
-                {2000, 500, 500, 2, 2},
-                {5000, 0, 500, 2, 2},
+                {5000, 1200, 500, 10, 11, prop1, prop1},
+                {5000, 500, 500, 10, 11, prop1, prop1},
+                {5000, 500, 1000, 10, 11, prop1, prop1},
+                {5000, 500, 2500, 10, 11, prop1, prop1},
+                {2000, 500, 500, 10, 11, prop1, prop1},
+                {5000, 0, 500, 10, 11, prop1, prop1},
+                {5000, 1200, 500, 2, 2, prop1, prop1},
+                {5000, 500, 500, 2, 2, prop1, prop1},
+                {5000, 500, 1000, 2, 2, prop1, prop1},
+                {5000, 500, 2500, 2, 2, prop1, prop1},
+                {2000, 500, 500, 2, 2, prop1, prop1},
+                {5000, 0, 500, 2, 2, prop1, prop1},
+                {5000, 1200, 500, 10, 11, prop1, prop2},
+                {5000, 500, 500, 10, 11, prop1, prop2},
+                {5000, 500, 1000, 10, 11, prop1, prop2},
+                {5000, 500, 2500, 10, 11, prop1, prop2},
+                {2000, 500, 500, 10, 11, prop1, prop2},
+                {5000, 0, 500, 10, 11, prop1, prop2},
+                {5000, 1200, 500, 2, 2, prop1, prop2},
+                {5000, 500, 500, 2, 2, prop1, prop2},
+                {5000, 500, 1000, 2, 2, prop1, prop2},
+                {5000, 500, 2500, 2, 2, prop1, prop2},
+                {2000, 500, 500, 2, 2, prop1, prop2},
+                {5000, 0, 500, 2, 2, prop1, prop2},
         });
     }
 
     public RtcmMessageCountProgressionTopologyTest(int bufferTimeMs, int bufferGracePeriodMs, int checkIntervalMs,
-                                                   int msgCntA, int msgCntB) {
+                                                   int msgCntA, int msgCntB, double propA, double propB) {
         this.bufferTimeMs = bufferTimeMs;
         this.bufferGracePeriodMs = bufferGracePeriodMs;
         this.checkIntervalMs = checkIntervalMs;
         this.msgCntA = msgCntA;
         this.msgCntB = msgCntB;
-        // Expect event if msg count changes since contents are unchanged
-        this.expectEvent = (this.msgCntA != this.msgCntB);
+        this.propA = propA;
+        this.propB = propB;
+
+        // Expect event if msg count changes with unchanged contents
+        // or msg count doesn't change, but contents do
+        this.expectEvent = ((msgCntA != msgCntB) && (propA == propB))
+            || ((msgCntA == msgCntB) && (propA != propB));
     }
 
     private final int bufferTimeMs;
@@ -88,6 +107,8 @@ public class RtcmMessageCountProgressionTopologyTest {
     private final int msgCntA;
     private final int msgCntB;
     private final boolean expectEvent;
+    private final double propA;
+    private final double propB;
 
     private final String rtcmInputTopicName = "topic.ProcessedRtcm";
     private final String eventOutputTopicName = "topic.CmRtcmMessageCountProgressionEvents";
@@ -106,7 +127,7 @@ public class RtcmMessageCountProgressionTopologyTest {
     public void testRtcmMessageCountTopology() throws JsonProcessingException {
         Properties streamsConfig = createStreamsConfig();
         Topology topology = createTopology();
-        Instant startTime = Instant.ofEpochMilli(startTimestamp);
+        final Instant startTime = Instant.ofEpochMilli(startTimestamp);
         try (TopologyTestDriver driver = new TopologyTestDriver(topology, streamsConfig, startTime)) {
 
             var rtcmInputTopic = driver.createInputTopic(rtcmInputTopicName,
@@ -121,16 +142,13 @@ public class RtcmMessageCountProgressionTopologyTest {
             key.setRsuId(rsuId);
             key.setStationId(stationId);
 
-
-
-
             final long diffMs = 1000;
             final Duration timeDiff = Duration.ofMillis(diffMs);
             final Instant nextTime = startTime.plus(timeDiff);
             final long nextTimestamp = nextTime.toEpochMilli();
 
-            var rtcm1 = getProcessedRTCM_type1004(msgCntA, 123.4, startTimestamp);
-            var rtcm2 = getProcessedRTCM_type1004(msgCntB, 123.4, nextTimestamp);
+            var rtcm1 = getProcessedRTCM_type1004(msgCntA, propA, startTimestamp);
+            var rtcm2 = getProcessedRTCM_type1004(msgCntB, propB, nextTimestamp);
 
             rtcmInputTopic.pipeInput(key, rtcm1, startTime);
 
@@ -157,12 +175,18 @@ public class RtcmMessageCountProgressionTopologyTest {
                 RtcmMessageCountProgressionEvent event = kv.value;
                 assertThat(event.getMessageCountA(), equalTo(msgCntA));
                 assertThat(event.getMessageCountB(), equalTo(msgCntB));
-                assertThat(event.getChange(), hasSize(equalTo(0)));
+                if (propA == propB) {
+                    assertThat(event.getChange(), hasSize(equalTo(0)));
+                    assertThat(msgCntA, not(equalTo(msgCntB)));
+                } else {
+                    assertThat(event.getChange(), hasSize(greaterThan(0)));
+                    assertThat(msgCntA, equalTo(msgCntB));
+                }
                 assertThat(event.getStationId(), equalTo(stationId));
                 assertThat(event.getTimestampA(), equalTo(startTimestamp));
                 assertThat(event.getTimestampB(), equalTo(nextTimestamp));
             } else {
-                assertThat("unexpected event", eventList, hasSize(equalTo(0)));
+                assertThat(eventList, hasSize(equalTo(0)));
             }
         }
     }
