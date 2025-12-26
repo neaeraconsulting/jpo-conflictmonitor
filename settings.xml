@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<settings>
-    <activeProfiles>
-        <activeProfile>default</activeProfile>
-    </activeProfiles>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+        https://maven.apache.org/xsd/settings-1.0.0.xsd">
     <servers>
         <server>
+            <id>central</id>
+        </server>
+        <server>
+            <id>osgeo</id>
+        </server>
+        <server>
             <id>github</id>
-            <username>jpo_conflictmonitor</username>
+            <username>${env.MAVEN_GITHUB_USERNAME}</username>
             <password>${env.MAVEN_GITHUB_TOKEN}</password>
         </server>
     </servers>
@@ -25,4 +31,7 @@
             </repositories>
         </profile>
     </profiles>
+    <activeProfiles>
+        <activeProfile>default</activeProfile>
+    </activeProfiles>
 </settings>
