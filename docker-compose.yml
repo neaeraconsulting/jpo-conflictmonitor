@@ -12,7 +12,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        MAVEN_GITHUB_USERNAME: ${MAVEN_GITHUB_USERNAME:?error}
+        MAVEN_GITHUB_TOKEN_NAME: ${MAVEN_GITHUB_TOKEN_NAME:?error}
         MAVEN_GITHUB_TOKEN: ${MAVEN_GITHUB_TOKEN:?error}
         MAVEN_GITHUB_ORG: ${MAVEN_GITHUB_ORG:?error}
     image: jpo-conflictmonitor:latest
