@@ -455,17 +455,17 @@ public class MonitorServiceController {
     private void startRtcmValidationAlgorithm() {
         final String rtcmValidation = "rtcmValidation";
         final RtcmValidationAlgorithmFactory algoFactory = conflictMonitorProps.getRtcmValidationAlgorithmFactory();
+        final RtcmValidationParameters validationParams = conflictMonitorProps.getRtcmValidationParameters();
         final String algo = conflictMonitorProps.getRtcmValidationAlgorithm();
         final RtcmValidationAlgorithm rtcmValidationAlgo = algoFactory.getAlgorithm(algo);
-        final RtcmValidationParameters params = rtcmValidationAlgo.getParameters();
-        configTopology.registerConfigListeners(params);
+        rtcmValidationAlgo.setParameters(validationParams);
+        configTopology.registerConfigListeners(validationParams);
         if (rtcmValidationAlgo instanceof StreamsTopology streamsAlgo) {
             streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(rtcmValidation));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, rtcmValidation, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, rtcmValidation, healthTopic));
             algoMap.put(rtcmValidation, streamsAlgo);
         }
-        rtcmValidationAlgo.setParameters(params);
         final RtcmMinimumDataAggregationAlgorithm aggAlgo = getRtcmMinimumDataAggregationAlgorithm();
         rtcmValidationAlgo.setMinimumDataAggregationAlgorithm(aggAlgo);
         Runtime.getRuntime().addShutdownHook(new Thread(rtcmValidationAlgo::stop));
