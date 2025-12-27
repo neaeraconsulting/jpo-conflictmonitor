@@ -39,7 +39,7 @@ public enum DSRCmsgID {
 
     public static DSRCmsgID fromHex(String hex) {
         for (DSRCmsgID dsrcMsgId : DSRCmsgID.values()) {
-            if (dsrcMsgId.getHex().equals(hex)) {
+            if (dsrcMsgId.getHex().equalsIgnoreCase(hex)) {
                 return dsrcMsgId;
             }
         }
