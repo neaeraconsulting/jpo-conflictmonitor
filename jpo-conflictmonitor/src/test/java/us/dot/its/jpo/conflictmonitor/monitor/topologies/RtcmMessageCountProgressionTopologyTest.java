@@ -21,9 +21,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.topologies.aggregation.RtcmMessage
 import us.dot.its.jpo.conflictmonitor.testutils.ResourceUtils;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuStationIdKey;
-import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.ProcessedRTCM;
-import us.dot.its.jpo.geojsonconverter.pojos.geojson.rtcm.RTCMProperties;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 
@@ -233,18 +231,6 @@ public class RtcmMessageCountProgressionTopologyTest {
         return rtcm;
     }
 
-    private ProcessedRTCM getProcessedRTCM_MSM4(final int msgCnt, final int iods, final long timestamp) throws JsonProcessingException {
-        ProcessedRTCM rtcm = loadProcessedRTCM("processed-rtcm-with-MSM4.json");
-        rtcm.getProperties().setUtcTime(timestamp);
-        rtcm.getProperties().setOdeReceivedAt(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC));
-        rtcm.getProperties().setMsgCnt(msgCnt);
-        // Change the "IODS" property in the decoded message
-        JsonNode decodedMessage = rtcm.getProperties().getMessages().get(2).getDecodedMessage();
-        if (decodedMessage instanceof ObjectNode objNode) {
-            objNode.put("IODS", iods);
-        }
-        return rtcm;
-    }
 
     private static final String RESOURCE_PATH = "/us/dot/its/jpo/conflictmonitor/monitor/utils/";
 
