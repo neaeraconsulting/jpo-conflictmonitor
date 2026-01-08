@@ -66,6 +66,8 @@ public abstract class BaseZeroRateChecker<TItem, TEvent extends BroadcastRateEve
                 Long lastTimestamp = item.value;
                 if (timestamp - lastTimestamp > maxAgeMillis) {
                     emitZeroEvent(key, timestamp);
+                    // Remove the key to avoid sending redundant zero rate events forever
+                    store.delete(key);
                 }
             }
         }

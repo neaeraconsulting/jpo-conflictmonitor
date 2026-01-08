@@ -8,7 +8,7 @@
 		</encoder>
 	</appender>
 	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="WARN"/>
-	<logger name="us.dot.its.jpo.conflictmonitor" level="WARN"/>
+	<logger name="us.dot.its.jpo.conflictmonitor" level="INFO"/>
 	<root level="ERROR">
 		<appender-ref ref="STDOUT" />
 	</root>
