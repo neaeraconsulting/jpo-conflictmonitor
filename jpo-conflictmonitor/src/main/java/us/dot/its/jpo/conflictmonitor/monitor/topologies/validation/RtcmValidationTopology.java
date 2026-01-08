@@ -178,8 +178,16 @@ public class RtcmValidationTopology
                 })
                 .map((windowedKey, counts) -> {
                     var event = new RtcmBroadcastRateEvent();
-                    event.setSource(windowedKey.key().getRsuId());
-                    event.setStationId(windowedKey.key().getStationId());
+                    final RsuStationIdRtcmTypeKey key = windowedKey.key();
+                    if (key != null) {
+                        event.setSource(key.getRsuId());
+                        Integer stationId = key.getStationId();
+                        if (stationId != null) {
+                            event.setStationId(stationId);
+                        } else {
+                            log.warn("StationID is null in key {}", key);
+                        }
+                    }
                     event.setIntersectionID(-1);
                     event.setRoadRegulatorID(-1);
                     event.setTopicName(parameters.getInputTopicName());
