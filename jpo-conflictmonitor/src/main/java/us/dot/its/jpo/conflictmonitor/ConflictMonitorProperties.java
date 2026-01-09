@@ -51,6 +51,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_me
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalGroupAlignmentAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithmFactory;
@@ -84,6 +85,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_req
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionAlgorithmFactory;
@@ -152,6 +155,8 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private MapMessageCountProgressionAggregationAlgorithmFactory mapMessageCountProgressionAggregationAlgorithmFactory;
    private String spatMessageCountProgressionAggregationAlgorithm;
    private SpatMessageCountProgressionAggregationAlgorithmFactory spatMessageCountProgressionAggregationAlgorithmFactory;
+   private String rtcmMessageCountProgressionAggregationAlgorithm;
+   private RtcmMessageCountProgressionAggregationAlgorithmFactory rtcmMessageCountProgressionAggregationAlgorithmFactory;
    private String revocableEnabledLaneAlignmentAggregationAlgorithm;
    private RevocableEnabledLaneAlignmentAggregationAlgorithmFactory revocableEnabledLaneAlignmentAggregationAlgorithmFactory;
 
@@ -234,6 +239,10 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private String bsmMessageCountProgressionAlgorithm;
    private BsmMessageCountProgressionParameters bsmMessageCountProgressionAlgorithmParameters;
 
+   private RtcmMessageCountProgressionAlgorithmFactory rtcmMessageCountProgressionAlgorithmFactory;
+   private String rtcmMessageCountProgressionAlgorithm;
+   private RtcmMessageCountProgressionParameters rtcmMessageCountProgressionAlgorithmParameters;
+
    private RevocableEnabledLaneAlignmentAlgorithmFactory revocableEnabledLaneAlignmentAlgorithmFactory;
    private String revocableEnabledLaneAlignmentAlgorithm;
    private RevocableEnabledLaneAlignmentParameters revocableEnabledLaneAlignmentParameters;
@@ -305,6 +314,8 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
               = getAlgorithmFromMap(algorithmMap, MapMessageCountProgressionEventAggregation.class);
       this.spatMessageCountProgressionAggregationAlgorithm
               = getAlgorithmFromMap(algorithmMap, SpatMessageCountProgressionEventAggregation.class);
+      this.rtcmMessageCountProgressionAggregationAlgorithm
+              = getAlgorithmFromMap(algorithmMap, RtcmMessageCountProgressionEventAggregation.class);
       this.revocableEnabledLaneAlignmentAggregationAlgorithm
               = getAlgorithmFromMap(algorithmMap, RevocableEnabledLaneAlignmentEventAggregation.class);
       this.rtcmMinimumDataAggregationAlgorithm
@@ -393,6 +404,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Autowired
    public void setSpatMessageCountProgressionAggregationAlgorithmFactory(SpatMessageCountProgressionAggregationAlgorithmFactory factory) {
       this.spatMessageCountProgressionAggregationAlgorithmFactory = factory;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setRtcmMessageCountProgressionAggregationAlgorithmFactory(RtcmMessageCountProgressionAggregationAlgorithmFactory factory) {
+      this.rtcmMessageCountProgressionAggregationAlgorithmFactory = factory;
    }
 
    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -846,6 +863,22 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Autowired
    public void setBsmMessageCountProgressionAlgorithmParameters(BsmMessageCountProgressionParameters bsmMessageCountProgressionAlgorithmParameters) {
       this.bsmMessageCountProgressionAlgorithmParameters = bsmMessageCountProgressionAlgorithmParameters;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setRtcmMessageCountProgressionAlgorithmFactory(RtcmMessageCountProgressionAlgorithmFactory factory) {
+      this.rtcmMessageCountProgressionAlgorithmFactory = factory;
+   }
+
+   @Value("${rtcm.message.count.progression.algorithm}")
+   public void setRtcmMessageCountProgressionAlgorithm(String algorithmName) {
+      this.rtcmMessageCountProgressionAlgorithm = algorithmName;
+   }
+
+   @Autowired
+   public void setRtcmMessageCountProgressionAlgorithmParameters(RtcmMessageCountProgressionParameters params) {
+      this.rtcmMessageCountProgressionAlgorithmParameters = params;
    }
 
 

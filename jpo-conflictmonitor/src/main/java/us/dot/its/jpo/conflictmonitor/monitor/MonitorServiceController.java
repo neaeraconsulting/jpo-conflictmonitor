@@ -19,6 +19,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_me
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalGroupAlignmentAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
@@ -62,6 +64,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_req
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageParameters;
@@ -369,6 +374,9 @@ public class MonitorServiceController {
             //Bsm Message Count Progression Topology
             startBsmMessageCountProgressionAlgorithm();
 
+            // RTCM Message Count Progression Topology
+            startRtcmMessageCountProgressionAlgorithm();
+
             // Priority/Preemption Request Topology
             startPriorityPreemptionRequestTopology();
 
@@ -624,6 +632,29 @@ public class MonitorServiceController {
         bsmMessageCountProgressionAlgo.start();
     }
 
+    private void startRtcmMessageCountProgressionAlgorithm() {
+        final String name = "rtcmMessageCountProgression";
+        final RtcmMessageCountProgressionAlgorithmFactory factory = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithm();
+        final RtcmMessageCountProgressionAlgorithm algorithm = factory.getAlgorithm(algorithmName);
+        final RtcmMessageCountProgressionParameters params = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithmParameters();
+        configTopology.registerConfigListeners(params);
+        if (algorithm instanceof StreamsTopology streamsTopology) {
+            streamsTopology.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsTopology.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
+            streamsTopology.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
+            algoMap.put(name, streamsTopology);
+        }
+        algorithm.setParameters(params);
+
+        // Plug in aggregation algorithm
+        var aggregationAlgorithm = getRtcmMessageCountProgressionAggregationAlgorithm();
+        algorithm.setAggregationAlgorithm(aggregationAlgorithm);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(algorithm::stop));
+        algorithm.start();
+    }
+
     private void startPriorityPreemptionRequestTopology() {
         final String name = "priorityPreemptionRequest";
         final PriorityPreemptionRequestAlgorithmFactory factory = conflictMonitorProps.getPriorityPreemptionRequestAlgorithmFactory();
@@ -783,6 +814,15 @@ public class MonitorServiceController {
         final var factory = conflictMonitorProps.getBsmMessageCountProgressionAggregationAlgorithmFactory();
         final String algorithmName = conflictMonitorProps.getBsmMessageCountProgressionAggregationAlgorithm();
         final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getAggregationParameters();
+        algorithm.setParameters(parameters);
+        return algorithm;
+    }
+
+    private RtcmMessageCountProgressionAggregationAlgorithm getRtcmMessageCountProgressionAggregationAlgorithm() {
+        final RtcmMessageCountProgressionAggregationAlgorithmFactory factory = conflictMonitorProps.getRtcmMessageCountProgressionAggregationAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRtcmMessageCountProgressionAggregationAlgorithm();
+        final RtcmMessageCountProgressionAggregationAlgorithm algorithm = factory.getAlgorithm(algorithmName);
         final var parameters = conflictMonitorProps.getAggregationParameters();
         algorithm.setParameters(parameters);
         return algorithm;
