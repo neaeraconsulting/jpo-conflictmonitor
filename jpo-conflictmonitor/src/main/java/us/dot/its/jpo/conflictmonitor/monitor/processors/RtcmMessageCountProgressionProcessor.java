@@ -65,19 +65,19 @@ public class RtcmMessageCountProgressionProcessor
     @Override
     public void process(Record<RsuStationIdKey, ProcessedRTCM> record) {
         final RsuStationIdKey key = record.key();
-        log.info("-----------------processing key {}", key);
+        log.debug("-----------------processing key {}", key);
         final ProcessedRTCM value = record.value();
         final long timestamp = record.timestamp();
 
         bufferStore.put(key, value, timestamp);
-        log.info("added to bufferStore key: {}, timestamp: {}", key, timestamp);
+        log.debug("added to bufferStore key: {}, timestamp: {}", key, timestamp);
 
         // Check for events here in case clock time doesn't advance
         checkForEvents(timestamp, key);
 
         var timestamps = new Timestamps(context().currentStreamTimeMs(), context().currentSystemTimeMs());
         var timestampedRtcm = new TimestampedProcessedRTCM(value, timestamps);
-        log.info("Adding key {} value {} to lastProcessedStore", key, timestampedRtcm);
+        log.debug("Adding key {} value {} to lastProcessedStore", key, timestampedRtcm);
         lastProcessedStore.put(key, timestampedRtcm);
     }
 
@@ -95,7 +95,7 @@ public class RtcmMessageCountProgressionProcessor
         // Query up to the current time excluding grace period
         final Instant endTime = Instant.ofEpochMilli(currentTime - parameters.getBufferGracePeriodMs());
 
-        log.info("query from {} to {}", startTime.toEpochMilli(), endTime.toEpochMilli());
+        log.debug("query from {} to {}", startTime.toEpochMilli(), endTime.toEpochMilli());
 
         // Do the versioned store query
         var query = MultiVersionedKeyQuery.<RsuStationIdKey, ProcessedRTCM>withKey(key)
@@ -103,13 +103,13 @@ public class RtcmMessageCountProgressionProcessor
                 .toTime(endTime)
                 .withAscendingTimestamps();
 
-        log.info("query {}", query);
+        log.debug("query {}", query);
 
         QueryResult<VersionedRecordIterator<ProcessedRTCM>> result
                 = bufferStore.query(query, PositionBound.unbounded(),
                 new QueryConfig(false));
 
-        log.info("result: {}", result);
+        log.debug("result: {}", result);
 
 
         if (result.isSuccess() && result.getResult() instanceof VersionedRecordIterator<ProcessedRTCM> iterator && iterator.hasNext()) {
@@ -118,7 +118,7 @@ public class RtcmMessageCountProgressionProcessor
             while (iterator.hasNext()) {
                 final VersionedRecord<ProcessedRTCM> state = iterator.next();
                 final ProcessedRTCM thisState = state.value();
-                log.info("====this state: {}", thisState);
+                log.debug("====this state: {}", thisState);
 
 
 
@@ -130,7 +130,7 @@ public class RtcmMessageCountProgressionProcessor
 
                 // Enforce the upper query bound here to avoid sending within grace period if query toTime doesn't work as expected
                 if (thisTime.isAfter(endTime)) {
-                    log.info("Skipping item at {} after the grace period time {}", thisTime.toEpochMilli(), endTime.toEpochMilli());
+                    log.debug("Skipping item at {} after the grace period time {}", thisTime.toEpochMilli(), endTime.toEpochMilli());
                     continue;
                 }
 
@@ -138,7 +138,7 @@ public class RtcmMessageCountProgressionProcessor
                     final long previousTimestamp = previousState.timestamp();
 
                     final long timeDifference = thisTimestamp - previousTimestamp;
-                    log.info("thisTimestamp: {}, previousTimestamp: {}, timeDifference: {}", previousTimestamp, previousTimestamp, timeDifference);
+                    log.debug("thisTimestamp: {}, previousTimestamp: {}, timeDifference: {}", previousTimestamp, previousTimestamp, timeDifference);
                     if (timeDifference < parameters.getBufferTimeMs()) {
                         DiffResult<ProcessedRTCM> diffResult = RtcmUtils.compare(previousState.value(), thisState);
                         final boolean valuesDiffer = diffResult.getNumberOfDiffs() > 0;
@@ -151,7 +151,7 @@ public class RtcmMessageCountProgressionProcessor
                             // Check if the event was sent already
                             var lastEvent = lastEventStore.get(key);
                             if (lastEvent != null && lastEvent.streamTime() >= thisTimestamp) {
-                                log.info("Already sent this event");
+                                log.debug("Already sent this event");
                             } else {
                                 final var event = new RtcmMessageCountProgressionEvent();
                                 event.setMessageCountA(previousMsgCnt);
@@ -163,19 +163,19 @@ public class RtcmMessageCountProgressionProcessor
                                 event.setChange(RtcmUtils.listDifferingFields(diffResult));
                                 context().forward(new Record<>(key, event, state.timestamp()));
                                 lastEventStore.put(key, new Timestamps(thisTimestamp, context().currentSystemTimeMs()));
-                                log.info("forwarded event key {}, timestamp {}, event {}", key, state.timestamp(), event);
+                                log.debug("forwarded event key {}, timestamp {}, event {}", key, state.timestamp(), event);
                             }
                         } else {
-                            log.info("values don't differ, not forwarding event");
+                            log.debug("values don't differ, not forwarding event");
                         }
                     }
                 } else {
-                    log.info("previous state is null");
+                    log.debug("previous state is null");
                 }
                 previousState = state;
-                log.info("previous state set to {}", previousState);
+                log.debug("previous state set to {}", previousState);
             }
-            log.info("record count: {}", recordCount);
+            log.debug("record count: {}", recordCount);
 
         }
 
@@ -192,7 +192,7 @@ public class RtcmMessageCountProgressionProcessor
      * @param punctuateTime Clock time millis
      */
     private void punctuate(final long punctuateTime) {
-        log.info("punctuate {}", punctuateTime);
+        log.debug("punctuate {}", punctuateTime);
         try (KeyValueIterator<RsuStationIdKey, TimestampedProcessedRTCM> iterator = lastProcessedStore.all()) {
             while (iterator.hasNext()) {
                 final var keyValue = iterator.next();
@@ -207,7 +207,7 @@ public class RtcmMessageCountProgressionProcessor
                 // but if stored messages are replayed with their original timestamps the offset will be large.
                 // This logic accounts for that large offset.
                 final long offsetPunctuateTime = punctuateTime - offset;
-                log.info("punctuateTime {} streamTime {} clockTime {} offset {} offsetPunctuateTime {}",
+                log.debug("punctuateTime {} streamTime {} clockTime {} offset {} offsetPunctuateTime {}",
                         punctuateTime, streamTime, clockTime, offset, offsetPunctuateTime);
 
                 checkForEvents(offsetPunctuateTime, key);
