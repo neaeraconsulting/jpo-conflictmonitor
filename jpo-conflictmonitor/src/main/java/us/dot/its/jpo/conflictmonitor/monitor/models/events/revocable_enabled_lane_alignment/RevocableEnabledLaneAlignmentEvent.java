@@ -35,7 +35,7 @@ public class RevocableEnabledLaneAlignmentEvent extends Event {
     private LaneTypeAttributesMap laneTypeAttributes;
 
     /**
-     * Set of LanIDs with the 'revocable' bit set in the MAP message.
+     * Set of LaneIDs with the 'revocable' bit set in the MAP message.
      */
     private Set<Integer> revocableLaneList;
 
