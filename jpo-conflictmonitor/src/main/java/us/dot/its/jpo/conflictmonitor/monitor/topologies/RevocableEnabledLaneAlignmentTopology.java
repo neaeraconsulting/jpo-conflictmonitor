@@ -16,6 +16,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsBuilder;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
@@ -150,6 +151,11 @@ public class RevocableEnabledLaneAlignmentTopology
         } else {
             throw new IllegalArgumentException("Aggregation algorithm must be a streams algorithm");
         }
+    }
+
+    @Override
+    public void setDynamicLaneActivationMetricsAlgorithm(DynamicLaneActivationMetricsAlgorithm dynamicLaneActivationMetricsAlgorithm) {
+        // TODO
     }
 
     private void buildNotificationTopology(KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> eventStream) {
