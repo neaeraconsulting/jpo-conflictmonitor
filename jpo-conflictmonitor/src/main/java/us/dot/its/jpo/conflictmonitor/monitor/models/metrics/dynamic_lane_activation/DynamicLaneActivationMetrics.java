@@ -1,5 +1,8 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,6 +27,7 @@ import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 @Getter
 @Setter
 @EqualsAndHashCode(callSuper = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DynamicLaneActivationMetrics extends Metrics<RsuIntersectionKey> {
     public DynamicLaneActivationMetrics() {
         super("DynamicLaneActivation");
@@ -32,28 +36,32 @@ public class DynamicLaneActivationMetrics extends Metrics<RsuIntersectionKey> {
     /**
      * The SPAT source (usually the IP address of the RSU)
      */
-    private String source;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String getSource() {
+        return key != null ? key.getRsuId() : null;
+    }
 
     /**
      * The intersection ID
      */
-    private int intersectionID;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private int getIntersectionID() {
+        return key != null ? key.getIntersectionId() : -1;
+    }
 
     /**
      * The RoadRegulatorID (region)
      */
-    private int roadRegulatorID;
-
-    /**
-     * Map of LaneID to DE_LaneTypeAttributes, including all lanes, revocable or not
-     */
-    private LaneTypeAttributesMap laneTypeAttributes;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private int getRoadRegulatorID() {
+        return key != null ? key.getRegion() : -1;
+    }
 
     /**
      * Table of the enabled status of each revocable lane in the intersection of the time period
      * of the metric.
      */
-    private RevocableEnabledLaneStatusTable revocableEnabledLaneStatusMap;
+    private RevocableEnabledLaneStatusTable revocableEnabledLaneStatusTable;
 
 }
 

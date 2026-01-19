@@ -4,12 +4,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.ArrayList;
-import java.util.TreeMap;
 
 /**
- * Table of the status of each revocable lane at an intersection over time.
+ * A list of enabled/disabled statuses for one revocable lane
  */
 @Data
 @EqualsAndHashCode(callSuper=true)
-public class RevocableEnabledLaneStatusTable extends ArrayList<RevocableEnabledLaneStatusChanges> {
+public class RevocableEnabledStatusList extends ArrayList<RevocableEnabledStatus> {
 }

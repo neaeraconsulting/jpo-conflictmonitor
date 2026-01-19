@@ -1,11 +1,19 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation;
 
-import java.util.TreeMap;
+import lombok.Data;
 
 /**
- * A time series of enabled/disabled status changes for a revocable one Lane.
- * <p>key = Timestamp (epoch millisecond) of the SPAT when the revocable lane status changed</p>
- * <p>value = The status of the revocable lane after the change (true = enabled, false = disabled)</p>
+ * A time series of enabled/disabled status changes for one revocable one Lane.
  */
-public class RevocableEnabledLaneStatusChanges extends TreeMap<Long, Boolean> {
+@Data
+public class RevocableEnabledLaneStatusChanges {
+    /**
+     * The lane ID
+     */
+    private String laneID;
+
+    /**
+     * List of enabled status changes for the revocable lane
+     */
+    private RevocableEnabledStatusList statusChanges;
 }
