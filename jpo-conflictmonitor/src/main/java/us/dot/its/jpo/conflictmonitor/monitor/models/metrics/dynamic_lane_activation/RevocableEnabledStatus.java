@@ -5,8 +5,7 @@ import lombok.Data;
 /**
  * A timestamped enabled/disabled status of a revocable lane
  */
-@Data
-public class RevocableEnabledStatus {
-    private long timestamp;
-    private boolean enabled;
-}
+public record RevocableEnabledStatus (
+    long timestamp,
+    boolean enabled
+){}

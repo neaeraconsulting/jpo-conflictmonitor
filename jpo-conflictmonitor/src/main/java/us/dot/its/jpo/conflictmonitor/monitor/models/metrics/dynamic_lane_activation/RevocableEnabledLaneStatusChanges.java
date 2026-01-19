@@ -10,7 +10,7 @@ public class RevocableEnabledLaneStatusChanges {
     /**
      * The lane ID
      */
-    private String laneID;
+    private int laneID;
 
     /**
      * List of enabled status changes for the revocable lane
