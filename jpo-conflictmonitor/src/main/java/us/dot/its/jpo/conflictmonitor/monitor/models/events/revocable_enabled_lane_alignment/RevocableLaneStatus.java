@@ -1,14 +1,15 @@
-package us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation;
+package us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment;
 
 import lombok.Data;
 import lombok.Generated;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.LaneTypeAttributesMap;
 
 import java.util.Set;
 
 /**
  * Lists all the revocable lanes for an intersection and their enabled/disabled status
  * for a particular SPAT timestamp.
+ * This type is produced for all revocable enabled lane status changes and used for the
+ * Dynamic Lane Activation Metric.
  */
 @Data
 @Generated
@@ -27,11 +28,6 @@ public class RevocableLaneStatus {
      * The Road Regulator ID
      */
     private int roadRegulatorID = -1;
-
-    /**
-     * The lane ID within the intersection
-     */
-    private int laneID;
 
     /**
      * The timestamp of the SPAT

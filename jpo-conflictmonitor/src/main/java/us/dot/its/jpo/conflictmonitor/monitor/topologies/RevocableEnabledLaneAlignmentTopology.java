@@ -64,7 +64,7 @@ public class RevocableEnabledLaneAlignmentTopology
     @Override
     public void buildTopology(StreamsBuilder builder, KStream<RsuIntersectionKey, SpatMap> spatMapStream) {
 
-        KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> eventStream =
+        KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> candidateEventStream =
             spatMapStream.map((rsuIntersectionKey, spatMap) -> {
                 var candidateEvent = new RevocableEnabledLaneAlignmentEvent();
                 candidateEvent.setIntersectionID(rsuIntersectionKey.getIntersectionId());
@@ -91,7 +91,17 @@ public class RevocableEnabledLaneAlignmentTopology
                 }
 
                 return new KeyValue<>(rsuIntersectionKey, candidateEvent);
-            }).filter((rsuIntersectionKey, candidateEvent) -> {
+            });
+
+        // Filter events with revocable lanes to perform metrics counts
+        var revocableLaneStatusStream = candidateEventStream
+                .map((key, value) -> {
+                    new KeyValue<>(key, (RevocableEnabledLaneAlignmentEvent) value);
+                });
+
+        // Filter candidates to find interesting events, where something doesn't match and should be reported
+        KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> eventStream = candidateEventStream
+                .filter((rsuIntersectionKey, candidateEvent) -> {
                 Set<Integer> revocableLanes = candidateEvent.getRevocableLaneList();
                 Set<Integer> enabledLanes = candidateEvent.getEnabledLaneList();
 
