@@ -6,9 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -17,15 +15,16 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_e
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.LaneTypeAttributesMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableLaneStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.RevocableEnabledLaneAlignmentNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.RevocableEnabledLaneAlignmentNotificationAggregation;
-import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.SignalGroupAlignmentNotificationAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.SpatUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
@@ -34,12 +33,8 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.ProcessedMap;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
-import us.dot.its.jpo.ode.plugin.j2735.J2735LaneTypeAttributes;
-
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentConstants.DEFAULT_REVOCABLE_ENABLED_LANE_ALIGNMENT_ALGORITHM;
 import static us.dot.its.jpo.conflictmonitor.monitor.utils.ProcessedMapUtils.*;
@@ -60,6 +55,7 @@ public class RevocableEnabledLaneAlignmentTopology
     }
 
     RevocableEnabledLaneAlignmentAggregationStreamsAlgorithm aggregationAlgorithm;
+    DynamicLaneActivationMetricsStreamsAlgorithm dynamicLaneActivationMetricsAlgorithm;
 
     @Override
     public void buildTopology(StreamsBuilder builder, KStream<RsuIntersectionKey, SpatMap> spatMapStream) {
@@ -95,9 +91,14 @@ public class RevocableEnabledLaneAlignmentTopology
 
         // Filter events with revocable lanes to perform metrics counts
         var revocableLaneStatusStream = candidateEventStream
-                .map((key, value) -> {
-                    new KeyValue<>(key, (RevocableEnabledLaneAlignmentEvent) value);
-                });
+                .filter((rsuIntersectionKey, event) -> {
+                    Set<Integer> revocableLanes = event.getRevocableLaneList();
+                    return !revocableLanes.isEmpty();
+                })
+                .mapValues(RevocableLaneStatus::new);
+
+        // Plug in Dynamic Lane Activate Metrics algorithm
+        dynamicLaneActivationMetricsAlgorithm.buildTopology(builder, revocableLaneStatusStream);
 
         // Filter candidates to find interesting events, where something doesn't match and should be reported
         KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> eventStream = candidateEventStream
@@ -165,7 +166,12 @@ public class RevocableEnabledLaneAlignmentTopology
 
     @Override
     public void setDynamicLaneActivationMetricsAlgorithm(DynamicLaneActivationMetricsAlgorithm dynamicLaneActivationMetricsAlgorithm) {
-        // TODO
+        // Enforce the algorithm being a Streams algorithm
+        if (dynamicLaneActivationMetricsAlgorithm instanceof DynamicLaneActivationMetricsStreamsAlgorithm streamsAlgorithm) {
+            this.dynamicLaneActivationMetricsAlgorithm = streamsAlgorithm;
+        } else {
+            throw new IllegalArgumentException("DynamicLaneActivationMetricsAlgorithm must be a streams algorithm");
+        }
     }
 
     private void buildNotificationTopology(KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> eventStream) {

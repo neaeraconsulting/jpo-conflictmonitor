@@ -1,7 +1,9 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Generated;
+import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
@@ -12,8 +14,20 @@ import java.util.Set;
  * Dynamic Lane Activation Metric.
  */
 @Data
+@NoArgsConstructor
 @Generated
 public class RevocableLaneStatus {
+
+    public RevocableLaneStatus(RevocableEnabledLaneAlignmentEvent event) {
+        this.source = event.getSource();
+        this.intersectionID = event.getIntersectionID();
+        this.roadRegulatorID = event.getRoadRegulatorID();
+        this.timestamp = event.getTimestamp();
+        this.laneTypeAttributes = event.getLaneTypeAttributes();
+        this.revocableLaneList = event.getRevocableLaneList();
+        this.enabledLaneList = event.getEnabledLaneList();
+    }
+
     /**
      * The SPAT source (usually IP address)
      */
