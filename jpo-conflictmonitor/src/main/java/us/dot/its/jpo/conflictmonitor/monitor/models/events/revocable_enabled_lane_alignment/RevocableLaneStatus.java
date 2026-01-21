@@ -23,7 +23,6 @@ public class RevocableLaneStatus {
         this.intersectionID = event.getIntersectionID();
         this.roadRegulatorID = event.getRoadRegulatorID();
         this.timestamp = event.getTimestamp();
-        this.laneTypeAttributes = event.getLaneTypeAttributes();
         this.revocableLaneList = event.getRevocableLaneList();
         this.enabledLaneList = event.getEnabledLaneList();
     }
@@ -47,11 +46,6 @@ public class RevocableLaneStatus {
      * The timestamp of the SPAT
      */
     private long timestamp;
-
-    /**
-     * Map of LaneID to DE_LaneTypeAttributes, including all lanes, revocable or not
-     */
-    private LaneTypeAttributesMap laneTypeAttributes;
 
     /**
      * Set of LaneIDs with the 'revocable' bit set in the MAP message.

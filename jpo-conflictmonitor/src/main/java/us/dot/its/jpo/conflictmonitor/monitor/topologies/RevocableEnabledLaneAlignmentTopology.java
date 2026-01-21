@@ -92,6 +92,10 @@ public class RevocableEnabledLaneAlignmentTopology
         // Filter events with revocable lanes to perform metrics counts
         var revocableLaneStatusStream = candidateEventStream
                 .filter((rsuIntersectionKey, event) -> {
+                    // pass through tombstones
+                    if (event == null) {
+                        return true;
+                    }
                     Set<Integer> revocableLanes = event.getRevocableLaneList();
                     return !revocableLanes.isEmpty();
                 })
