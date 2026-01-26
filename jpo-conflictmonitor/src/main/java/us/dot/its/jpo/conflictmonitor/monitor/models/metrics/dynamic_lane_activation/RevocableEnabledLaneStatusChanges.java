@@ -15,5 +15,5 @@ public class RevocableEnabledLaneStatusChanges {
     /**
      * List of enabled status changes for the revocable lane
      */
-    private RevocableEnabledStatusList statusChanges;
+    private RevocableEnabledStatusList statusChanges = new RevocableEnabledStatusList();
 }

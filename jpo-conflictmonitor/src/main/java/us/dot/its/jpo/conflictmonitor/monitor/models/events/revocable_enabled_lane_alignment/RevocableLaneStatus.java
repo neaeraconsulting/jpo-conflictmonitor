@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.Generated;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -50,10 +51,17 @@ public class RevocableLaneStatus {
     /**
      * Set of LaneIDs with the 'revocable' bit set in the MAP message.
      */
-    private Set<Integer> revocableLaneList;
+    private Set<Integer> revocableLaneList = new HashSet<>();
 
     /**
      * Set of enabled Lane IDs from the SPAT message.
      */
-    private Set<Integer> enabledLaneList;
+    private Set<Integer> enabledLaneList = new HashSet<>();
+
+    /**
+     * Flag to indicate it this is a "tick" in the processing topology, not an actual status.
+     */
+    private boolean tick = false;
+
+
 }

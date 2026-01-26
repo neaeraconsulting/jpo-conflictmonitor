@@ -11,4 +11,13 @@ import java.util.ArrayList;
 @Data
 @EqualsAndHashCode(callSuper=true)
 public class RevocableEnabledStatusList extends ArrayList<RevocableEnabledStatus> {
+
+    @Override
+    public RevocableEnabledStatus getLast() {
+        if (this.isEmpty()) {
+            return null;
+        }
+        return super.getLast();
+    }
+
 }

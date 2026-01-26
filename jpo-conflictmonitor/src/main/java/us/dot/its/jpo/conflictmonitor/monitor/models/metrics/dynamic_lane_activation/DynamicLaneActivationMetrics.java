@@ -61,7 +61,7 @@ public class DynamicLaneActivationMetrics extends Metrics<RsuIntersectionKey> {
      * Table of the enabled status of each revocable lane in the intersection of the time period
      * of the metric.
      */
-    private RevocableEnabledLaneStatusTable revocableEnabledLaneStatusTable;
+    private RevocableEnabledLaneStatusTable revocableEnabledLaneStatusTable = new RevocableEnabledLaneStatusTable();
 
 }
 

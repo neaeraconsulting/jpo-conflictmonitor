@@ -1,20 +1,22 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.EmitStrategy;
-import org.apache.kafka.streams.kstream.Grouped;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsBuilder;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableLaneStatus;
-import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation.DynamicLaneActivationMetrics;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation.*;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DynamicLaneActivationMetricsTickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
@@ -28,8 +30,8 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_
 @Slf4j
 @Component(DEFAULT_DYNAMIC_LANE_ACTIVATION_METRICS_ALGORITHM)
 public class DynamicLaneActivationMetricsTopology
-    extends BaseStreamsBuilder<DynamicLaneActivationMetricsParameters>
-    implements DynamicLaneActivationMetricsStreamsAlgorithm {
+        extends BaseStreamsBuilder<DynamicLaneActivationMetricsParameters>
+        implements DynamicLaneActivationMetricsStreamsAlgorithm {
 
     private CommonMetricsParameters commonParameters;
 
@@ -66,10 +68,12 @@ public class DynamicLaneActivationMetricsTopology
                         TickProcessor.TimestampsSerdes());
         builder.addStateStore(timestampStoreBuilder);
 
-        var metricsStream = inputStream
+        KStream<RsuIntersectionKey, DynamicLaneActivationMetrics> metricsStream = inputStream
 
                 // Insert ticks to keep stream time moving if we stop receiving events
-                .process(() -> new DynamicLaneActivationMetricsTickProcessor(commonParameters, parameters.isDebug(), timestampStoreName))
+                .process(() ->
+                        new DynamicLaneActivationMetricsTickProcessor(commonParameters, parameters.isDebug(),
+                                timestampStoreName))
 
                 // Group by key for aggregation
                 .groupByKey(Grouped.with(
@@ -85,9 +89,91 @@ public class DynamicLaneActivationMetricsTopology
                 .emitStrategy(EmitStrategy.onWindowClose())
 
                 // Aggregate and deduplicate
+                .aggregate(
+                        // Initializer
+                        DynamicLaneActivationMetrics::new,
 
+                        // Aggregator
+                        (key, status, metrics) -> {
+                            metrics.setKey(key);
 
+                            // Don't count tombstones or ticks in the metric
+                            if (status == null || status.isTick()) {
+                                if (parameters.isDebug()) {
+                                    log.debug("Ignore TICK in metric aggregation: {}", metrics);
+                                }
+                                return metrics;
+                            }
 
+                            final long timestamp = status.getTimestamp();
 
+                            RevocableEnabledLaneStatusTable table = metrics.getRevocableEnabledLaneStatusTable();
+                            for (final int laneId : status.getRevocableLaneList()) {
+                                final boolean enabled = status.getEnabledLaneList().contains(laneId);
+
+                                RevocableEnabledLaneStatusChanges statusChanges = table.getChangesForLaneID(laneId);
+                                if (statusChanges == null) {
+                                    statusChanges = new RevocableEnabledLaneStatusChanges();
+                                    statusChanges.setLaneID(laneId);
+                                    table.add(statusChanges);
+                                }
+                                RevocableEnabledStatusList statusList = statusChanges.getStatusChanges();
+                                if (!statusList.isEmpty()) {
+                                    final RevocableEnabledStatus lastStatus = statusChanges.getStatusChanges().getLast();
+                                    if (lastStatus != null) {
+                                        // Add new status if the timestamp is later than the last one and the
+                                        // time "enabled" status has changed
+                                        if (timestamp > lastStatus.timestamp() && enabled != lastStatus.enabled()) {
+                                            statusList.add(new RevocableEnabledStatus(timestamp, enabled));
+                                        }
+                                    } else {
+                                        // This is the first status, add it
+                                        statusList.add(new RevocableEnabledStatus(timestamp, enabled));
+                                    }
+                                }
+                            }
+
+                            return metrics;
+                        },
+                        Named.as("dynamic-lane-activation-metrics-aggregation"),
+                        Materialized.<RsuIntersectionKey, DynamicLaneActivationMetrics, WindowStore<Bytes, byte[]>>as("dynamic-lane-activation-metricsd-aggregation-store")
+                                .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
+                                .withValueSerde(JsonSerdes.DynamicLaneActivationMetrics())
+                                .withRetention(storeRetentionTime)
+                )
+                .toStream()
+
+                // Filter out empty events that may happen due to ticks?
+                // Don't necessarily filter those out so we can be alerted if changes stop
+//                .filter((key, metrics) -> {
+//                    // Check if there are any entries for any lanes
+//                    var table = metrics.getRevocableEnabledLaneStatusTable();
+//                    for (var item : table) {
+//                        if (!item.getStatusChanges().isEmpty()) {
+//                            return true;
+//                        }
+//                    }
+//                    return false;
+//                })
+
+                // Get the time period from the window bounds and rekey normal key, not windowed
+                .map((windowedKey, value) -> {
+                    RsuIntersectionKey key = windowedKey.key();
+                    long startTime = windowedKey.window().start();
+                    long endTime = windowedKey.window().end();
+                    value.setKey(key);
+                    ProcessingTimePeriod period = new ProcessingTimePeriod(startTime, endTime);
+                    value.setTimePeriod(period);
+                    return new KeyValue<>(key, value);
+                });
+
+        if (getParameters().isDebug()) {
+            metricsStream.process(() -> new DiagnosticProcessor<>("Produced DynamicLaneActivationMetrics", log));
+        }
+
+        return metricsStream;
     }
+
+
 }
+

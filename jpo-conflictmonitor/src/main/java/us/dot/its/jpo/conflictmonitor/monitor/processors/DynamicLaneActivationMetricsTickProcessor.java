@@ -15,6 +15,8 @@ public class DynamicLaneActivationMetricsTickProcessor
 
     @Override
     public RevocableLaneStatus tickValue() {
-        return new RevocableLaneStatus();
+        var tick = new RevocableLaneStatus();
+        tick.setTick(true);
+        return tick;
     }
 }
