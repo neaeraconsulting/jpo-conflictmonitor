@@ -243,7 +243,9 @@ kafka.topics:
     - name: topic.CmPriorityRequestMetrics
       cleanupPolicy: delete
       retentionMs: 300000
-
+    - name: topic.CmDynamicLaneActivationMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
 
 
 # Connection of Travel

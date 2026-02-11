@@ -10,7 +10,7 @@ public class DynamicLaneActivationMetricsAlgorithms {
     @Bean
     public FactoryBean<?> dynamicLaneActivationMetricsServiceLocatorFactoryBean() {
         var factoryBean = new ServiceLocatorFactoryBean();
-        factoryBean.setServiceLocatorInterface(DynamicLaneActivationMetricsAlgorithms.class);
+        factoryBean.setServiceLocatorInterface(DynamicLaneActivationMetricsAlgorithmFactory.class);
         return factoryBean;
     }
 }

@@ -68,6 +68,7 @@ public class RevocableEnabledLaneAlignmentTopologyTest {
     final String eventTopicName = "topic.CmRevocableEnabledLaneAlignment";
     final String notificationTopicName = "topic.CmRevocableEnabledLaneAlignmentNotification";
     final String aggNotificationTopicName = "topic.CmRevocableEnabledLaneAlignmentNotificationAggregation";
+    final String dynamicLaneActivationMetricsTopicName = "topic.CmDynamicLaneActivationMetrics";
     final boolean debug = true;
     final boolean aggregateEvents = false;
     final String rsuId = "172.18.0.1";
@@ -127,6 +128,8 @@ public class RevocableEnabledLaneAlignmentTopologyTest {
         var parameters = getRevocableEnabledLaneAlignmentParameters();
         var revocableEnabledLaneAlignmentTopology = new RevocableEnabledLaneAlignmentTopology();
         revocableEnabledLaneAlignmentTopology.setParameters(parameters);
+        revocableEnabledLaneAlignmentTopology.setDynamicLaneActivationMetricsAlgorithm(
+                getDynamicLaneActivationMetricsAlgorithm());
         var streamsBuilder = new StreamsBuilder();
 
         // Simulate the joined spat-map stream for input to the algorithm under test
@@ -169,5 +172,27 @@ public class RevocableEnabledLaneAlignmentTopologyTest {
         String mapStr = ResourceUtils.loadResource(RESOURCE_PATH + "RevocableLanes_ProcessedMap.json");
         ObjectMapper mapper = DateJsonMapper.getInstance();
         return (ProcessedMap<LineString>)mapper.readValue(mapStr, ProcessedMap.class);
+    }
+
+    private us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm
+    getDynamicLaneActivationMetricsAlgorithm() {
+        var commonParameters = new us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters();
+        commonParameters.setInterval(30);
+        commonParameters.setIntervalUnits(java.time.temporal.ChronoUnit.SECONDS);
+        commonParameters.setGracePeriodMs(0);
+        commonParameters.setCheckInterval(10);
+        commonParameters.setCheckIntervalUnits(java.time.temporal.ChronoUnit.SECONDS);
+        commonParameters.setRetentionTime(1);
+        commonParameters.setRetentionTimeUnits(java.time.temporal.ChronoUnit.MINUTES);
+
+        var metricsParameters = new us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters();
+        metricsParameters.setDebug(debug);
+        metricsParameters.setAlgorithm("defaultDynamicLaneActivationMetricsAlgorithm");
+        metricsParameters.setOutputMetricTopic(dynamicLaneActivationMetricsTopicName);
+
+        var metricsTopology = new DynamicLaneActivationMetricsTopology();
+        metricsTopology.setCommonParameters(commonParameters);
+        metricsTopology.setParameters(metricsParameters);
+        return metricsTopology;
     }
 }

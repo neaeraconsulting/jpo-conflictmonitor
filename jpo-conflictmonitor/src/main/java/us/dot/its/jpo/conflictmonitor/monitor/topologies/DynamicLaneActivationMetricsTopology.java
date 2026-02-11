@@ -73,7 +73,8 @@ public class DynamicLaneActivationMetricsTopology
                 // Insert ticks to keep stream time moving if we stop receiving events
                 .process(() ->
                         new DynamicLaneActivationMetricsTickProcessor(commonParameters, parameters.isDebug(),
-                                timestampStoreName))
+                                timestampStoreName),
+                        timestampStoreName)
 
                 // Group by key for aggregation
                 .groupByKey(Grouped.with(
@@ -118,19 +119,20 @@ public class DynamicLaneActivationMetricsTopology
                                     table.add(statusChanges);
                                 }
                                 RevocableEnabledStatusList statusList = statusChanges.getStatusChanges();
-                                if (!statusList.isEmpty()) {
-                                    final RevocableEnabledStatus lastStatus = statusChanges.getStatusChanges().getLast();
-                                    if (lastStatus != null) {
-                                        // Add new status if the timestamp is later than the last one and the
-                                        // time "enabled" status has changed
-                                        if (timestamp > lastStatus.timestamp() && enabled != lastStatus.enabled()) {
-                                            statusList.add(new RevocableEnabledStatus(timestamp, enabled));
-                                        }
-                                    } else {
-                                        // This is the first status, add it
-                                        statusList.add(new RevocableEnabledStatus(timestamp, enabled));
-                                    }
+                                if (statusList.isEmpty()) {
+                                    // First status for this lane in the window
+                                    statusList.add(new RevocableEnabledStatus(timestamp, enabled));
+                                    continue;
                                 }
+
+                                final RevocableEnabledStatus lastStatus = statusList.getLast();
+                                if (lastStatus != null && timestamp > lastStatus.timestamp() && enabled != lastStatus.enabled()) {
+                                    statusList.add(new RevocableEnabledStatus(timestamp, enabled));
+                                }
+                            }
+
+                            if (parameters.isDebug()) {
+                                log.debug("Updated aggregated metrics: {}", metrics);
                             }
 
                             return metrics;
@@ -176,4 +178,3 @@ public class DynamicLaneActivationMetricsTopology
 
 
 }
-

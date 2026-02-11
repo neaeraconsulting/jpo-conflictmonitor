@@ -24,7 +24,7 @@ import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
         @Type(value = PriorityRequestMetrics.class,
                 name = "PriorityRequest"),
         @Type(value = DynamicLaneActivationMetrics.class,
-            name = "DynamicLaneActivationMetric")
+            name = "DynamicLaneActivation")
 })
 @Data
 @Generated

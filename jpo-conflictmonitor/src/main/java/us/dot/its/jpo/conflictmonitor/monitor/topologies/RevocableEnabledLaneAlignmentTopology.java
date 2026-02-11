@@ -102,7 +102,17 @@ public class RevocableEnabledLaneAlignmentTopology
                 .mapValues(RevocableLaneStatus::new);
 
         // Plug in Dynamic Lane Activate Metrics algorithm
-        dynamicLaneActivationMetricsAlgorithm.buildTopology(builder, revocableLaneStatusStream);
+        var dynamicLaneActivationMetricsStream =
+                dynamicLaneActivationMetricsAlgorithm.buildTopology(builder, revocableLaneStatusStream);
+
+        dynamicLaneActivationMetricsStream.to(
+                dynamicLaneActivationMetricsAlgorithm.getParameters().getOutputMetricTopic(),
+                Produced.with(
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                        JsonSerdes.DynamicLaneActivationMetrics(),
+                        new IntersectionIdPartitioner<>()
+                )
+        );
 
         // Filter candidates to find interesting events, where something doesn't match and should be reported
         KStream<RsuIntersectionKey, RevocableEnabledLaneAlignmentEvent> eventStream = candidateEventStream

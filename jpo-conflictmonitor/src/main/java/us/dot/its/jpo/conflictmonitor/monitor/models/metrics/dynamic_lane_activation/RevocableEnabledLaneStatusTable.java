@@ -51,7 +51,6 @@ public class RevocableEnabledLaneStatusTable extends AbstractList<RevocableEnabl
     @Override
     public RevocableEnabledLaneStatusChanges remove(int index) {
         RevocableEnabledLaneStatusChanges previous = list.remove(index);
-        list.remove(index);
         if (previous != null) {
             int laneId = previous.getLaneID();
             laneIdMap.remove(laneId);

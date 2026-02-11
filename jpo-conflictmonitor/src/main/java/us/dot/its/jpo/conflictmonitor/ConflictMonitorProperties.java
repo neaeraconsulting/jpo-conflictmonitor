@@ -73,6 +73,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
@@ -237,6 +239,9 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private PriorityRequestMetricsAlgorithmFactory priorityRequestMetricsAlgorithmFactory;
    private String priorityRequestMetricsAlgorithm;
    private PriorityRequestMetricsParameters priorityRequestMetricsParameters;
+   private DynamicLaneActivationMetricsAlgorithmFactory dynamicLaneActivationMetricsAlgorithmFactory;
+   private String dynamicLaneActivationMetricsAlgorithm;
+   private DynamicLaneActivationMetricsParameters dynamicLaneActivationMetricsParameters;
 
    private NotificationAlgorithmFactory notificationAlgorithmFactory;
    private String notificationAlgorithm;
@@ -462,6 +467,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
    @Autowired
+   public void setDynamicLaneActivationMetricsParameters(DynamicLaneActivationMetricsParameters dynamicLaneActivationMetricsParameters) {
+      this.dynamicLaneActivationMetricsParameters = dynamicLaneActivationMetricsParameters;
+      this.dynamicLaneActivationMetricsAlgorithm = dynamicLaneActivationMetricsParameters.getAlgorithm();
+   }
+
+   @Autowired
    public void setCommonMetricsParameters(CommonMetricsParameters commonMetricsParameters) {
       this.commonMetricsParameters = commonMetricsParameters;
    }
@@ -481,6 +492,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Autowired
    public void setPriorityRequestMetricsAlgorithmFactory(PriorityRequestMetricsAlgorithmFactory factory) {
       this.priorityRequestMetricsAlgorithmFactory = factory;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setDynamicLaneActivationMetricsAlgorithmFactory(DynamicLaneActivationMetricsAlgorithmFactory factory) {
+      this.dynamicLaneActivationMetricsAlgorithmFactory = factory;
    }
 
 
