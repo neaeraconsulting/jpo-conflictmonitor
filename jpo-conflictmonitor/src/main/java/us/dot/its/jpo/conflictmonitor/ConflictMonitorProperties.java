@@ -986,8 +986,16 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       // kafkaTopicsDisabledSet.addAll(asList);
    }
 
+   // Streams configurations
+   private int streamsConfigReplicationFactor;
+   private String streamsConfigAcks;
+   private int streamsConfigNumStreamThreads;
+   private long streamsConfigCacheMaxBytesBuffering;
+   private int streamsConfigCommitIntervalMs;
+
    public Properties createStreamProperties(String name) {
       Properties streamProps = new Properties();
+
       streamProps.put(StreamsConfig.APPLICATION_ID_CONFIG, name);
 
       streamProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokers);
@@ -1001,19 +1009,19 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       streamProps.put(StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG,
             AlwaysContinueProductionExceptionHandler.class.getName());
 
-      streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 2);
+      streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
 
-      // streamProps.put(StreamsConfig.producerPrefix("acks"), "all");
-      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
+      streamProps.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, streamsConfigReplicationFactor);
+      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), streamsConfigAcks);
 
       // Reduce cache buffering per topology to 1MB
-      streamProps.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 1 * 1024 * 1024L);
+      streamProps.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, streamsConfigCacheMaxBytesBuffering);
       // Optionally, to disable caching:
       //streamProps.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
 
       // Decrease default commit interval. Default for 'at least once' mode of 30000ms
       // is too slow.
-      streamProps.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+      streamProps.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, streamsConfigCommitIntervalMs);
 
       // All the keys are Strings in this app
       streamProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
@@ -1026,10 +1034,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       }
       // streamProps.put(StreamsConfig.STATE_DIR_CONFIG, "/var/lib/")\
 
-      // Increase max.block.ms and delivery.timeout.ms for streams
-      final int FIVE_MINUTES_MS = 5 * 60 * 1000;
-      streamProps.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, FIVE_MINUTES_MS);
-      streamProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, FIVE_MINUTES_MS);
+      // don't think these are necessary
+      // TODO parameterize them if they are necessary
+//      // Increase max.block.ms and delivery.timeout.ms for streams
+//      final int FIVE_MINUTES_MS = 5 * 60 * 1000;
+//      streamProps.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, FIVE_MINUTES_MS);
+//      streamProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, FIVE_MINUTES_MS);
 
       // Disable batching
       // streamProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 0);
