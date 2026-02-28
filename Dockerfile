@@ -38,6 +38,7 @@ ENV LD_PRELOAD="/usr/lib64/libjemalloc.so"
 # Entrypoint for prod: JMX not exposed.
 # GC settings similar to Kafka recommendations, see: https://kafka.apache.org/documentation.html#java
 # Set max Java heap usage as percentage of total available memory.
+# Always exit on out-of-memory-error so the app can restart
 ENTRYPOINT ["java", \
 	"-Dlogback.configurationFile=/home/logback.xml", \
     "-XX:+UseG1GC", \
@@ -49,6 +50,7 @@ ENTRYPOINT ["java", \
     "-XX:+ExplicitGCInvokesConcurrent", \
     "-XX:InitialRAMPercentage=5.0", \
     "-XX:MaxRAMPercentage=50.0", \
+    "-XX:+ExitOnOutOfMemoryError", \
 	"-jar", \
 	"/home/jpo-conflictmonitor.jar"]
 

@@ -39,14 +39,22 @@ public class StreamsExceptionHandler implements StreamsUncaughtExceptionHandler 
     @Override
     public StreamThreadExceptionResponse handle(Throwable exception) {
         try {
+            logger.error(String.format("Uncaught exception in stream topology %s", topology), exception);
+        } catch (Throwable e) {
+            // Ignore error logging exception, don't try to log it again...
+        } finally {
+            // Immediate exit on out-of-memory
+            if (exception instanceof OutOfMemoryError) {
+                System.exit(1);
+            }
+        }
+
+        try {
             var event = new KafkaStreamsUnhandledExceptionEvent();
             event.setAppId(SystemUtils.getHostName());
             event.setTopology(topology);
             event.setException(exception);
-            
-            
-            logger.error(String.format("Uncaught exception in stream topology %s", topology), exception);
-            
+
             var notification = new KafkaStreamsAnomalyNotification();
             notification.setExceptionEvent(event);
             notification.setNotificationHeading(String.format("Streams error on %s", topology));
@@ -54,7 +62,7 @@ public class StreamsExceptionHandler implements StreamsUncaughtExceptionHandler 
             // Unique id as key, send to compacted topic
             kafkaTemplate.send(notificationTopic, notification.getUniqueId(), notification.toString());
             
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             logger.error("Exception sending kafka streams error event", ex);
         }
 
