@@ -1025,7 +1025,7 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       // KIP:
       // https://cwiki.apache.org/confluence/display/KAFKA/KIP-1033%3A+Add+Kafka+Streams+exception+handler+for+exceptions+occurring+during+processing
       streamProps.put(StreamsConfig.PROCESSING_EXCEPTION_HANDLER_CLASS_CONFIG,
-              LogAndContinueExceptionHandler.class.getName());
+              LogAndContinueProcessingExceptionHandler.class.getName());
 
       // All the keys are Strings in this app
       streamProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
