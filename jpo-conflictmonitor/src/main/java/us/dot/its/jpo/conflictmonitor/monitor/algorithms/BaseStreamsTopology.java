@@ -3,6 +3,7 @@ package us.dot.its.jpo.conflictmonitor.monitor.algorithms;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
 import org.slf4j.Logger;
@@ -69,7 +70,6 @@ public abstract class BaseStreamsTopology<TParams> {
      * @return {@link Topology} for this streams topology
      */
     public abstract Topology buildTopology();
-
 
     /**
      * Overridable method for testing

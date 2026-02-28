@@ -163,7 +163,7 @@ public class ConnectionOfTravelAssessmentTopology
                     JsonSerdes.ConnectionOfTravelNotification()));
 
                     
-        return builder.build();
+        return builder.build(streamsProperties);
     }    
 
 

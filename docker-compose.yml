@@ -95,6 +95,9 @@ services:
       streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS}
       streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING}
       streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS}
+      streams-config-linger-ms: ${CM_STREAMS_CONFIG_LINGER_MS}
+      streams-config-batch-size: ${CM_STREAMS_CONFIG_BATCH_SIZE}
+      streams-config-topology-optimization: ${CM_STREAMS_CONFIG_TOPOLOGY_OPTIMIZATION}
     healthcheck:
       test: ["CMD", "java", "-version"]
       interval: 10s

@@ -180,7 +180,7 @@ public class StopLinePassageAssessmentTopology
             Produced.with(Serdes.String(),
                     JsonSerdes.StopLinePassageNotification()));
 
-        return builder.build();
+        return builder.build(streamsProperties);
     }    
 
 

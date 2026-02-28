@@ -25,6 +25,14 @@ streams-config-acks: ${CM_STREAMS_CONFIG_ACKS:1}
 streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:10}
 streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING:1048576}
 streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:100}
+streams-config-compression-type: ${CM_STREAMS_CONFIG_COMPRESSION_TYPE:zstd}
+# Amount of time to wait to try and increase batching
+# Default 5 ms
+streams-config-linger-ms: ${CM_STREAMS_CONFIG_LINGER_MS:50}
+# Producer batch size.  Default 16384
+streams-config-batch-size: ${CM_STREAMS_CONFIG_BATCH_SIZE:16384}
+streams-config-topology-optimization: ${CM_STREAMS_CONFIG_TOPOLOGY_OPTIMIZATION:all}
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -54,8 +62,7 @@ kafkaTopicCmConnectionOfTravelEvent: topic.CmConnectionOfTravelEvent
 kafkaTopicCmStopLinePassageEvent: topic.CmStopLinePassageEvent
 kafakTopicCmVehicleStopEvent: topic.CmStopLineStopEvent
 
-# Amount of time to wait to try and increase batching
-kafka.linger_ms: 50
+
 
 # Custom kafka properties
 # TODO Remove, use jpo-utils instead
