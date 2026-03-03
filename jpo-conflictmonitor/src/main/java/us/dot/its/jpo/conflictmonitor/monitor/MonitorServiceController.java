@@ -352,14 +352,16 @@ public class MonitorServiceController {
             Runtime.getRuntime().addShutdownHook(new Thread(connectionofTravelAssessmentAlgo::stop));
             connectionofTravelAssessmentAlgo.start();
 
-            //Map Message Count Progression Topology
-            startMapMessageCountProgressionAlgorithm();
-
-            //Spat Message Count Progression Topology
-            startSpatMessageCountProgressionAlgorithm();
-            
-            //Bsm Message Count Progression Topology
-            startBsmMessageCountProgressionAlgorithm();
+            // Temporarily disable message count progression topologies
+            // TODO: fix memory leak in these
+//            //Map Message Count Progression Topology
+//            startMapMessageCountProgressionAlgorithm();
+//
+//            //Spat Message Count Progression Topology
+//            startSpatMessageCountProgressionAlgorithm();
+//
+//            //Bsm Message Count Progression Topology
+//            startBsmMessageCountProgressionAlgorithm();
 
             // Priority/Preemption Request Topology
             startPriorityPreemptionRequestTopology();

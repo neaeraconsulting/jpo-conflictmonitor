@@ -116,16 +116,4 @@ services:
         condition: service_healthy
         required: false
 
-  conflictmonitor-kafka-cli:
-    image: bitnamilegacy/kafka:3.8.0
-    hostname: kafka-reset
-    restart: on-failure:2
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 256M
-    entrypoint:
-      - "tail"
-      - "-f"
-      - "/dev/null"
+
