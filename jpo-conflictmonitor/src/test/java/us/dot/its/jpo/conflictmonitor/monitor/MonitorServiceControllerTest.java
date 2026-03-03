@@ -121,7 +121,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 /**
  * Unit test for {@link MonitorServiceController}
  */
-@Ignore("ignore until message count progression fixed")
 @RunWith(MockitoJUnitRunner.class)
 public class MonitorServiceControllerTest {
 
