@@ -146,15 +146,20 @@ public class EventAggregationProcessor<TKey, TEvent extends Event, TAggEvent ext
                         .withAscendingTimestamps();
         QueryResult<VersionedRecordIterator<TAggEvent>> queryResult =
                 eventStore.query(versionedQuery, PositionBound.unbounded(), new QueryConfig(false));
-        VersionedRecordIterator<TAggEvent> resultIterator = queryResult.getResult();
         var records = new ArrayList<VersionedRecord<TAggEvent>>();
-        while (resultIterator.hasNext()) {
-            VersionedRecord<TAggEvent> record = resultIterator.next();
-            records.add(record);
+        if (queryResult.isSuccess()) {
+            try (VersionedRecordIterator<TAggEvent> resultIterator = queryResult.getResult()) {
+                while (resultIterator.hasNext()) {
+                    VersionedRecord<TAggEvent> record = resultIterator.next();
+                    records.add(record);
+                }
+                if (params.isDebug()) log.debug("queryEventStore: Found {} records, timestamps: {}",
+                        records.size(),
+                        records.stream().map(VersionedRecord::timestamp).sorted().toArray());
+            }
+        } else {
+            log.error("EventAggregationProcessor: versioned store query failed");
         }
-        if (params.isDebug()) log.debug("queryEventStore: Found {} records, timestamps: {}",
-                records.size(),
-                records.stream().map(VersionedRecord::timestamp).sorted().toArray());
         return records;
     }
 

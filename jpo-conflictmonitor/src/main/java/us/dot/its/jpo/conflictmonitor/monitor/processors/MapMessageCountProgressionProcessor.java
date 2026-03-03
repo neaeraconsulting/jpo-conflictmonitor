@@ -80,45 +80,46 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                 new QueryConfig(false));
 
         if (result.isSuccess()) {
-            VersionedRecordIterator<ProcessedMap<LineString>> iterator = result.getResult();
-            ProcessedMap<LineString> previousState = null;
-            int recordCount = 0;
+            try (VersionedRecordIterator<ProcessedMap<LineString>> iterator = result.getResult()) {
+                ProcessedMap<LineString> previousState = null;
+                int recordCount = 0;
 
-            while (iterator.hasNext()) {
-                final VersionedRecord<ProcessedMap<LineString>> state = iterator.next();
-                final ProcessedMap<LineString> thisState = state.value();
-                recordCount++;
+                while (iterator.hasNext()) {
+                    final VersionedRecord<ProcessedMap<LineString>> state = iterator.next();
+                    final ProcessedMap<LineString> thisState = state.value();
+                    recordCount++;
 
-                // Skip records older than the last processed state
-                if (lastProcessedMap != null && thisState.getProperties().getOdeReceivedAt().isBefore(lastProcessedMap.getProperties().getOdeReceivedAt())) {
-                    continue;
-                }
+                    // Skip records older than the last processed state
+                    if (lastProcessedMap != null && thisState.getProperties().getOdeReceivedAt().isBefore(lastProcessedMap.getProperties().getOdeReceivedAt())) {
+                        continue;
+                    }
 
-                if (previousState != null) {
-                    long timeDifference = thisState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli() - previousState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
+                    if (previousState != null) {
+                        long timeDifference = thisState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli() - previousState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
 
-                    if (timeDifference < parameters.getBufferTimeMs()) {
-                        int previousHash = calculateHash(previousState);
-                        int currentHash = calculateHash(thisState);
-                        int previousRevision = previousState.getProperties().getRevision();
-                        int currentRevision = thisState.getProperties().getRevision();
-                        int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
-                        int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
-                        boolean revisionChanged = previousHash != currentHash && (previousRevision + 1) % 128 != currentRevision;
-                        boolean msgIssueRevisionChanged = previousHash != currentHash && (previousMsgIssueRevision + 1) % 128 != currentMsgIssueRevision;
+                        if (timeDifference < parameters.getBufferTimeMs()) {
+                            int previousHash = calculateHash(previousState);
+                            int currentHash = calculateHash(thisState);
+                            int previousRevision = previousState.getProperties().getRevision();
+                            int currentRevision = thisState.getProperties().getRevision();
+                            int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
+                            int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
+                            boolean revisionChanged = previousHash != currentHash && (previousRevision + 1) % 128 != currentRevision;
+                            boolean msgIssueRevisionChanged = previousHash != currentHash && (previousMsgIssueRevision + 1) % 128 != currentMsgIssueRevision;
 
-                        if (previousHash == currentHash && previousRevision == currentRevision && previousMsgIssueRevision == currentMsgIssueRevision) {
-                        } else if (revisionChanged || msgIssueRevisionChanged) {
-                            MapMessageCountProgressionEvent event = createEvent(previousState, thisState, revisionChanged, msgIssueRevisionChanged);
-                            context().forward(new Record<>(key, event, state.timestamp()));
+                            if (previousHash == currentHash && previousRevision == currentRevision && previousMsgIssueRevision == currentMsgIssueRevision) {
+                            } else if (revisionChanged || msgIssueRevisionChanged) {
+                                MapMessageCountProgressionEvent event = createEvent(previousState, thisState, revisionChanged, msgIssueRevisionChanged);
+                                context().forward(new Record<>(key, event, state.timestamp()));
+                            }
                         }
                     }
+                    previousState = thisState;
                 }
-                previousState = thisState;
-            }
-            if (recordCount > 1) {
-                // Update last processed state
-                lastProcessedStateStore.put(key, previousState);
+                if (recordCount > 1) {
+                    // Update last processed state
+                    lastProcessedStateStore.put(key, previousState);
+                }
             }
         }
     }
