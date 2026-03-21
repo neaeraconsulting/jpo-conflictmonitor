@@ -57,7 +57,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          cpus: 16
+          memory: 8G
     depends_on:
       kafka:
         condition: service_healthy
