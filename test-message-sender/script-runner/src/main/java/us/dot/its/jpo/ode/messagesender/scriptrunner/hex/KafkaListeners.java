@@ -185,6 +185,12 @@ public class KafkaListeners {
     final String MINUTE_OF_YEAR = "@MINUTE_OF_YEAR@";
     final String MILLI_OF_MINUTE = "@MILLI_OF_MINUTE@";
     final String TEMP_ID = "@TEMP_ID@";
+    final String YEAR = "@YEAR@";
+    final String MONTH = "@MONTH@";
+    final String DAY = "@DAY@";
+    final String HOUR = "@HOUR@";
+    final String MINUTE = "@MINUTE@";
+    final String OFFSET = "@OFFSET@";
 
     String substitutePlaceholders(DSRCmsgID msgId, String message) {
         var mapper = DateJsonMapper.getInstance();
@@ -242,6 +248,15 @@ public class KafkaListeners {
     }
 
     private void substituteRtcmPlaceholders(JsonNode node) {
-        // TODO
+        JsonNode status = node.at("/payload/data/value/RTCMcorrections/anchorPoint/utcTime");
+        if (status instanceof ObjectNode anchorPt) {
+            anchorPt.put("year", YEAR);
+            anchorPt.put("month", MONTH);
+            anchorPt.put("day", DAY);
+            anchorPt.put("hour", HOUR);
+            anchorPt.put("minute", MINUTE);
+            anchorPt.put("second", MILLI_OF_MINUTE);
+            anchorPt.put("offset", OFFSET);
+        }
     }
 }
