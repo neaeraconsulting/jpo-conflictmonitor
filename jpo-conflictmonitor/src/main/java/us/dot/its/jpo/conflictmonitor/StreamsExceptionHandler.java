@@ -4,7 +4,6 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 
 
@@ -29,7 +28,6 @@ public class StreamsExceptionHandler implements StreamsUncaughtExceptionHandler 
     final String topology;
     final String notificationTopic;
     
-    @Autowired
     public StreamsExceptionHandler(KafkaTemplate<String, String> kafkaTemplate, String topology, String notificationTopic) {
             this.kafkaTemplate = kafkaTemplate;
             this.topology = topology;
