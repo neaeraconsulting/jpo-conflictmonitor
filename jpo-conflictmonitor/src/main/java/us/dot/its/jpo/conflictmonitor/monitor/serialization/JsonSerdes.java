@@ -8,6 +8,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.event_state
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationKey;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
@@ -29,11 +30,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfigKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.MapBroadcastRateEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEventAggregation;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.MapMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.BsmMessageCountProgressionEvent;
@@ -55,6 +54,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.Rsu
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.deserialization.GenericJsonDeserializer;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.RsuStationIdRtcmTypeKey;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
@@ -611,5 +611,33 @@ public class JsonSerdes {
 
     public static Serde<IntersectionVehicleRequestStatus> IntersectionVehicleRequestStatus() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestStatus.class));
+    }
+
+    public static Serde<RtcmMinimumDataEvent> RtcmMinimumDataEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEvent.class));
+    }
+
+    public static Serde<RtcmBroadcastRateEvent> RtcmBroadcastRateEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmBroadcastRateEvent.class));
+    }
+
+    public static Serde<RtcmMinimumDataEventAggregation> RtcmMinimumDataEventAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEventAggregation.class));
+    }
+
+    public static Serde<RsuStationIdRtcmTypeKey> RsuStationIdRtcmTypeKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RsuStationIdRtcmTypeKey.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionEvent> RtcmMessageCountProgressionEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEvent.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionAggregationKey> RtcmMessageCountProgressionAggregationKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionAggregationKey.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionEventAggregation> RtcmMessageCountProgressionEventAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEventAggregation.class));
     }
 }

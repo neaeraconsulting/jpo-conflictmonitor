@@ -1,0 +1,230 @@
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      -111.50943489999999,
+      40.660336
+    ]
+  },
+  "properties": {
+    "schemaVersion": 9,
+    "messageType": "RTCM",
+    "odeReceivedAt": "2025-07-28T19:59:00.138Z",
+    "originIp": "172.18.0.1",
+    "asn1": "001C80F725244028D2D4B29BC25EC0C12C818D300133ED980037BDD1A80C6358121DD4E499FFC6712E91F0D10F4C00F90266005105115939553131053951153939048081393D391400003551492535093114810531313D64513985D880D4B8D0D080BC8109BDBDD080D4B8D0D0023197E488D300833EC980037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC671286EECB",
+    "msgCnt": 82,
+    "rev": "rtcmRev3",
+    "longitude": -111.50943489999999,
+    "latitude": 40.660336,
+    "elevation": 2063.0,
+    "messageTypes": [
+      1005,
+      1033,
+      1004
+    ],
+    "stationId": 2432,
+    "messages": [
+      {
+        "hex": "D300133ED980037BDD1A80C6358121DD4E499FFC6712E91F0D",
+        "decodedMessage": {
+          "class": "RTCM3",
+          "device": "stdin",
+          "type": 1005,
+          "length": 19,
+          "station_id": 2432,
+          "system": [
+            "GPS",
+            "GLONASS"
+          ],
+          "refstation": true,
+          "sro": false,
+          "x": -1776533.4842,
+          "y": -4507816.005,
+          "z": 4133882.4466
+        }
+      },
+      {
+        "hex": "D3003E409980144144564E554C4C414E54454E4E4120204E4F4E4500000D5452494D424C4520414C4C4F59144E617620352E3434202F20426F6F7420352E3434008C65F9",
+        "decodedMessage": {
+          "class": "RTCM3",
+          "device": "stdin",
+          "type": 1033,
+          "length": 62,
+          "station_id": 2432,
+          "desc": "ADVNULLANTENNA  NONE",
+          "setup_id": 0,
+          "serial": "",
+          "receiver": "TRIMBLE ALLOY",
+          "firmware": "Nav 5.44 / Bo"
+        }
+      },
+      {
+        "hex": "D300833EC980037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC6712037BDD1A80C6358121DD4E499FFC671286EECB",
+        "decodedMessage": {
+          "class": "RTCM3",
+          "device": "stdin",
+          "type": 1004,
+          "length": 131,
+          "station_id": 2432,
+          "tow": 14612294,
+          "sync": "true",
+          "smoothing": "false",
+          "interval": "0",
+          "satellites": [
+            {
+              "ident": 49,
+              "L1": {
+                "ind": 1,
+                "prange": 35064.64,
+                "delta": -35.5270,
+                "lockt": 38,
+                "amb": 127,
+                "CNR": 60.25
+              },
+              "L2": {
+                "ind": 2,
+                "prange": 144.80,
+                "delta": 28.5395,
+                "lockt": 35,
+                "CNR": 20.00
+              }
+            },
+            {
+              "ident": 6,
+              "L1": {
+                "ind": 0,
+                "prange": 130212.20,
+                "delta": 61.0950,
+                "lockt": 36,
+                "amb": 207,
+                "CNR": 63.50
+              },
+              "L2": {
+                "ind": 0,
+                "prange": 263.86,
+                "delta": 3.5670,
+                "lockt": 244,
+                "CNR": 26.50
+              }
+            },
+            {
+              "ident": 0,
+              "L1": {
+                "ind": 1,
+                "prange": 184048.68,
+                "delta": 138.7085,
+                "lockt": 228,
+                "amb": 153,
+                "CNR": 63.75
+              },
+              "L2": {
+                "ind": 3,
+                "prange": 32.98,
+                "delta": 65.9815,
+                "lockt": 238,
+                "CNR": 35.25
+              }
+            },
+            {
+              "ident": 16,
+              "L1": {
+                "ind": 0,
+                "prange": 64949.12,
+                "delta": 148.4105,
+                "lockt": 28,
+                "amb": 147,
+                "CNR": 15.75
+              },
+              "L2": {
+                "ind": 3,
+                "prange": 290.84,
+                "delta": 73.7835,
+                "lockt": 61,
+                "CNR": 52.25
+              }
+            },
+            {
+              "ident": 42,
+              "L1": {
+                "ind": 0,
+                "prange": 8118.64,
+                "delta": 18.5510,
+                "lockt": 211,
+                "amb": 146,
+                "CNR": 25.75
+              },
+              "L2": {
+                "ind": 3,
+                "prange": 323.06,
+                "delta": -121.8495,
+                "lockt": 247,
+                "CNR": 46.50
+              }
+            },
+            {
+              "ident": 13,
+              "L1": {
+                "ind": 0,
+                "prange": 168786.98,
+                "delta": -259.8255,
+                "lockt": 234,
+                "amb": 114,
+                "CNR": 19.00
+              },
+              "L2": {
+                "ind": 3,
+                "prange": 327.10,
+                "delta": 115.8405,
+                "lockt": 222,
+                "CNR": 61.75
+              }
+            },
+            {
+              "ident": 17,
+              "L1": {
+                "ind": 1,
+                "prange": 104984.44,
+                "delta": -163.5505,
+                "lockt": 221,
+                "amb": 78,
+                "CNR": 18.25
+              },
+              "L2": {
+                "ind": 2,
+                "prange": 163.76,
+                "delta": 211.0880,
+                "lockt": 27,
+                "CNR": 55.50
+              }
+            },
+            {
+              "ident": 58,
+              "L1": {
+                "ind": 0,
+                "prange": 138952.16,
+                "delta": -85.9800,
+                "lockt": 59,
+                "amb": 169,
+                "CNR": 50.25
+              },
+              "L2": {
+                "ind": 0,
+                "prange": 266.22,
+                "delta": -235.7575,
+                "lockt": 6,
+                "CNR": 59.50
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "validationMessages": [
+      {
+        "message": "CTI-4501 conformance issue: anchorPoint (DF_FullPositionVector) 'utcTime' field: DDateTime is missing."
+      }
+    ],
+    "cti4501Conformant": false
+  }
+}
