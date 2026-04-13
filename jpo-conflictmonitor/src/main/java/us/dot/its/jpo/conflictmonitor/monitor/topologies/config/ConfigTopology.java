@@ -562,7 +562,7 @@ public class ConfigTopology
                 .withValueSerde(IntersectionConfig())
         );
 
-        return builder.build();
+        return builder.build(streamsProperties);
         
 
     }

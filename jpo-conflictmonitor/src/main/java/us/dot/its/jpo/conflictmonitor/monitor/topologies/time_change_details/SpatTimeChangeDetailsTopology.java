@@ -109,7 +109,7 @@ public class SpatTimeChangeDetailsTopology
             buildNotificationTopology(timeChangeEventStream);
         }
 
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
     // Notifications of non-aggregated events

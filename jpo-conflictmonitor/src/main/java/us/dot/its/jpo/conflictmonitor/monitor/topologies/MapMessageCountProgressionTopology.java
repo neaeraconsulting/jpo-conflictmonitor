@@ -99,7 +99,7 @@ public class MapMessageCountProgressionTopology
                             us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.MapMessageCountProgressionEvent(),
                             new IntersectionIdPartitioner<>()));
         }
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
     @Override

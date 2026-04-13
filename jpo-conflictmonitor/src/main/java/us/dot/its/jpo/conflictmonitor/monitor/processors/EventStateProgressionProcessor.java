@@ -86,29 +86,30 @@ public class EventStateProgressionProcessor
             if (result.isSuccess()) {
 
                 // Identify transitions, and forward transition messages
-                VersionedRecordIterator<SpatMovementState> iterator = result.getResult();
-                SpatMovementState previousState = null;
+                try (VersionedRecordIterator<SpatMovementState> iterator = result.getResult()) {
+                    SpatMovementState previousState = null;
 
-                while (iterator.hasNext()) {
-                    final VersionedRecord<SpatMovementState> state = iterator.next();
-                    final SpatMovementState thisState = state.value();
-                    if (previousState != null && previousState.getPhaseState() != thisState.getPhaseState()) {
+                    while (iterator.hasNext()) {
+                        final VersionedRecord<SpatMovementState> state = iterator.next();
+                        final SpatMovementState thisState = state.value();
+                        if (previousState != null && previousState.getPhaseState() != thisState.getPhaseState()) {
 
-                        if (parameters.isDebug()) {
-                            log.info("transition detected at timestamp {} -> {}, signal group {}, {} -> {}",
-                                    previousState.getUtcTimeStamp(),state.timestamp(),
-                                    record.key().getSignalGroup(), previousState.getPhaseState(), thisState.getPhaseState());
+                            if (parameters.isDebug()) {
+                                log.info("transition detected at timestamp {} -> {}, signal group {}, {} -> {}",
+                                        previousState.getUtcTimeStamp(), state.timestamp(),
+                                        record.key().getSignalGroup(), previousState.getPhaseState(), thisState.getPhaseState());
+                            }
+
+                            latestTransitionStore.put(record.key(), record.timestamp());
+
+                            // Transition detected,
+                            context().forward(record
+                                    .withTimestamp(state.timestamp())
+                                    .withValue(new SpatMovementStateTransition(previousState, thisState)));
+
                         }
-
-                        latestTransitionStore.put(record.key(), record.timestamp());
-
-                        // Transition detected,
-                        context().forward(record
-                                .withTimestamp(state.timestamp())
-                                .withValue(new SpatMovementStateTransition(previousState, thisState)));
-
+                        previousState = thisState;
                     }
-                    previousState = thisState;
                 }
             } else {
                 log.error("Failed to query state store: {}", result.getFailureMessage());

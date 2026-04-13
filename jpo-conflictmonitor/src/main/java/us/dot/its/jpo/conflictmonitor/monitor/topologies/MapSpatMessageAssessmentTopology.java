@@ -430,7 +430,7 @@ public class MapSpatMessageAssessmentTopology
             signalStateConflictEventStream.print(Printed.toSysOut());
         }
 
-        return builder.build();
+        return builder.build(streamsProperties);
 
     }
 
