@@ -12,6 +12,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        MAVEN_GITHUB_TOKEN_NAME: ${MAVEN_GITHUB_TOKEN_NAME:?error}
         MAVEN_GITHUB_TOKEN: ${MAVEN_GITHUB_TOKEN:?error}
         MAVEN_GITHUB_ORG: ${MAVEN_GITHUB_ORG:?error}
     image: jpo-conflictmonitor:latest
@@ -23,7 +24,6 @@ services:
     environment:
       DOCKER_HOST_IP: ${DOCKER_HOST_IP:?error}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:?error}
-      CONNECT_URL: ${CONNECT_URL:?error}
       spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:?error}
       ROCKSDB_TOTAL_OFF_HEAP_MEMORY: ${ROCKSDB_TOTAL_OFF_HEAP_MEMORY:?error}
       ROCKSDB_INDEX_FILTER_BLOCK_RATIO: ${ROCKSDB_INDEX_FILTER_BLOCK_RATIO:?error}
@@ -70,7 +70,6 @@ services:
     environment:
       DOCKER_HOST_IP: ${DOCKER_HOST_IP:?error}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:?error}
-      CONNECT_URL: ${CONNECT_URL:?error}
       spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:?error}
       ROCKSDB_TOTAL_OFF_HEAP_MEMORY: ${ROCKSDB_TOTAL_OFF_HEAP_MEMORY:?error}
       ROCKSDB_INDEX_FILTER_BLOCK_RATIO: ${ROCKSDB_INDEX_FILTER_BLOCK_RATIO:?error}

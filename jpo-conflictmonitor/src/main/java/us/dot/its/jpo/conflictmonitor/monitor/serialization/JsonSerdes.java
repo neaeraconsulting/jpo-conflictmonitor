@@ -8,6 +8,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.event_state
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationKey;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
@@ -30,24 +31,36 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfigKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.MapBroadcastRateEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.RtcmMinimumDataEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.RtcmMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.MapMessageCountProgressionEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.BsmMessageCountProgressionEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.EventStateProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.SpatTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapBoundingBox;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleRequestStatus;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
+import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimeChangeDetailAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.RsuIntersectionSignalGroupKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.deserialization.GenericJsonDeserializer;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.RsuStationIdRtcmTypeKey;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
@@ -581,5 +594,70 @@ public class JsonSerdes {
 
     public static Serde<RevocableEnabledLaneAlignmentNotificationAggregation> RevocableEnabledLaneAlignmentNotificationAggregation() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableEnabledLaneAlignmentNotificationAggregation.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestKey> IntersectionVehicleRequestKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestKey.class));
+    }
+
+
+    public static Serde<SrmRequest> SrmRequest() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SrmRequest.class));
+    }
+
+    public static Serde<SsmStatus> SsmStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SsmStatus.class));
+    }
+
+    public static Serde<JoinedRequestStatus> JoinedRequestStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(JoinedRequestStatus.class));
+    }
+
+    public static Serde<PriorityPreemptionRequestEvent>  PriorityPreemptionRequestEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(PriorityPreemptionRequestEvent.class));
+    }
+
+    public static Serde<PriorityRequestMetrics> PriorityRequestMetrics() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(PriorityRequestMetrics.class));
+    }
+
+    public static Serde<IntersectionVehicleTypeKey> IntersectionVehicleTypeKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleTypeKey.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestSequenceKey> IntersectionVehicleRequestSequenceKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestSequenceKey.class));
+    }
+
+    public static Serde<IntersectionVehicleRequestStatus> IntersectionVehicleRequestStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(IntersectionVehicleRequestStatus.class));
+    }
+
+    public static Serde<RtcmMinimumDataEvent> RtcmMinimumDataEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEvent.class));
+    }
+
+    public static Serde<RtcmBroadcastRateEvent> RtcmBroadcastRateEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmBroadcastRateEvent.class));
+    }
+
+    public static Serde<RtcmMinimumDataEventAggregation> RtcmMinimumDataEventAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMinimumDataEventAggregation.class));
+    }
+
+    public static Serde<RsuStationIdRtcmTypeKey> RsuStationIdRtcmTypeKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RsuStationIdRtcmTypeKey.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionEvent> RtcmMessageCountProgressionEvent() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEvent.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionAggregationKey> RtcmMessageCountProgressionAggregationKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionAggregationKey.class));
+    }
+
+    public static Serde<RtcmMessageCountProgressionEventAggregation> RtcmMessageCountProgressionEventAggregation() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEventAggregation.class));
     }
 }

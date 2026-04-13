@@ -24,8 +24,8 @@ public class DiagnosticProcessor<K,V> extends ContextualProcessor<K,V,Void,Void>
     public void process(Record<K, V> record) {
         if (context().recordMetadata().isPresent()) {
             var metadata = context().recordMetadata().get();
-            logger.info("{}: topic: {}, offset: {}, key: {}, partition: {}, timestamp: {}", description,
-                    metadata.topic(), metadata.offset(), record.key(), metadata.partition(), record.timestamp());
+            logger.info("{}: topic: {}, offset: {}, key: {}, partition: {}, timestamp: {}, value: {}", description,
+                    metadata.topic(), metadata.offset(), record.key(), metadata.partition(), record.timestamp(), record.value());
         }
     }
 }

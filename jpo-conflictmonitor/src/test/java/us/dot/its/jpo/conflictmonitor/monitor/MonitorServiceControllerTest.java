@@ -23,12 +23,16 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.*;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_event.BsmEventAlgorithmFactory;
@@ -58,6 +62,10 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationStreamsAlgorithm;
@@ -65,9 +73,15 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.Notificati
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageParameters;
@@ -92,6 +106,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.Sp
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
@@ -145,6 +162,10 @@ public class MonitorServiceControllerTest {
     @Mock SpatValidationStreamsAlgorithm spatValidationAlgorithm;
     SpatValidationParameters spatValidationParameters = new SpatValidationParameters();
 
+    @Mock RtcmValidationAlgorithmFactory rtcmValidationStreamsAlgorithmFactory;
+    @Mock RtcmValidationStreamsAlgorithm rtcmValidationAlgorithm;
+    RtcmValidationParameters rtcmValidationParameters = new RtcmValidationParameters();
+
     @Mock SpatTimestampDeltaAlgorithmFactory spatTimestampDeltaAlgorithmFactory;
     @Mock SpatTimestampDeltaStreamsAlgorithm spatTimestampDeltaStreamsAlgorithm;
     SpatTimestampDeltaParameters spatTimestampDeltaParameters = new SpatTimestampDeltaParameters();
@@ -170,9 +191,23 @@ public class MonitorServiceControllerTest {
     @Mock SpatMessageCountProgressionAggregationAlgorithm spatMessageCountProgressionAggregationAlgorithm;
     @Mock BsmMessageCountProgressionAggregationAlgorithmFactory bsmMessageCountProgressionAggregationAlgorithmFactory;
     @Mock BsmMessageCountProgressionAggregationAlgorithm bsmMessageCountProgressionAggregationAlgorithm;
+    @Mock RtcmMessageCountProgressionAggregationAlgorithmFactory rtcmMessageCountProgressionAggregationAlgorithmFactory;
+    @Mock RtcmMessageCountProgressionAggregationAlgorithm rtcmMessageCountProgressionAggregationAlgorithm;
     @Mock RevocableEnabledLaneAlignmentAggregationAlgorithmFactory revocableEnabledLaneAlignmentAggregationAlgorithmFactory;
     @Mock RevocableEnabledLaneAlignmentAggregationAlgorithm revocableEnabledLaneAlignmentAggregationAlgorithm;
+    @Mock RtcmMinimumDataAggregationAlgorithmFactory rtcmMinimumDataAggregationAlgorithmFactory;
+    @Mock RtcmMinimumDataAggregationAlgorithm rtcmMinimumDataAggregationAlgorithm;
 
+    @Mock PriorityPreemptionRequestAlgorithmFactory priorityPreemptionRequestAlgorithmFactory;
+    @Mock PriorityPreemptionRequestAlgorithm priorityPreemptionRequestAlgorithm;
+    PriorityPreemptionRequestParameters priorityPreemptionRequestParameters = new PriorityPreemptionRequestParameters();
+
+    @Mock
+    PriorityRequestMetricsAlgorithmFactory priorityRequestMetricsAlgorithmFactory;
+    @Mock
+    PriorityRequestMetricsAlgorithm priorityRequestMetricsAlgorithm;
+    PriorityRequestMetricsParameters priorityRequestMetricsParameters = new PriorityRequestMetricsParameters();
+    CommonMetricsParameters commonMetricsParameters = new CommonMetricsParameters();
 
     @Mock SpatTimeChangeDetailsAlgorithmFactory spatTimeChangeDetailsAlgorithmFactory;
     @Mock SpatTimeChangeDetailsStreamsAlgorithm spatTimeChangeDetailsAlgorithm;
@@ -247,6 +282,10 @@ public class MonitorServiceControllerTest {
     @Mock BsmMessageCountProgressionAlgorithm bsmMessageCountProgressionAlgorithm;
     BsmMessageCountProgressionParameters bsmMessageCountProgressionParameters = new BsmMessageCountProgressionParameters();
 
+    @Mock RtcmMessageCountProgressionAlgorithmFactory rtcmMessageCountProgressionAlgorithmFactory;
+    @Mock RtcmMessageCountProgressionAlgorithm rtcmMessageCountProgressionAlgorithm;
+    RtcmMessageCountProgressionParameters  rtcmMessageCountProgressionParameters = new RtcmMessageCountProgressionParameters();
+
     @Mock RevocableEnabledLaneAlignmentAlgorithmFactory revocableEnabledLaneAlignmentAlgorithmFactory;
     @Mock RevocableEnabledLaneAlignmentAlgorithm revocableEnabledLaneAlignmentAlgorithm;
     RevocableEnabledLaneAlignmentParameters revocableEnabledLaneParameters = new RevocableEnabledLaneAlignmentParameters();
@@ -288,6 +327,11 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getSpatValidationAlgorithm()).thenReturn(defaultAlgo);
         when(spatValidationStreamsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(spatValidationAlgorithm);
         when(conflictMonitorProperties.getSpatValidationParameters()).thenReturn(spatValidationParameters);
+
+        when(conflictMonitorProperties.getRtcmValidationAlgorithmFactory()).thenReturn(rtcmValidationStreamsAlgorithmFactory);
+        when(conflictMonitorProperties.getRtcmValidationAlgorithm()).thenReturn(defaultAlgo);
+        when(rtcmValidationStreamsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(rtcmValidationAlgorithm);
+        when(conflictMonitorProperties.getRtcmValidationParameters()).thenReturn(rtcmValidationParameters);
 
         when(conflictMonitorProperties.getSpatTimestampDeltaAlgorithmFactory()).thenReturn(spatTimestampDeltaAlgorithmFactory);
         when(conflictMonitorProperties.getSpatTimestampDeltaAlgorithm()).thenReturn(defaultAlgo);
@@ -332,6 +376,10 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getSpatMessageCountProgressionAggregationAlgorithm()).thenReturn(defaultAlgo);
         when(spatMessageCountProgressionAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(spatMessageCountProgressionAggregationAlgorithm);
 
+        when(conflictMonitorProperties.getRtcmMessageCountProgressionAggregationAlgorithmFactory()).thenReturn(rtcmMessageCountProgressionAggregationAlgorithmFactory);
+        when(conflictMonitorProperties.getRtcmMessageCountProgressionAggregationAlgorithm()).thenReturn(defaultAlgo);
+        when(rtcmMessageCountProgressionAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(rtcmMessageCountProgressionAggregationAlgorithm);
+
         when(conflictMonitorProperties.getBsmMessageCountProgressionAggregationAlgorithmFactory()).thenReturn(bsmMessageCountProgressionAggregationAlgorithmFactory);
         when(conflictMonitorProperties.getBsmMessageCountProgressionAggregationAlgorithm()).thenReturn(defaultAlgo);
         when(bsmMessageCountProgressionAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(bsmMessageCountProgressionAggregationAlgorithm);
@@ -340,6 +388,30 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAlgorithm()).thenReturn(defaultAlgo);
         when(revocableEnabledLaneAlignmentAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(revocableEnabledLaneAlignmentAlgorithm);
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentParameters()).thenReturn(revocableEnabledLaneParameters);
+
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithmFactory);
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithm()).thenReturn(defaultAlgo);
+        when(revocableEnabledLaneAlignmentAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithm);
+
+        when(conflictMonitorProperties.getRtcmMinimumDataAggregationAlgorithmFactory()).thenReturn(rtcmMinimumDataAggregationAlgorithmFactory);
+        when(conflictMonitorProperties.getRtcmMinimumDataAggregationAlgorithm()).thenReturn(defaultAlgo);
+        when(rtcmMinimumDataAggregationAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(rtcmMinimumDataAggregationAlgorithm);
+
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAlgorithmFactory);
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAlgorithm()).thenReturn(defaultAlgo);
+        when(revocableEnabledLaneAlignmentAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(revocableEnabledLaneAlignmentAlgorithm);
+        when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentParameters()).thenReturn(revocableEnabledLaneParameters);
+
+        when(conflictMonitorProperties.getPriorityPreemptionRequestAlgorithmFactory()).thenReturn(priorityPreemptionRequestAlgorithmFactory);
+        when(conflictMonitorProperties.getPriorityPreemptionRequestAlgorithm()).thenReturn(defaultAlgo);
+        when(priorityPreemptionRequestAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(priorityPreemptionRequestAlgorithm);
+        when(conflictMonitorProperties.getPriorityPreemptionRequestParameters()).thenReturn(priorityPreemptionRequestParameters);
+
+        when(conflictMonitorProperties.getPriorityRequestMetricsAlgorithmFactory()).thenReturn(priorityRequestMetricsAlgorithmFactory);
+        when(conflictMonitorProperties.getPriorityRequestMetricsAlgorithm()).thenReturn(defaultAlgo);
+        when(conflictMonitorProperties.getPriorityRequestMetricsParameters()).thenReturn(priorityRequestMetricsParameters);
+        when(conflictMonitorProperties.getCommonMetricsParameters()).thenReturn(commonMetricsParameters);
+        when(priorityRequestMetricsAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(priorityRequestMetricsAlgorithm);
 
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory()).thenReturn(revocableEnabledLaneAlignmentAggregationAlgorithmFactory);
         when(conflictMonitorProperties.getRevocableEnabledLaneAlignmentAggregationAlgorithm()).thenReturn(defaultAlgo);
@@ -431,6 +503,11 @@ public class MonitorServiceControllerTest {
         when(bsmMessageCountProgressionAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(bsmMessageCountProgressionAlgorithm);
         when(conflictMonitorProperties.getBsmMessageCountProgressionAlgorithmParameters()).thenReturn(bsmMessageCountProgressionParameters);
 
+        when(conflictMonitorProperties.getRtcmMessageCountProgressionAlgorithmFactory()).thenReturn(rtcmMessageCountProgressionAlgorithmFactory);
+        when(conflictMonitorProperties.getRtcmMessageCountProgressionAlgorithm()).thenReturn(defaultAlgo);
+        when(rtcmMessageCountProgressionAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(rtcmMessageCountProgressionAlgorithm);
+        when(conflictMonitorProperties.getRtcmMessageCountProgressionAlgorithmParameters()).thenReturn(rtcmMessageCountProgressionParameters);
+
         when(conflictMonitorProperties.getEventAlgorithmFactory()).thenReturn(eventAlgorithmFactory);
         when(conflictMonitorProperties.getEventAlgorithm()).thenReturn(defaultAlgo);
         when(eventAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(eventAlgorithm);
@@ -451,10 +528,11 @@ public class MonitorServiceControllerTest {
         );
         assertThat(monitorServiceController, notNullValue());
 
-        // Check all algorithms were started
+        // Check algorithms were started
         verify(mapValidationAlgorithm, times(1)).start();
         verify(spatValidationAlgorithm, times(1)).start();
         verify(spatTimeChangeDetailsAlgorithm, times(1)).start();
+        verify(rtcmValidationAlgorithm, times(1)).start();
         verify(mapSpatMessageAssessmentAlgorithm, times(1)).start();
         verify(bsmEventAlgorithm, times(1)).start();
         verify(intersectionEventAlgorithm, times(1)).start();
@@ -466,6 +544,8 @@ public class MonitorServiceControllerTest {
         verify(spatMessageCountProgressionAlgorithm, times(1)).start();
         verify(spatMessageCountProgressionAlgorithm, times(1)).start();
         verify(vehicleMisbehaviorAlgorithm, times(1)).start();
+        verify(rtcmMessageCountProgressionAlgorithm, times(1)).start();
+        verify(priorityPreemptionRequestAlgorithm, times(1)).start();
     }
     
 }

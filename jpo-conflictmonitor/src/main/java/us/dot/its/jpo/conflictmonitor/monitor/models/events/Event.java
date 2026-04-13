@@ -9,11 +9,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.MapBroadcastRateEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEventAggregation;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.*;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
@@ -44,16 +44,20 @@ import lombok.Setter;
         @JsonSubTypes.Type(value = TimeChangeDetailsEvent.class, name = "TimeChangeDetails"),
         @JsonSubTypes.Type(value = MapMinimumDataEvent.class, name = "MapMinimumData"),
         @JsonSubTypes.Type(value = SpatMinimumDataEvent.class, name = "SpatMinimumData"),
+        @JsonSubTypes.Type(value = RtcmMinimumDataEvent.class, name = "RtcmMinimumData"),
         @JsonSubTypes.Type(value = MapBroadcastRateEvent.class, name = "MapBroadcastRate"),
         @JsonSubTypes.Type(value = SpatBroadcastRateEvent.class, name = "SpatBroadcastRate"),
+        @JsonSubTypes.Type(value = RtcmBroadcastRateEvent.class, name = "RtcmBroadcastRate"),
         @JsonSubTypes.Type(value = MapMessageCountProgressionEvent.class, name = "MapMessageCountProgression"),
         @JsonSubTypes.Type(value = SpatMessageCountProgressionEvent.class, name = "SpatMessageCountProgression"),
         @JsonSubTypes.Type(value = BsmMessageCountProgressionEvent.class, name = "BsmMessageCountProgression"),
+        @JsonSubTypes.Type(value = RtcmMessageCountProgressionEvent.class, name = "RtcmMessageCountProgression"),
         @JsonSubTypes.Type(value = MapTimestampDeltaEvent.class, name = "MapTimestampDelta"),
         @JsonSubTypes.Type(value = SpatTimestampDeltaEvent.class, name = "SpatTimestampDelta"),
         @JsonSubTypes.Type(value = EventStateProgressionEvent.class, name = "EventStateProgression"),
         @JsonSubTypes.Type(value = SpatMinimumDataEventAggregation.class, name = "SpatMinimumDataAggregation"),
         @JsonSubTypes.Type(value = MapMinimumDataEventAggregation.class, name = "MapMinimumDataAggregation"),
+        @JsonSubTypes.Type(value = RtcmMinimumDataEventAggregation.class, name = "RtcmMinimumDataAggregation"),
         @JsonSubTypes.Type(value = IntersectionReferenceAlignmentEventAggregation.class,
                 name = "IntersectionReferenceAlignmentAggregation"),
         @JsonSubTypes.Type(value = SignalGroupAlignmentEventAggregation.class,
@@ -68,10 +72,12 @@ import lombok.Setter;
                 name = "SpatMessageCountProgressionAggregation"),
         @JsonSubTypes.Type(value = MapMessageCountProgressionEventAggregation.class,
                 name = "MapMessageCountProgressionAggregation"),
+        @JsonSubTypes.Type(value = RtcmMessageCountProgressionEventAggregation.class, name = "RtcmMessageCountProgressionAggregation"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEvent.class, name = "RevocableEnabledLaneAlignment"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEventAggregation.class,
                 name = "RevocableEnabledLaneAlignmentAggregation"),
-        @JsonSubTypes.Type(value = VehicleMisbehaviorEvent.class, name = "VehicleMisbehavior")
+        @JsonSubTypes.Type(value = VehicleMisbehaviorEvent.class, name = "VehicleMisbehavior"),
+        @JsonSubTypes.Type(value = PriorityPreemptionRequestEvent.class, name = "PriorityPreemptionRequest")
 })
 @Getter
 @Setter
