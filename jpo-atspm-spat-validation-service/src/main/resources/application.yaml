@@ -17,3 +17,10 @@ spring:
       # uri overrides individual properties above if it is set
       # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.uri
       #uri: ${CM_MONGO_URI:mongodb://ode:replace_me@localhost:27017/CV}
+
+cm:
+  atspm:
+    client:
+      base-url: ${CM_ATSPM_CLIENT_BASE_URL:?error}
+      username: ${CM_ATSPM_CLIENT_USERNAME:?error}
+      password: ${CM_ATSPM_CLIENT_PASSWORD:?error}

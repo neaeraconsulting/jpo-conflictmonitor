@@ -1,0 +1,20 @@
+package us.dot.its.jpo.conflictmonitor.atspm.models;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class SignalEventCountAggregation extends Aggregation {
+
+    @JsonProperty("Id")
+    private int id;
+
+    @JsonProperty("SignalId")
+    private String signalId;
+
+    @JsonProperty("EventCount")
+    private int eventCount;
+}
+

@@ -1,0 +1,21 @@
+package us.dot.its.jpo.conflictmonitor.atspm.client;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+@Data
+public class AtspmToken {
+
+    @JsonProperty("access_token")
+    private String accessToken;
+
+    @JsonProperty("token_type")
+    private String tokenType;
+
+    @JsonProperty("expires_in")
+    private long expiresIn;
+
+    public boolean isInitialized() {
+        return accessToken != null;
+    }
+}
