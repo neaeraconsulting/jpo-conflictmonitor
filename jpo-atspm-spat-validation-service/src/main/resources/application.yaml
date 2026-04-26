@@ -4,3 +4,16 @@ server.port: 8055
 spring:
   application:
     name: jpo-atspm-spat-validation-service
+  data:
+    # Mongo properties ref:
+    # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.additional-hosts
+    mongodb:
+      database: ${CM_DATABASE_NAME:CV}
+      host: ${DB_HOST_IP:localhost}
+      port: 27017
+      username: ${MONGO_READ_WRITE_USER:ode}
+      password: ${MONGO_READ_WRITE_PASS:replace_me}
+      authenticationDatabase: ${CM_MONGO_AUTH_DB:admin}
+      # uri overrides individual properties above if it is set
+      # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.uri
+      #uri: ${CM_MONGO_URI:mongodb://ode:replace_me@localhost:27017/CV}
