@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.atspm.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -15,6 +16,7 @@ public class AtspmToken {
     @JsonProperty("expires_in")
     private long expiresIn;
 
+    @JsonIgnore
     public boolean isInitialized() {
         return accessToken != null;
     }
