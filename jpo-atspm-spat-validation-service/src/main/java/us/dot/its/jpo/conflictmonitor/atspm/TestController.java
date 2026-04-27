@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import us.dot.its.jpo.conflictmonitor.atspm.client.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.atspm.client.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.atspm.client.AtspmTokenService;
 
@@ -15,15 +16,22 @@ import java.time.Instant;
 public class TestController {
 
     private final AtspmTokenService tokenService;
+    private final AtspmClientService clientService;
 
     @Autowired
-    public TestController(AtspmTokenService tokenService) {
+    public TestController(AtspmTokenService tokenService, AtspmClientService clientService) {
         this.tokenService = tokenService;
+        this.clientService = clientService;
     }
 
     @GetMapping(path = "/token")
     public AtspmToken getToken() {
         return tokenService.token();
+    }
+
+    @GetMapping(path = "/authenticate")
+    public String authenticate() {
+        return clientService.authenticate();
     }
 
     @GetMapping(path = "/health")

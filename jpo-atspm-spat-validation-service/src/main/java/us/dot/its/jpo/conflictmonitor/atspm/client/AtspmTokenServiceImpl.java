@@ -15,11 +15,14 @@ public class AtspmTokenServiceImpl implements AtspmTokenService {
 
     private final AtspmClientProperties properties;
     private final RestClient restClient;
+    private final AtspmToken token;
 
     @Autowired
-    public AtspmTokenServiceImpl(AtspmClientProperties properties, RestClient restClient) {
+    public AtspmTokenServiceImpl(AtspmClientProperties properties, RestClient restClient,
+                                 AtspmToken token) {
         this.properties = properties;
         this.restClient = restClient;
+        this.token = token;
     }
 
     @Override
@@ -31,11 +34,20 @@ public class AtspmTokenServiceImpl implements AtspmTokenService {
         formData.add("password", properties.getPassword());
 
 
-        return restClient.post()
+        AtspmToken newToken = restClient.post()
                 .uri("/token")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(formData)
                 .retrieve()
                 .body(AtspmToken.class);
+
+        if (newToken != null && newToken.getAccessToken() != null) {
+            token.setAccessToken(newToken.getAccessToken());
+            token.setTokenType(newToken.getTokenType());
+            token.setExpiresIn(newToken.getExpiresIn());
+        } else {
+            throw new RuntimeException("Failed to get token");
+        }
+        return token;
     }
 }
