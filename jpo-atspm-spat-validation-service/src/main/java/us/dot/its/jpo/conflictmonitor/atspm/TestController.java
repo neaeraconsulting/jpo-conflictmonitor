@@ -7,8 +7,14 @@ import org.springframework.web.bind.annotation.*;
 import us.dot.its.jpo.conflictmonitor.atspm.client.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.atspm.client.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.atspm.client.AtspmTokenService;
+import us.dot.its.jpo.conflictmonitor.atspm.models.ControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.atspm.models.ControllerType;
+import us.dot.its.jpo.conflictmonitor.atspm.models.Signal;
 
+import javax.ws.rs.QueryParam;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping(path = "/test", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -34,9 +40,32 @@ public class TestController {
         return clientService.authenticate();
     }
 
+    @GetMapping(path = "/forall")
+    public String forall() {
+        return clientService.forall();
+    }
+
+    @GetMapping(path = "/ControllerType")
+    public List<ControllerType> controllerType() {
+        return clientService.controllerType();
+    }
+
+    @GetMapping(path = "/SignalConfig/{signalId}")
+    public List<Signal> signalConfig(@PathVariable String signalId) {
+        return clientService.signalConfig(signalId);
+    }
+
     @GetMapping(path = "/health")
     public Health health() {
         return new Health(true, String.format("%s", Instant.now()));
+    }
+
+    @GetMapping(path = "/controllerEventLogs")
+    public List<ControllerEventLog> controllerEventLogs(@RequestParam("StartTime") LocalDateTime startTime,
+                                                        @RequestParam("EndTime") LocalDateTime endTime,
+                                                        @RequestParam("RouteId") int routeId) {
+        return clientService.controllerEventLogs(startTime, endTime, routeId);
+
     }
 
     @ExceptionHandler(Throwable.class)

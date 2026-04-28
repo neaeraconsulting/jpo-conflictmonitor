@@ -6,12 +6,13 @@ import us.dot.its.jpo.conflictmonitor.atspm.models.Signal;
 
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AtspmClientService {
     String authenticate();
     String forall();
-    List<Signal> signalConfig(int signalId);
+    List<Signal> signalConfig(String signalId);
     List<ControllerType> controllerType();
-    List<ControllerEventLog> controllerEventLogs(Instant startTime, Instant endTime, int routeId);
+    List<ControllerEventLog> controllerEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId);
 }

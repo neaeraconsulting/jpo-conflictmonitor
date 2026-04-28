@@ -2,6 +2,7 @@ package us.dot.its.jpo.conflictmonitor.atspm.client;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,8 @@ public class AtspmTokenServiceImpl implements AtspmTokenService {
     private final AtspmToken token;
 
     @Autowired
-    public AtspmTokenServiceImpl(AtspmClientProperties properties, RestClient restClient,
+    public AtspmTokenServiceImpl(AtspmClientProperties properties,
+                                 @Qualifier("tokenClient") RestClient restClient,
                                  AtspmToken token) {
         this.properties = properties;
         this.restClient = restClient;
@@ -36,7 +38,6 @@ public class AtspmTokenServiceImpl implements AtspmTokenService {
 
         AtspmToken newToken = restClient.post()
                 .uri("/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(formData)
                 .retrieve()
                 .body(AtspmToken.class);

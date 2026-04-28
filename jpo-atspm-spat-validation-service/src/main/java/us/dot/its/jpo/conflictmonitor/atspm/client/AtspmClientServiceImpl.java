@@ -1,6 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.atspm.client;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import us.dot.its.jpo.conflictmonitor.atspm.models.ControllerEventLog;
@@ -8,6 +9,8 @@ import us.dot.its.jpo.conflictmonitor.atspm.models.ControllerType;
 import us.dot.its.jpo.conflictmonitor.atspm.models.Signal;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -26,30 +29,56 @@ public class AtspmClientServiceImpl implements AtspmClientService {
 
     @Override
     public String authenticate() {
-        return restClient.get().uri("/api/data/authenticate")
+        return restClient.get()
+                .uri("/authenticate")
                 .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
-                .retrieve().body(String.class);
+                .retrieve()
+                .body(String.class);
     }
 
     @Override
     public String forall() {
-        return restClient.get().uri("/api/data/forall")
+        return restClient.get()
+                .uri("/forall")
                 .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
-                .retrieve().body(String.class);
+                .retrieve()
+                .body(String.class);
     }
 
     @Override
-    public List<Signal> signalConfig(int signalId) {
-        return List.of();
+    public List<Signal> signalConfig(String signalId) {
+        ParameterizedTypeReference<List<Signal>> returnTypeRef = new  ParameterizedTypeReference<>() {};
+        return restClient.get()
+                .uri("/SignalConfig/{signalId}", signalId)
+                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
+                .retrieve()
+                .body(returnTypeRef);
     }
 
     @Override
     public List<ControllerType> controllerType() {
-        return List.of();
+        ParameterizedTypeReference<List<ControllerType>> returnTypeRef = new ParameterizedTypeReference<>() {};
+        return restClient.get()
+                .uri("/ControllerType")
+                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
+                .retrieve()
+                .body(returnTypeRef);
     }
 
+    private final static DateTimeFormatter localTimeFormat =  DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
     @Override
-    public List<ControllerEventLog> controllerEventLogs(Instant startTime, Instant endTime, int routeId) {
-        return List.of();
+    public List<ControllerEventLog> controllerEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId) {
+        ParameterizedTypeReference<List<ControllerEventLog>> returnTypeRef = new  ParameterizedTypeReference<>() {};
+        return restClient.get()
+                .uri(builder -> builder
+                        .path("/SignalConfig")
+                        .queryParam("StartTime",  localTimeFormat.format(startTime))
+                        .queryParam("EndTime",  localTimeFormat.format(endTime))
+                        .queryParam("RouteId", routeId)
+                        .build())
+                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
+                .retrieve()
+                .body(returnTypeRef);
     }
 }
