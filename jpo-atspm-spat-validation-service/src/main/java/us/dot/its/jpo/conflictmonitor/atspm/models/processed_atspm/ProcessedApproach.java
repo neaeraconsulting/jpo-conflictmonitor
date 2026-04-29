@@ -3,9 +3,7 @@ package us.dot.its.jpo.conflictmonitor.atspm.models.processed_atspm;
 import lombok.Data;
 import us.dot.its.jpo.conflictmonitor.atspm.models.atspm_api.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Data
@@ -16,7 +14,8 @@ public class ProcessedApproach {
     private Integer protectedPhaseNumber;
     private Integer permissivePhaseNumber;
     private Integer pedestrianPhaseNumber;
-    private List<ProcessedDetector> detectors;
+    private Set<Lane> lanes;
+
     public static ProcessedApproach fromApproach(
             Approach approach, Map<Integer, String> movementTypeMap,
             Map<Integer, String> laneTypeMap, Map<Integer, String> directionTypeMap) {
@@ -29,13 +28,24 @@ public class ProcessedApproach {
         pa.protectedPhaseNumber = approach.getProtectedPhaseNumber();
         pa.permissivePhaseNumber = approach.getPermissivePhaseNumber();
         pa.pedestrianPhaseNumber = approach.getPedestrianPhaseNumber();
-        pa.detectors = new ArrayList<>();
+        pa.lanes = new LinkedHashSet<>();
         if (approach.getDetectors() != null) {
             for (Detector detector : approach.getDetectors()) {
                 ProcessedDetector pd = ProcessedDetector.fromDetector(detector, movementTypeMap, laneTypeMap);
-                pa.getDetectors().add(pd);
+                final Lane lane = new Lane();
+                lane.setLaneNumber(pd.getLaneNumber());
+                lane.setLaneType(pd.getLaneType());
+                lane.setMovements(new HashSet<>());
+                lane.getMovements().add(pd.getMovementType());
+                Lane existingLane = pa.getLanes().stream().filter(l -> l.getLaneNumber() == lane.getLaneNumber()).findFirst().orElse(null);
+                if (existingLane != null) {
+                    existingLane.getMovements().add(pd.getMovementType());
+                } else {
+                    pa.getLanes().add(lane);
+                }
             }
         }
+
         return pa;
     }
 }

@@ -27,6 +27,7 @@ public class ProcessedSignal {
     private boolean enabled;
     private List<ProcessedApproach> approaches;
 
+
     public static ProcessedSignal fromSignal(
             Signal signal, List<ControllerType> controllerTypes, List<MovementType> movementTypes,
             List<LaneType> laneTypes, List<DirectionType> directionTypes) {
