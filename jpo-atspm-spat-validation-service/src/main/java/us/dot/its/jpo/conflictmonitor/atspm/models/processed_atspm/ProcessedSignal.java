@@ -43,17 +43,17 @@ public class ProcessedSignal {
                 DirectionType::getDirectionTypeID,
                 DirectionType::getDescription));
         ProcessedSignal ps = new ProcessedSignal();
-        ps.setSignalID(signal.getSignalID());
-        ps.setPrimaryName(signal.getPrimaryName());
-        ps.setSecondaryName(signal.getSecondaryName());
-        ps.setLatitude(signal.getLatitude());
-        ps.setLongitude(signal.getLongitude());
-        ps.setRegion(String.format("%s", signal.getRegion()));
+        ps.signalID = signal.getSignalID();
+        ps.primaryName = signal.getPrimaryName();
+        ps.secondaryName = signal.getSecondaryName();
+        ps.latitude = signal.getLatitude();
+        ps.longitude = signal.getLongitude();
+        ps.region = String.format("%s", signal.getRegion());
         if (controllerTypeMap.containsKey(signal.getControllerTypeID())) {
-            ps.setControllerType(controllerTypeMap.get(signal.getControllerTypeID()));
+            ps.controllerType = controllerTypeMap.get(signal.getControllerTypeID());
         }
-        ps.setEnabled(signal.isEnabled());
-        ps.setApproaches(new ArrayList<>());
+        ps.enabled = signal.isEnabled();
+        ps.approaches = new ArrayList<>();
         if (signal.getApproaches() != null) {
             for (Approach approach : signal.getApproaches()) {
                 ProcessedApproach pa = ProcessedApproach.fromApproach(approach, movementTypeMap, laneTypeMap, directionTypeMap);

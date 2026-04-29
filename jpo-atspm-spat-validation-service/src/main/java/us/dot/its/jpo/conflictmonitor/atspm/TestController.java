@@ -101,7 +101,7 @@ public class TestController {
 
     }
 
-    @GetMapping(path = "/ProcessedSignal")
+    @GetMapping(path = "/ProcessedSignal/{signalId}")
     public ProcessedSignal processedSignal(@PathVariable String signalId) {
         Signal signal = clientService.signalConfig(signalId);
         List<ControllerType> controllerTypes = clientService.controllerType();
