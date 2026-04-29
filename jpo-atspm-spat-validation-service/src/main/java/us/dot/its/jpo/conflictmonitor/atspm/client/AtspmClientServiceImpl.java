@@ -4,11 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import us.dot.its.jpo.conflictmonitor.atspm.models.ControllerEventLog;
-import us.dot.its.jpo.conflictmonitor.atspm.models.ControllerType;
-import us.dot.its.jpo.conflictmonitor.atspm.models.Signal;
+import us.dot.its.jpo.conflictmonitor.atspm.models.atspm_api.*;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -25,60 +22,87 @@ public class AtspmClientServiceImpl implements AtspmClientService {
         this.token = token;
     }
 
-
-
     @Override
     public String authenticate() {
-        return restClient.get()
-                .uri("/authenticate")
-                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
-                .retrieve()
-                .body(String.class);
+        return retrieveString("/authenticate");
     }
 
     @Override
     public String forall() {
+        return retrieveString("/forall");
+    }
+
+    @Override
+    public List<ControllerType> controllerType() {
+        var returnTypeRef = new ParameterizedTypeReference<List<ControllerType>>() {};
+        return retrieveList(returnTypeRef, "/ControllerType");
+    }
+
+    @Override
+    public List<DirectionType> directionType() {
+        var returnTypeRef = new ParameterizedTypeReference<List<DirectionType>>() {};
+        return retrieveList(returnTypeRef, "/DirectionType");
+    }
+
+    @Override
+    public List<LaneType> laneType() {
+        var returnTypeRef = new ParameterizedTypeReference<List<LaneType>>() {};
+        return retrieveList(returnTypeRef, "/LaneType");
+    }
+
+    @Override
+    public List<MovementType> movementType() {
+        var returnTypeRef = new ParameterizedTypeReference<List<MovementType>>() {};
+        return retrieveList(returnTypeRef, "/MovementType");
+    }
+
+    @Override
+    public Signal signalConfig(String signalId) {
+        return retrieveObject(Signal.class, "/SignalConfig/{signalId}", signalId);
+    }
+
+    @Override
+    public Approach approachConfig(int approachId) {
+        return retrieveObject(Approach.class, "/ApproachConfig/{approachId}", approachId);
+    }
+
+    @Override
+    public Detector detectorConfig(String detectorId) {
+        return retrieveObject(Detector.class, "/DetectorConfig/{detectorId}", detectorId);
+    }
+
+    @Override
+    public List<ControllerEventLog> controllerEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId) {
+        ParameterizedTypeReference<List<ControllerEventLog>> returnTypeRef = new  ParameterizedTypeReference<>() {};
+        return retrieveList(returnTypeRef,
+                "/controllerEventLogs?StartTime={startTime}&EndTime={endTime}&RouteIds={routeId}",
+                localTimeFormat.format(startTime), localTimeFormat.format(endTime), routeId);
+    }
+
+    private final static DateTimeFormatter localTimeFormat =  DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
+    private String retrieveString(String path) {
         return restClient.get()
-                .uri("/forall")
+                .uri(path)
                 .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
                 .retrieve()
                 .body(String.class);
     }
 
-    @Override
-    public List<Signal> signalConfig(String signalId) {
-        ParameterizedTypeReference<List<Signal>> returnTypeRef = new  ParameterizedTypeReference<>() {};
+    private <T> List<T> retrieveList(ParameterizedTypeReference<List<T>> returnTypeRef, String path, Object ... args) {
         return restClient.get()
-                .uri("/SignalConfig/{signalId}", signalId)
+                .uri(path, args)
                 .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
                 .retrieve()
                 .body(returnTypeRef);
     }
 
-    @Override
-    public List<ControllerType> controllerType() {
-        ParameterizedTypeReference<List<ControllerType>> returnTypeRef = new ParameterizedTypeReference<>() {};
+    private <T> T retrieveObject(Class<T> objectClass, String path, Object... args) {
         return restClient.get()
-                .uri("/ControllerType")
+                .uri(path, args)
                 .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
                 .retrieve()
-                .body(returnTypeRef);
+                .body(objectClass);
     }
 
-    private final static DateTimeFormatter localTimeFormat =  DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-
-    @Override
-    public List<ControllerEventLog> controllerEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId) {
-        ParameterizedTypeReference<List<ControllerEventLog>> returnTypeRef = new  ParameterizedTypeReference<>() {};
-        return restClient.get()
-                .uri(builder -> builder
-                        .path("/SignalConfig")
-                        .queryParam("StartTime",  localTimeFormat.format(startTime))
-                        .queryParam("EndTime",  localTimeFormat.format(endTime))
-                        .queryParam("RouteId", routeId)
-                        .build())
-                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
-                .retrieve()
-                .body(returnTypeRef);
-    }
 }
