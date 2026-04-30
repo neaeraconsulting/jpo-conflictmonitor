@@ -24,3 +24,5 @@ cm:
       base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
       username: ${CM_ATSPM_CLIENT_USERNAME:username}
       password: ${CM_ATSPM_CLIENT_PASSWORD:password}
+    scheduler:
+      thread.pool.size: 10
