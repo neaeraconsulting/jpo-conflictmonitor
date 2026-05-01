@@ -3,24 +3,24 @@ package us.dot.its.jpo.conflictmonitor.batch.algorithms;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import us.dot.its.jpo.conflictmonitor.batch.scheduler.atspm_spat_validation.AtspmSpatValidationTask;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 
 @Slf4j
 @ToString
-public abstract class SpringTaskScheduler<TParameters, TTaskMetadata, TTask>
-    implements Algorithm<TParameters>, ScheduledTaskAlgorithm<TTaskMetadata> {
+public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask extends Runnable>
+    implements Algorithm<TParameters>, ScheduledTaskAlgorithm<TaskMetadata> {
 
     protected Duration interval;
     protected Instant startTime;
     protected TParameters parameters;
-    protected List<TTaskMetadata> taskMetadata;
+    protected List<TaskMetadata> taskMetadata;
     protected final ThreadPoolTaskScheduler taskScheduler;
-    protected List<ScheduledFuture<?>> futureTasks;
+    protected final List<ScheduledFuture<?>> futureTasks = new ArrayList<>();
 
     public SpringTaskScheduler(ThreadPoolTaskScheduler taskScheduler) {
         this.taskScheduler = taskScheduler;
@@ -49,19 +49,24 @@ public abstract class SpringTaskScheduler<TParameters, TTaskMetadata, TTask>
     @Override
     public void start() {
         validate();
-        for (TTaskMetadata taskMetadata : taskMetadata) {
-            var task = new AtspmSpatValidationTask(taskMetadata, parameters);
-            var futureTask = taskScheduler.scheduleAtFixedRate(this, startTime, interval);
+        for (TaskMetadata taskMetadata : taskMetadata) {
+            var task = createTask(taskMetadata, parameters);
+            var futureTask = taskScheduler.scheduleAtFixedRate(task, startTime, interval);
+            futureTasks.add(futureTask);
             log.info("Task {} scheduled at {} with interval {}", this, startTime, interval);
         }
     }
 
+    protected abstract TTask createTask(TaskMetadata taskMetadata, TParameters parameters);
+
     @Override
     public void stop() {
-        if (futureTask != null) {
-            futureTask.cancel(true);
-            futureTask = null;
+        for (ScheduledFuture<?> futureTask : futureTasks) {
+            if (futureTask != null) {
+                futureTask.cancel(true);
+            }
         }
+        futureTasks.clear();
     }
 
     @Override
