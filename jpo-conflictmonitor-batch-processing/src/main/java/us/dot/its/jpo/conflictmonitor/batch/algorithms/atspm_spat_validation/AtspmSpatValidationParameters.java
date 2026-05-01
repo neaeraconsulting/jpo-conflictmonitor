@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -14,7 +15,11 @@ import java.util.Set;
 public class AtspmSpatValidationParameters {
     private String algorithm;
     private int interval;
+    /**
+     * Units must be HOURS, MINUTES, or SECONDS
+     */
     private ChronoUnit intervalUnits;
+    private List<RouteConfig> routes;
 
     @JsonIgnore
     private final static Set<ChronoUnit> validUnits = Set.of(ChronoUnit.HOURS, ChronoUnit.MINUTES, ChronoUnit.SECONDS);

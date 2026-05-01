@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringScheduledTask;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationTaskMetadata;
 import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmClientService;
+import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
 
 import java.time.*;
@@ -17,10 +19,9 @@ import java.time.temporal.ChronoUnit;
 import static us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationConstants.DEFAULT_ATSPM_SPAT_VALIDATION_ALGORITHM;
 
 @Slf4j
-@Component(DEFAULT_ATSPM_SPAT_VALIDATION_ALGORITHM)
+
 public class AtspmSpatValidationTask
-        extends SpringScheduledTask<AtspmSpatValidationParameters>
-        implements AtspmSpatValidationAlgorithm {
+        extends SpringScheduledTask<AtspmSpatValidationTaskMetadata, AtspmSpatValidationParameters> {
 
     private final AtspmTokenService tokenService;
     private final AtspmClientService clientService;
@@ -29,14 +30,16 @@ public class AtspmSpatValidationTask
 
     @Autowired
     public AtspmSpatValidationTask(
+            AtspmSpatValidationTaskMetadata taskMetadata,
             AtspmSpatValidationParameters parameters,
-            ThreadPoolTaskScheduler taskScheduler, AtspmTokenService tokenService,
+            AtspmTokenService tokenService,
             AtspmClientService clientService,
             Clock clock) {
-        super(taskScheduler);
+
         this.tokenService = tokenService;
         this.clientService = clientService;
         this.parameters = parameters;
+        this.taskMetadata = taskMetadata;
         this.interval = Duration.of(parameters.getInterval(), parameters.getIntervalUnits());
         log.info("Interval {}", interval);
         this.clock = clock;
@@ -54,6 +57,9 @@ public class AtspmSpatValidationTask
 
     @Override
     public void run() {
-        log.info("Tick");
+        AtspmToken token = tokenService.token();
+        String authentication = clientService.authenticate();
+        assert authentication != null;
+
     }
 }

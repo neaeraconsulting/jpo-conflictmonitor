@@ -28,6 +28,28 @@ cm:
         base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
         username: ${CM_ATSPM_CLIENT_USERNAME:username}
         password: ${CM_ATSPM_CLIENT_PASSWORD:password}
-      interval: 1
-      intervalUnits: SECONDS
+      interval: 5
+      intervalUnits: MINUTES
+      routes:
+        - routeId: 6
+          signals:
+            - signalId: "1106121"
+              description: "Daisy Mountain Dr & Gavilan Peak Pkwy"
+              enabled: true
+            - signalId: "1106118"
+              description: "Daisy Mountain Dr & Dedication Trail"
+              enabled: true
+            - signalId: "11061116"
+              description: "Daisy Mountain Dr & Meridian Dr"
+              enabled: true
+            - signalId: "11061114"
+              description: "Daisy Mountain Dr & Hastings Way"
+              enabled: true
+            - signalId: "1106112"
+              description: "Daisy Mountain Dr & Memorial Dr"
+              enabled: false
+            - signalId: "1106101"
+              description: "Anthem Way & Daisy Mountain Dr"
+              enabled: true
+
 
