@@ -4,6 +4,7 @@ import org.apache.kafka.streams.TaskMetadata;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /***
@@ -11,13 +12,20 @@ import java.util.List;
  * processing at a scheduled interval, with configurable parameters, that can
  * be started and stopped.
  */
-public interface ScheduledTaskAlgorithm<TaskMetadata> extends Runnable {
+public interface ScheduledTaskAlgorithm<TParameters, TaskMetadata> extends Runnable {
 
     // Scheduling params
-    void setInterval(Duration interval);
-    Duration getInterval();
-    void setStartTime(Instant startTime);
-    Instant getStartTime();
+    void setInterval(int interval);
+    int getInterval();
+    void setIntervalUnits(ChronoUnit intervalUnits);
+    ChronoUnit getIntervalUnits();
+    void setTaskStartTimeStagger(int taskStartTimeStagger);
+    int getTaskStartTimeStagger();
+    void setTaskStartTimeStaggerUnits(ChronoUnit taskStartTimeStaggerUnits);
+    int getTaskStartTimeStaggerUnits();
+
+    void setParameters(TaskMetadata parameters);
+    TParameters getParameters();
 
     // Set separate metadata for each scheduled task
     // Each scheduled task runs in parallel, for scalability.
