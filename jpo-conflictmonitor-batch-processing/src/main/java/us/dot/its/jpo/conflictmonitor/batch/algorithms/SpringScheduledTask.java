@@ -16,11 +16,11 @@ import java.util.concurrent.ScheduledFuture;
 public abstract class SpringScheduledTask<TParameters>
         implements Algorithm<TParameters>, ScheduledTaskAlgorithm {
 
-    private Duration interval;
-    private Instant startTime;
-    private TParameters parameters;
-    private final ThreadPoolTaskScheduler taskScheduler;
-    private ScheduledFuture<?> futureTask;
+    protected Duration interval;
+    protected Instant startTime;
+    protected TParameters parameters;
+    protected final ThreadPoolTaskScheduler taskScheduler;
+    protected ScheduledFuture<?> futureTask;
 
     public SpringScheduledTask(ThreadPoolTaskScheduler taskScheduler) {
         this.taskScheduler = taskScheduler;
@@ -48,6 +48,7 @@ public abstract class SpringScheduledTask<TParameters>
 
     @Override
     public void start() {
+        validate();
         futureTask = taskScheduler.scheduleAtFixedRate(this, startTime, interval);
         log.info("Task {} scheduled at {} with interval {}", this, startTime, interval);
     }
@@ -68,6 +69,21 @@ public abstract class SpringScheduledTask<TParameters>
     @Override
     public TParameters getParameters() {
         return parameters;
+    }
+
+    /**
+     * Check that required parameters are set
+     */
+    private void validate() {
+        if (interval == null) {
+            throw new IllegalStateException("interval is not initialized");
+        }
+        if (startTime == null) {
+            throw new IllegalStateException("startTime is not initialized");
+        }
+        if (parameters == null) {
+            throw new IllegalStateException("parameters are not initialized");
+        }
     }
 
 }

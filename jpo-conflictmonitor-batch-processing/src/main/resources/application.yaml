@@ -19,10 +19,15 @@ spring:
       #uri: ${CM_MONGO_URI:mongodb://ode:replace_me@localhost:27017/CV}
 
 cm:
-  atspm:
-    client:
-      base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
-      username: ${CM_ATSPM_CLIENT_USERNAME:username}
-      password: ${CM_ATSPM_CLIENT_PASSWORD:password}
+  batch:
     scheduler:
       thread.pool.size: 10
+    atspm.spat.validation:
+      algorithm: defaultAtspmSpatValidationAlgorithm
+      client:
+        base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
+        username: ${CM_ATSPM_CLIENT_USERNAME:username}
+        password: ${CM_ATSPM_CLIENT_PASSWORD:password}
+      interval: 1
+      intervalUnits: SECONDS
+
