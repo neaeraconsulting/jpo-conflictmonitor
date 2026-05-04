@@ -1,9 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.batch.algorithms;
 
-import org.apache.kafka.streams.TaskMetadata;
-
-import java.time.Duration;
-import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -12,7 +8,7 @@ import java.util.List;
  * processing at a scheduled interval, with configurable parameters, that can
  * be started and stopped.
  */
-public interface ScheduledTaskAlgorithm<TParameters, TaskMetadata> extends Runnable {
+public interface ScheduledTaskAlgorithm<TParameters, TaskMetadata> extends Algorithm<TParameters> {
 
     // Scheduling params
     void setInterval(int interval);
@@ -22,10 +18,7 @@ public interface ScheduledTaskAlgorithm<TParameters, TaskMetadata> extends Runna
     void setTaskStartTimeStagger(int taskStartTimeStagger);
     int getTaskStartTimeStagger();
     void setTaskStartTimeStaggerUnits(ChronoUnit taskStartTimeStaggerUnits);
-    int getTaskStartTimeStaggerUnits();
-
-    void setParameters(TaskMetadata parameters);
-    TParameters getParameters();
+    ChronoUnit getTaskStartTimeStaggerUnits();
 
     // Set separate metadata for each scheduled task
     // Each scheduled task runs in parallel, for scalability.

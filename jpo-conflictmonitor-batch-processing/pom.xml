@@ -52,6 +52,11 @@
             <artifactId>httpclient5</artifactId>
             <version>5.6.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.6.0-jre</version>
+        </dependency>
     </dependencies>
 
     <build>

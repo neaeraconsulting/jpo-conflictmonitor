@@ -1,45 +1,54 @@
 package us.dot.its.jpo.conflictmonitor.batch.scheduler.atspm_spat_validation;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
-import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringScheduledTask;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringTaskScheduler;
-import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationAlgorithm;
-import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
-import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationTaskMetadata;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.*;
+import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmClientService;
+import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
+
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
 
 import static us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationConstants.DEFAULT_ATSPM_SPAT_VALIDATION_ALGORITHM;
 
 @Slf4j
 @Component(DEFAULT_ATSPM_SPAT_VALIDATION_ALGORITHM)
 public class AtspmSpatValidationTaskScheduler
-        extends SpringTaskScheduler<AtspmSpatValidationParameters, AtspmSpatValidationTaskMetadata, AtspmSpatValidationTask>
-        implements AtspmSpatValidationAlgorithm {
+        extends SpringTaskScheduler<AtspmSpatValidationParameters, RouteConfig, AtspmSpatValidationTask>
+        implements AtspmSpatValidationScheduledTaskAlgorithm {
 
+    private final AtspmTokenService tokenService;
+    private final AtspmClientService clientService;
+    private final MongoTemplate mongoTemplate;
 
-    @Override
-    protected AtspmSpatValidationTask createTask(AtspmSpatValidationTaskMetadata atspmSpatValidationTaskMetadata, AtspmSpatValidationParameters atspmSpatValidationParameters) {
-        return null;
+    @Autowired
+    public AtspmSpatValidationTaskScheduler(ThreadPoolTaskScheduler taskScheduler, Clock clock,
+                                            AtspmSpatValidationParameters parameters, AtspmTokenService tokenService,
+                                            AtspmClientService clientService, MongoTemplate mongoTemplate) {
+        super(taskScheduler, clock);
+        this.interval = parameters.getInterval();
+        this.intervalUnits = parameters.getIntervalUnits();
+        this.taskStartTimeStagger = parameters.getTaskStartTimeStagger();
+        this.taskStartTimeStaggerUnits = parameters.getTaskStartTimeStaggerUnits();
+        this.gracePeriodOffset = parameters.getGracePeriodOffset();
+        this.gracePeriodOffsetUnits = parameters.getGracePeriodOffsetUnits();
+        this.parameters = parameters;
+        this.taskMetadata = parameters.getRoutes();
+        this.tokenService = tokenService;
+        this.clientService = clientService;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Override
-    public void run() {
-
+    protected AtspmSpatValidationTask createTask(
+            RouteConfig routeConfig, AtspmSpatValidationParameters atspmSpatValidationParameters) {
+        return new AtspmSpatValidationTask(routeConfig, parameters, tokenService, clientService, clock, mongoTemplate);
     }
 
-    @Override
-    public void setInterval(int interval) {
 
-    }
 
-    @Override
-    public void setTaskStartTimeStagger(int taskStartTimeStagger) {
-
-    }
 }

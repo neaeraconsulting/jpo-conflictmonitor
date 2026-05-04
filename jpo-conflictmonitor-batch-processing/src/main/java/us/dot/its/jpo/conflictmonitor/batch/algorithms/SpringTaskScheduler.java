@@ -19,12 +19,14 @@ import java.util.concurrent.ScheduledFuture;
 @Slf4j
 @ToString
 public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask extends Runnable>
-    implements Algorithm<TParameters>, ScheduledTaskAlgorithm<TaskMetadata, TParameters> {
+    implements ScheduledTaskAlgorithm<TParameters, TaskMetadata> {
 
-    protected Integer interval;
+    protected int interval;
     protected ChronoUnit intervalUnits;
-    protected Integer taskStartTimeStagger;
+    protected int taskStartTimeStagger;
     protected ChronoUnit taskStartTimeStaggerUnits;
+    protected int gracePeriodOffset;
+    protected ChronoUnit gracePeriodOffsetUnits;
     protected TParameters parameters;
     protected List<TaskMetadata> taskMetadata;
     protected final ThreadPoolTaskScheduler taskScheduler;
@@ -41,19 +43,22 @@ public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask exten
     public void start() {
         validate();
         // Start at top of the specified unit (e.g. top of the hour if interval units are hours.)
-        Instant now = clock.instant();
-        Instant startTime = switch (intervalUnits) {
+        final Instant now = clock.instant();
+
+        final Instant startTime = switch (intervalUnits) {
             case ChronoUnit.HOURS -> now.truncatedTo(ChronoUnit.HOURS).plus(1, ChronoUnit.HOURS);
             case ChronoUnit.MINUTES -> now.truncatedTo(ChronoUnit.MINUTES).plus(1, ChronoUnit.MINUTES);
             case ChronoUnit.SECONDS -> now.truncatedTo(ChronoUnit.SECONDS).plus(1, ChronoUnit.SECONDS);
             default -> now;
         };
-        log.info("Start time {}", startTime);
+        Instant offsetStartTime = startTime;
         for (TaskMetadata taskMetadata : taskMetadata) {
+            log.info("Start time {}", offsetStartTime);
             var task = createTask(taskMetadata, parameters);
-            var futureTask = taskScheduler.scheduleAtFixedRate(task, startTime, Duration.of(interval, intervalUnits));
+            var futureTask = taskScheduler.scheduleAtFixedRate(task, offsetStartTime, Duration.of(interval, intervalUnits));
             futureTasks.add(futureTask);
-            log.info("Task {} scheduled at {} with interval {} {}", this, startTime, interval, intervalUnits);
+            log.info("Task for {} scheduled at {} with interval {} {}", taskMetadata, offsetStartTime, interval, intervalUnits);
+            offsetStartTime = offsetStartTime.plus(taskStartTimeStagger, taskStartTimeStaggerUnits);
         }
     }
 
@@ -75,8 +80,23 @@ public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask exten
      * Check that required parameters are set
      */
     private void validate() {
-        if (interval == null) {
+        if (interval <= 0) {
             throw new IllegalStateException("interval is not initialized");
+        }
+        if (intervalUnits == null) {
+            throw new IllegalStateException("intervalUnits is not initialized");
+        }
+        if (taskStartTimeStagger <= 0) {
+            throw new IllegalStateException("taskStartTimeStagger is not initialized");
+        }
+        if (taskStartTimeStaggerUnits == null) {
+            throw new IllegalStateException("taskStartTimeStaggerUnits is not initialized");
+        }
+        if (gracePeriodOffset <= 0) {
+            throw new IllegalStateException("gracePeriodOffset is not initialized");
+        }
+        if (gracePeriodOffsetUnits == null) {
+            throw new IllegalStateException("gracePeriodOffsetUnits is not initialized");
         }
         if (parameters == null) {
             throw new IllegalStateException("parameters are not initialized");
@@ -85,5 +105,6 @@ public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask exten
             throw new IllegalStateException("task metadata is not initialized or is empty list");
         }
     }
+
 
 }

@@ -4,6 +4,9 @@ import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Clock;
+import java.time.Duration;
+
 /**
  * Base class for scheduled tasks based on Spring Scheduling
  */
@@ -14,10 +17,12 @@ public abstract class SpringScheduledTask<TaskMetadata, TParameters> implements 
 
     protected TParameters parameters;
     protected TaskMetadata taskMetadata;
+    protected Clock clock;
 
-    public SpringScheduledTask(TaskMetadata taskMetadata, TParameters parameters) {
+    public SpringScheduledTask(TaskMetadata taskMetadata, TParameters parameters, Clock clock) {
         this.taskMetadata = taskMetadata;
         this.parameters = parameters;
+        this.clock = clock;
     }
 
 }

@@ -2,6 +2,8 @@ package us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed;
 
 import lombok.Getter;
 
+import java.util.Optional;
+
 /**
  * Includes a subset of logger Event Codes used by this algorithm to indication the beginning of green, yellow and red
  * indications.
@@ -25,13 +27,18 @@ public enum EventCode {
         this.descriptor = descriptor;
     }
 
-    public static EventCode fromCode(int code) {
+    /**
+     * Parse the event code
+     * @param code The raw event code
+     * @return The event code enum, or empty if it's an event code this algorithm doesn't care about
+     */
+    public static Optional<EventCode> fromCode(int code) {
         for (EventCode eventCode : EventCode.values()) {
             if (eventCode.code == code) {
-                return eventCode;
+                return Optional.of(eventCode);
             }
         }
-        throw new IllegalArgumentException("Invalid EventCode code: " + code);
+        return Optional.empty();
     }
 
 }

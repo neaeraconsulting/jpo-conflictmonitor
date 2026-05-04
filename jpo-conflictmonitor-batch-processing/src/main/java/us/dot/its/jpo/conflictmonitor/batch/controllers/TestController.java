@@ -22,6 +22,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Health check method, and methods that pass through to the ATSPM service, for testing the API.
+ */
 @RestController
 @RequestMapping(path = "/test", produces = MediaType.APPLICATION_JSON_VALUE)
 @Slf4j
@@ -34,6 +37,11 @@ public class TestController {
     public TestController(AtspmTokenService tokenService, AtspmClientService clientService) {
         this.tokenService = tokenService;
         this.clientService = clientService;
+    }
+
+    @GetMapping(path = "/health")
+    public Health health() {
+        return new Health(true, String.format("%s", Instant.now()), null);
     }
 
     @GetMapping(path = "/token")
@@ -84,11 +92,6 @@ public class TestController {
     @GetMapping(path = "/DetectorConfig/{detectorId}")
     public Detector detectorConfig(@PathVariable String detectorId) {
         return clientService.detectorConfig(detectorId);
-    }
-
-    @GetMapping(path = "/health")
-    public Health health() {
-        return new Health(true, String.format("%s", Instant.now()), null);
     }
 
     @GetMapping(path = "/controllerEventLogs")

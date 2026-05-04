@@ -4,16 +4,21 @@ server.port: 8055
 spring:
   application:
     name: jpo-atspm-spat-validation-service
+  groovy:
+    template:
+      check-template-location: false
+  thymeleaf:
+    check-template-location: false
   data:
     # Mongo properties ref:
     # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.additional-hosts
     mongodb:
       database: ${CM_DATABASE_NAME:CV}
       host: ${DB_HOST_IP:localhost}
-      port: 27017
+      port: ${MONGO_PORT:27017}
       username: ${MONGO_READ_WRITE_USER:ode}
       password: ${MONGO_READ_WRITE_PASS:replace_me}
-      authenticationDatabase: ${CM_MONGO_AUTH_DB:admin}
+      authentication-database: ${CM_MONGO_AUTH_DB:admin}
       # uri overrides individual properties above if it is set
       # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.uri
       #uri: ${CM_MONGO_URI:mongodb://ode:replace_me@localhost:27017/CV}
@@ -28,10 +33,16 @@ cm:
         base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
         username: ${CM_ATSPM_CLIENT_USERNAME:username}
         password: ${CM_ATSPM_CLIENT_PASSWORD:password}
-      interval: 5
-      intervalUnits: MINUTES
+      local-time-zone: "America/Phoenix"
+      interval: 10
+      interval-units: MINUTES
+      task-start-time-stagger: 1
+      task-start-time-stagger-units: MINUTES
+      grace-period-offset: 2
+      grace-period-offset-units: HOURS
       routes:
         - routeId: 6
+          description: "Daisy Mountain Dr"
           signals:
             - signalId: "1106121"
               description: "Daisy Mountain Dr & Gavilan Peak Pkwy"
@@ -51,5 +62,14 @@ cm:
             - signalId: "1106101"
               description: "Anthem Way & Daisy Mountain Dr"
               enabled: true
+        - routeId: 9999
+          description: "Fake route for testing scalability"
+          signals:
+            - signalId: "1111111"
+              description: "Fake signal 1"
+              enabled: false
+            - signalId: "2222222"
+              description: "Fake signal 2"
+              enabled: false
 
 
