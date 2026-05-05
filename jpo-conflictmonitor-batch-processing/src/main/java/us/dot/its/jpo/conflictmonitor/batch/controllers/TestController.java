@@ -2,6 +2,7 @@ package us.dot.its.jpo.conflictmonitor.batch.controllers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,12 +15,15 @@ import org.springframework.web.bind.annotation.RestController;
 import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
+import us.dot.its.jpo.conflictmonitor.batch.client.spat.ProcessedSpatService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 /**
@@ -32,11 +36,13 @@ public class TestController {
 
     private final AtspmTokenService tokenService;
     private final AtspmClientService clientService;
+    private final ProcessedSpatService spatService;
 
     @Autowired
-    public TestController(AtspmTokenService tokenService, AtspmClientService clientService) {
+    public TestController(AtspmTokenService tokenService, AtspmClientService clientService, ProcessedSpatService spatService) {
         this.tokenService = tokenService;
         this.clientService = clientService;
+        this.spatService = spatService;
     }
 
     @GetMapping(path = "/health")
@@ -95,9 +101,10 @@ public class TestController {
     }
 
     @GetMapping(path = "/controllerEventLogs")
-    public List<ControllerEventLog> controllerEventLogs(@RequestParam("StartTime") LocalDateTime startTime,
-                                                        @RequestParam("EndTime") LocalDateTime endTime,
-                                                        @RequestParam("RouteIds") int routeId) {
+    public List<ControllerEventLog> controllerEventLogs(
+            @RequestParam("StartTime") LocalDateTime startTime,
+            @RequestParam("EndTime") LocalDateTime endTime,
+            @RequestParam("RouteIds") int routeId) {
         return clientService.controllerEventLogs(startTime, endTime, routeId);
 
     }
@@ -110,6 +117,14 @@ public class TestController {
         List<LaneType> laneTypes = clientService.laneType();
         List<DirectionType> directionTypes = clientService.directionType();
         return ProcessedSignal.fromSignal(signal, controllerTypes, movementTypes, laneTypes, directionTypes);
+    }
+
+    @GetMapping(path = "/processedSpats/{intersectionId}")
+    public List<ProcessedSpat> findSpats(
+            @PathVariable int intersectionId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime) {
+        return spatService.findByIntersectionIdAndTimestamp(intersectionId, startTime, endTime);
     }
 
     @ExceptionHandler(Throwable.class)
