@@ -25,6 +25,9 @@ spring:
 
 cm:
   batch:
+    clock:
+      offset: true
+      start-timestamp:
     scheduler:
       thread.pool.size: 10
     atspm.spat.validation:
@@ -44,32 +47,41 @@ cm:
         - routeId: 6
           description: "Daisy Mountain Dr"
           signals:
-            - signalId: "1106121"
+            - signal-id: "1106121"
+              intersection-id: 44383
               description: "Daisy Mountain Dr & Gavilan Peak Pkwy"
               enabled: true
-            - signalId: "1106118"
+            - signal-id: "1106118"
+              intersection-id: 0  # Missing MAP
               description: "Daisy Mountain Dr & Dedication Trail"
-              enabled: true
-            - signalId: "11061116"
+              enabled: false  # Missing SPATs
+            - signal-id: "11061116"
+              intersection-id: 54749
               description: "Daisy Mountain Dr & Meridian Dr"
               enabled: true
-            - signalId: "11061114"
+            - signal-id: "11061114"
+              intersection-id: 63397
               description: "Daisy Mountain Dr & Hastings Way"
               enabled: true
-            - signalId: "1106112"
+            - signal-id: "1106112"
+              intersection-id: 13710
               description: "Daisy Mountain Dr & Memorial Dr"
-              enabled: false
-            - signalId: "1106101"
+              enabled: false  # Missing ATSPM data
+            - signal-id: "1106101"
+              intersection-id: 22391
               description: "Anthem Way & Daisy Mountain Dr"
               enabled: true
         - routeId: 9999
           description: "Fake route for testing scalability"
           signals:
-            - signalId: "1111111"
+            - signal-id: "1111111"
+              intersection-id: 1111111
               description: "Fake signal 1"
               enabled: false
-            - signalId: "2222222"
+            - signal-id: "2222222"
+              intersection-id: 2222222
               description: "Fake signal 2"
               enabled: false
+
 
 

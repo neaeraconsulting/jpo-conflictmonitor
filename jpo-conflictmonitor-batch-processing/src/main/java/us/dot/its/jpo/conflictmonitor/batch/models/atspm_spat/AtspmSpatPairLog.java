@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.springframework.data.mongodb.core.mapping.Document;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
 
 import java.time.Instant;
 import java.util.List;
@@ -48,6 +49,29 @@ public class AtspmSpatPairLog {
         double total = atspmSpatPairs.size();
         if (total == 0) return 0;
         return (numPaired  / total) * 100.0;
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private double getPercentGreenPaired() {
+        return percentPaired(SpatSignalIndication.GREEN);
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private double getPercentRedPaired() {
+        return percentPaired(SpatSignalIndication.RED);
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private double getPercentYellowPaired() {
+        return percentPaired(SpatSignalIndication.YELLOW);
+    }
+
+    private double percentPaired(final SpatSignalIndication indication) {
+        if (atspmSpatPairs == null) return 0;
+        double numPaired = atspmSpatPairs.stream().filter(AtspmSpatPair::isPaired).filter(pair -> pair.getSpatIndication() == indication).count();
+        double total = atspmSpatPairs.size();
+        if (total == 0) return 0;
+        return (numPaired / total) * 100.0;
     }
 
 

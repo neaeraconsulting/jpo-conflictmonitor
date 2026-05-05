@@ -49,12 +49,12 @@ public class TestController {
         return tokenService.token();
     }
 
-    @GetMapping(path = "/authenticate")
+    @GetMapping(path = "/authenticate", produces = MediaType.TEXT_PLAIN_VALUE)
     public String authenticate() {
         return clientService.authenticate();
     }
 
-    @GetMapping(path = "/forall")
+    @GetMapping(path = "/forall", produces = MediaType.TEXT_PLAIN_VALUE)
     public String forall() {
         return clientService.forall();
     }
