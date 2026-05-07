@@ -8,6 +8,7 @@ import org.springframework.web.client.RestClient;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
+import us.dot.its.jpo.conflictmonitor.batch.time.TimeUtil;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -94,8 +95,8 @@ public class AtspmClientServiceImpl implements AtspmClientService {
     public ProcessedControllerEventLog processedEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId) {
         List<ControllerEventLog> eventLogs = controllerEventLogs(startTime, endTime, routeId);
         log.info("Got eventLogs with {} items", eventLogs.size());
-        Instant startInstant = startTime.toInstant(ZoneOffset.UTC);
-        Instant endInstant = endTime.toInstant(ZoneOffset.UTC);
+        Instant startInstant = TimeUtil.localTimeToInstantAtZone(startTime, parameters.getLocalTimeZone(), clock);
+        Instant endInstant = TimeUtil.localTimeToInstantAtZone(endTime, parameters.getLocalTimeZone(), clock);
         var atspmLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock, parameters.getLocalTimeZone());
         log.info("Got {} processed log items", atspmLog.size());
         return atspmLog;
