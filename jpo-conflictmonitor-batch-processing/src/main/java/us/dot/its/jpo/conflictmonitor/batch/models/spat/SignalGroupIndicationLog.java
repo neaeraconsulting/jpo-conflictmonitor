@@ -28,6 +28,7 @@ public class SignalGroupIndicationLog {
                 if (indication.isPresent()) {
                     tsIndication.setTimestamp(state.getTimestamp());
                     tsIndication.setIndication(indication.get());
+                    tsIndication.setMovementPhaseState(state.getEventState());
                     log.indicationsMap.putIndication(signalGroup, tsIndication);
                 }
             }

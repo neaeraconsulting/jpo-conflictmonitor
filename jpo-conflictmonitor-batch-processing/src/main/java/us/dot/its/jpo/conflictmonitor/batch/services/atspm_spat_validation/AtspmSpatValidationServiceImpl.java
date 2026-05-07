@@ -66,28 +66,40 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         for (SignalConfig signal : routeConfig.getSignals()) {
 
             final Integer intersectionId = signal.getIntersectionId();
+            final String signalId = signal.getSignalId();
+
+            AtspmSpatPairLog pairLog = new AtspmSpatPairLog();
+            pairLog.setRouteId(routeId);
+
+            pairLog.setSignalId(signalId);
+            pairLog.setStartTime(startTime);
+            pairLog.setEndTime(endTime);
+            pairLog.setAtspmSpatPairs(new ArrayList<>());
+            logs.add(pairLog);
+
             if (intersectionId == null) {
-                log.warn("Missing intersection id for signal {}", signal);
+                String msg = String.format("Missing intersection id for signal %s", signal);
+                pairLog.setError(msg);
+                log.warn(msg);
                 continue;
             }
+
+            pairLog.setIntersectionId(intersectionId);
+
             SignalGroupIndicationLog spatLog = spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
             log.info("Got spatLog for signal {}", signal);
 
-            final String signalId = signal.getSignalId();
+
             if (!signalPhaseMap.containsKey(signalId)) {
-                log.warn("ATSPM Signal phase map has no entries for signalId {}", signalId);
+                String msg = String.format("ATSPM Signal phase map has no entries for signalId {}", signalId);
+                pairLog.setError(msg);
+                log.warn(msg);
                 continue;
             }
             final ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
             SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
 
-            AtspmSpatPairLog pairLog = new AtspmSpatPairLog();
-            pairLog.setRouteId(routeId);
-            pairLog.setIntersectionId(intersectionId);
-            pairLog.setSignalId(signalId);
-            pairLog.setStartTime(startTime);
-            pairLog.setEndTime(endTime);
-            pairLog.setAtspmSpatPairs(new ArrayList<>());
+
 
             for (final Integer signalGroup : signalGroupMap.keySet()) {
                 List<TimestampedIndication> indications = signalGroupMap.getIndications(signalGroup);
@@ -99,20 +111,23 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
                     AtspmSpatPair pair = new  AtspmSpatPair();
                     pair.setSpatTimestamp(spatTimestamp);
                     pair.setSpatIndication(spatIndication);
+                    pair.setSpatMovementPhaseState(indication.getMovementPhaseState());
                     pair.setSpatSignalGroupId(signalGroup);
-                    Optional<ProcessedControllerEvent> optEvent
+                    var eventResult
                             = phaseMap.findEventInWindow(signalGroup, eventCode, spatTimestamp, Duration.ofSeconds(3));
-                    if (optEvent.isPresent()) {
-                        ProcessedControllerEvent event = optEvent.get();
+                    if (eventResult.event() != null) {
+                        ProcessedControllerEvent event = eventResult.event();
                         pair.setAtspmTimestamp(event.getTimestamp());
                         pair.setAtspmEventCode(event.getEventCode());
                         pair.setAtspmPrimaryPhase(event.getPhase());
-                        pair.setPaired(true);
-                        pairLog.getAtspmSpatPairs().add(pair);
+                        pair.setPaired(eventResult.paired());
+                    } else {
+                        pair.setPaired(false);
                     }
+                    pairLog.getAtspmSpatPairs().add(pair);
                 }
             }
-            logs.add(pairLog);
+
         }
         return logs;
     }
