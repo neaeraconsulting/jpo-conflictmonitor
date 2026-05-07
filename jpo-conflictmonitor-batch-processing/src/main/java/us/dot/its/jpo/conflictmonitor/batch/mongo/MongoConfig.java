@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.batch.client.mongo;
+package us.dot.its.jpo.conflictmonitor.batch.mongo;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;

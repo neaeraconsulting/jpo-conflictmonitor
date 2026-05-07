@@ -7,8 +7,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringTaskScheduler;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.*;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmClientService;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
 
 
 import java.time.Clock;

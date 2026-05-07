@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.batch.client.atspm;
+package us.dot.its.jpo.conflictmonitor.batch.services.atspm;
 
 import lombok.Data;
 import lombok.Generated;

@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.batch.client.atspm;
+package us.dot.its.jpo.conflictmonitor.batch.services.atspm;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;

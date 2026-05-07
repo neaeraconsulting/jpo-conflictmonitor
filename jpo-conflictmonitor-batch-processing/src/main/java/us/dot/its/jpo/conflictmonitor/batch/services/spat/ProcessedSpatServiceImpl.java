@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.batch.client.spat;
+package us.dot.its.jpo.conflictmonitor.batch.services.spat;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

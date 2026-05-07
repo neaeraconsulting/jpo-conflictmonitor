@@ -12,10 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmClientService;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmToken;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
-import us.dot.its.jpo.conflictmonitor.batch.client.spat.ProcessedSpatService;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmToken;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
+import us.dot.its.jpo.conflictmonitor.batch.services.spat.ProcessedSpatService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
@@ -110,6 +111,8 @@ public class TestController {
         return clientService.controllerEventLogs(startTime, endTime, routeId);
 
     }
+
+
 
     @GetMapping(path = "/ProcessedSignal/{signalId}")
     public ProcessedSignal processedSignal(@PathVariable String signalId) {

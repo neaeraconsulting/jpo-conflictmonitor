@@ -38,6 +38,13 @@ public class AtspmSpatValidationParameters {
 
     private List<RouteConfig> routes;
 
+    public RouteConfig findRouteConfig(final int routeId) {
+        for (RouteConfig routeConfig : routes) {
+            if (routeConfig.getRouteId() == routeId) return routeConfig;
+        }
+        throw new IllegalArgumentException(String.format("Route ID %s not found", routeId));
+    }
+
     @JsonIgnore
     private final static Set<ChronoUnit> validUnits = Set.of(ChronoUnit.HOURS, ChronoUnit.MINUTES, ChronoUnit.SECONDS);
 

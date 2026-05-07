@@ -4,18 +4,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringScheduledTask;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
-import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationTaskMetadata;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmClientService;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmToken;
-import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEvent;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmToken;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm_spat_validation.AtspmSpatValidationService;
 
 import java.time.*;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 
@@ -26,6 +23,7 @@ public class AtspmSpatValidationTask
     private final AtspmTokenService tokenService;
     private final AtspmClientService clientService;
     private final MongoTemplate mongoTemplate;
+    private final AtspmSpatValidationService atspmSpatService;
 
 
     public AtspmSpatValidationTask(
@@ -34,11 +32,13 @@ public class AtspmSpatValidationTask
             AtspmTokenService tokenService,
             AtspmClientService clientService,
             Clock clock,
-            MongoTemplate mongoTemplate) {
+            MongoTemplate mongoTemplate,
+            AtspmSpatValidationService atspmSpatService) {
         super(taskMetadata, parameters, clock);
         this.tokenService = tokenService;
         this.clientService = clientService;
         this.mongoTemplate = mongoTemplate;
+        this.atspmSpatService = atspmSpatService;
     }
 
     @Override

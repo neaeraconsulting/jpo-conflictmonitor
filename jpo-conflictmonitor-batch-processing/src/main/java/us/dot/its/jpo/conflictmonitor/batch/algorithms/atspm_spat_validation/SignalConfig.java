@@ -2,6 +2,7 @@ package us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation;
 
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -14,7 +15,7 @@ public class SignalConfig {
     /**
      * SPAT Intersection ID
      */
-    private String intersectionId;
+    private Integer intersectionId;
 
     /**
      * Description of the intersection
@@ -27,5 +28,6 @@ public class SignalConfig {
     private boolean enabled;
 
     private List<PhaseConfig> phases;
+
 
 }

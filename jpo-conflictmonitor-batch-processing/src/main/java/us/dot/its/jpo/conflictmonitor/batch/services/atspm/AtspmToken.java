@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.batch.client.atspm;
+package us.dot.its.jpo.conflictmonitor.batch.services.atspm;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
