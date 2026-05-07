@@ -1,8 +1,8 @@
 package us.dot.its.jpo.conflictmonitor.batch.controllers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,12 +18,13 @@ import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.client.spat.ProcessedSpatService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatLog;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.List;
 
 /**
@@ -120,19 +121,41 @@ public class TestController {
     }
 
     @GetMapping(path = "/processedSpats/{intersectionId}")
-    public List<ProcessedSpat> findSpats(
+    public List<ProcessedSpat> listProcessedSpats(
             @PathVariable int intersectionId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime) {
-        return spatService.findByIntersectionIdAndTimestamp(intersectionId, startTime, endTime);
+            @RequestParam Instant startTime,
+            @RequestParam Instant endTime) {
+        log.info("intersectionID: {}, startTime: {}, endTime: {}", intersectionId, startTime, endTime);
+        return spatService.listProcessedSpats(intersectionId, startTime, endTime);
+    }
+
+    @GetMapping(path = "/spatLogs/{intersectionId}")
+    public SpatLog spatLogs(
+            @PathVariable int intersectionId,
+            @RequestParam Instant startTime,
+            @RequestParam Instant endTime) {
+        log.info("intersectionID: {}, startTime: {}, endTime: {}", intersectionId, startTime, endTime);
+        return spatService.spatLogs(intersectionId, startTime, endTime);
+    }
+
+    @GetMapping(path = "/signalGroupLogs/{intersectionId}")
+    public SignalGroupLog signalGroupLogs(
+            @PathVariable int intersectionId,
+            @RequestParam Instant startTime,
+            @RequestParam Instant endTime) {
+        log.info("intersectionID: {}, startTime: {}, endTime: {}", intersectionId, startTime, endTime);
+        return spatService.signalGroupLogs(intersectionId, startTime, endTime);
     }
 
     @ExceptionHandler(Throwable.class)
     public Health handleException(Throwable ex) {
-        return new Health(false, ex.getClass().getName(), ex);
+        String rootMsg = ExceptionUtils.getRootCauseMessage(ex);
+        String rootStack = ExceptionUtils.getStackTrace(ExceptionUtils.getRootCause(ex));
+        String msg = String.format("%s, root cause: %s, stack trace: %s", ex.getMessage(), rootMsg, rootStack);
+        return new Health(false, ex.getClass().getName(), msg);
     }
 
 
 
-    public record Health (boolean healthy, String message, Throwable exception){}
+    public record Health (boolean healthy, String message, String exception){}
 }
