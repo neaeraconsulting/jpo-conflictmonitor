@@ -181,9 +181,11 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             Set<Integer> signalGroupSet = spatLog.getIndicationsMap().keySet();
             var alignmentEvent = new AtspmSpatSignalGroupAlignmentEvent();
             alignmentEvent.setSignalId(signalId);
-            alignmentEvent.setSignalId(signalId);
+            alignmentEvent.setIntersectionID(intersectionId);
             alignmentEvent.setIntersectionDescription(signal.getDescription());
             alignmentEvent.getSpatSignalGroupIds().addAll(signalGroupSet);
+            alignmentEvent.setStartTime(startTime);
+            alignmentEvent.setEndTime(endTime);
             if (phaseMultimap.containsKey(signalId)) {
                 Collection<Integer> phases = phaseMultimap.get(signalId);
                 alignmentEvent.getAtspmPhases().addAll(phases);
@@ -194,6 +196,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             }
         }
 
+        result.sort(Comparator.comparing(AtspmSpatSignalGroupAlignmentEvent::getSignalId));
         return result;
 
     }

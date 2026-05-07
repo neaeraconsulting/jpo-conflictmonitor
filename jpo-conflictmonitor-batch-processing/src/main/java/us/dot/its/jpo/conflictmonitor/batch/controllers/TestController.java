@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
@@ -172,13 +173,22 @@ public class TestController {
         return spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
     }
 
-    @GetMapping(path = "atspmSpatValidation/{routeId}")
+    @GetMapping(path = "/atspmSpatValidation/{routeId}")
     public List<AtspmSpatPairLog> atspmSpatValidation(
             @PathVariable int routeId,
             @RequestParam Instant startTime,
             @RequestParam Instant endTime) {
         log.info("routeId: {}, startTime: {}, endTime: {}", routeId, startTime, endTime);
         return validationService.atpsmSpatLogs(routeId, startTime, endTime);
+    }
+
+    @GetMapping(path = "/atspmSpatSignalGroupAlignment/{routeId}")
+    public List<AtspmSpatSignalGroupAlignmentEvent> signalGroupAlignmentEvent(
+            @PathVariable int routeId,
+            @RequestParam Instant startTime,
+            @RequestParam Instant endTime) {
+        log.info("routeId: {}, startTime: {}, endTime: {}", routeId, startTime, endTime);
+        return validationService.atspmSpatSignalGroupAlignmentEvents(routeId, startTime, endTime);
     }
 
     @ExceptionHandler(Throwable.class)
