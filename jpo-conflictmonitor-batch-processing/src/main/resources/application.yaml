@@ -33,7 +33,7 @@ cm:
   batch:
     clock:
       offset: true
-      start-timestamp:
+      start-timestamp: "2026-04-26T01:00:00Z"
     scheduler:
       thread.pool.size: 10
     atspm.spat.validation:
