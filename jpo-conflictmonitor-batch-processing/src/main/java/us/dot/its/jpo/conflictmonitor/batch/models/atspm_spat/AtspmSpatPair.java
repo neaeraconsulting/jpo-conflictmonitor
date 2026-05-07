@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.EventCode;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
@@ -7,6 +8,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedMovementPhaseState;
 
 import java.time.Instant;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 public class AtspmSpatPair {
 

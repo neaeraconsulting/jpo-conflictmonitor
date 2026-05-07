@@ -29,6 +29,7 @@ public class ProcessedSpatServiceImpl implements ProcessedSpatService {
     public List<ProcessedSpat> listProcessedSpats(
             int intersectionId, Instant startTime, Instant endTime) {
         log.info("Finding spats intersection {}, startTime {}, endTime {}", intersectionId, startTime, endTime);
+        // TODO check if config is disabled
         Query query = new Query(
                 Criteria.where("intersectionId").is(intersectionId)
                         .and("utcTimeStamp").gte(startTime).lte(endTime)
