@@ -1,6 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed;
 
 import lombok.Getter;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
 
 import java.util.Optional;
 
@@ -39,6 +40,14 @@ public enum EventCode {
             }
         }
         return Optional.empty();
+    }
+
+    public static EventCode fromSpatIndication(SpatSignalIndication spatIndication) {
+       return switch (spatIndication) {
+           case GREEN -> GREEN;
+           case YELLOW -> YELLOW;
+           case RED -> RED;
+       };
     }
 
 }

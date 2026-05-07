@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm_spat_validation.AtspmSpatValidationService;
 import us.dot.its.jpo.conflictmonitor.batch.services.spat.ProcessedSpatService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
@@ -40,12 +42,15 @@ public class TestController {
     private final AtspmTokenService tokenService;
     private final AtspmClientService clientService;
     private final ProcessedSpatService spatService;
+    private final AtspmSpatValidationService validationService;
 
     @Autowired
-    public TestController(AtspmTokenService tokenService, AtspmClientService clientService, ProcessedSpatService spatService) {
+    public TestController(AtspmTokenService tokenService, AtspmClientService clientService,
+                          ProcessedSpatService spatService, AtspmSpatValidationService validationService) {
         this.tokenService = tokenService;
         this.clientService = clientService;
         this.spatService = spatService;
+        this.validationService = validationService;
     }
 
     @GetMapping(path = "/health")
@@ -165,6 +170,15 @@ public class TestController {
             @RequestParam Instant endTime) {
         log.info("intersectionID: {}, startTime: {}, endTime: {}", intersectionId, startTime, endTime);
         return spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
+    }
+
+    @GetMapping(path = "atspmSpatValidation/{routeId}")
+    public List<AtspmSpatPairLog> atspmSpatValidation(
+            @PathVariable int routeId,
+            @RequestParam Instant startTime,
+            @RequestParam Instant endTime) {
+        log.info("routeId: {}, startTime: {}, endTime: {}", routeId, startTime, endTime);
+        return validationService.atpsmSpatLogs(routeId, startTime, endTime);
     }
 
     @ExceptionHandler(Throwable.class)

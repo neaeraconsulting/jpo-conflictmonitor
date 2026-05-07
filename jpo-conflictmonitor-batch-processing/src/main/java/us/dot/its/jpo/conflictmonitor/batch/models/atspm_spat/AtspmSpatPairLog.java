@@ -69,7 +69,7 @@ public class AtspmSpatPairLog {
     private double percentPaired(final SpatSignalIndication indication) {
         if (atspmSpatPairs == null) return 0;
         double numPaired = atspmSpatPairs.stream().filter(AtspmSpatPair::isPaired).filter(pair -> pair.getSpatIndication() == indication).count();
-        double total = atspmSpatPairs.size();
+        double total = atspmSpatPairs.stream().filter(pair -> pair.getSpatIndication() == indication).count();
         if (total == 0) return 0;
         return (numPaired / total) * 100.0;
     }
