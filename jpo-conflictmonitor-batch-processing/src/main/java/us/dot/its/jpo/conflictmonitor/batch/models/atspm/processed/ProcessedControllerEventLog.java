@@ -1,16 +1,17 @@
 package us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed;
 
-import com.google.common.collect.*;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.mapping.Document;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Data
 @Document(collection = "CmAtspmProcessedControllerEventLog")
 public class ProcessedControllerEventLog {
@@ -19,12 +20,12 @@ public class ProcessedControllerEventLog {
     private Instant startTime;
     private Instant endTime;
 
-    private Map<String, Map<Integer, List<ProcessedControllerEvent>>> events;
+    private SignalPhaseMap signalPhaseMap;
 
     public long size() {
-        if (events == null) return 0;
+        if (signalPhaseMap == null) return 0;
         long count = 0;
-        for (Map<Integer, List<ProcessedControllerEvent>> phaseMap : events.values()) {
+        for (Map<Integer, List<ProcessedControllerEvent>> phaseMap : signalPhaseMap.values()) {
             for (List<ProcessedControllerEvent> eventList : phaseMap.values()) {
                 count += eventList.size();
             }
@@ -39,41 +40,84 @@ public class ProcessedControllerEventLog {
         this.startTime = startTime;
         this.endTime = endTime;
 
-        // Group by signal ID
-        var multimap = ArrayListMultimap.<String, ProcessedControllerEvent>create();
+        // Group by signal ID and Phase
+        signalPhaseMap = new SignalPhaseMap();
         for (ControllerEventLog event : controllerEvent) {
             Optional<ProcessedControllerEvent> pceOpt = ProcessedControllerEvent.fromControllerEventLog(event, clock, localTimeZone);
-            pceOpt.ifPresent(e -> multimap.put(e.getSignalId(), e));
+            pceOpt.ifPresent(e -> signalPhaseMap.putEvent(e.getSignalId(), e));
         }
 
-        // Group by phase
-        var signalPhaseMultimap = new LinkedHashMap<String, ListMultimap<Integer, ProcessedControllerEvent>>();
-        for (String signalId : multimap.keySet()) {
-            List<ProcessedControllerEvent> eventList = multimap.get(signalId);
-            var phaseMultimap = ArrayListMultimap.<Integer, ProcessedControllerEvent>create();
-            for (ProcessedControllerEvent event : eventList) {
-                phaseMultimap.put(event.getPhase(), event);
-            }
-            signalPhaseMultimap.put(signalId, phaseMultimap);
-        }
-
-        // Convert to normal Map structure that Mongo can deal with
-        events = new LinkedHashMap<>();
-        for (String signalId : signalPhaseMultimap.keySet()) {
-            ListMultimap<Integer, ProcessedControllerEvent> phaseMultimap = signalPhaseMultimap.get(signalId);
-            Map<Integer, List<ProcessedControllerEvent>> phaseMap = new LinkedHashMap<>();
-            for (Integer phase : phaseMultimap.keySet()) {
-                List<ProcessedControllerEvent> eventList = phaseMultimap.get(phase);
+        // Sort
+        for (String signalId : signalPhaseMap.keySet()) {
+            PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
+            for (Integer phase : phaseMap.keySet()) {
+                List<ProcessedControllerEvent> eventList = phaseMap.get(phase);
                 eventList.sort(Comparator.comparingInt(ProcessedControllerEvent::getPhase));
-                phaseMap.put(phase, eventList);
             }
-            events.put(signalId, phaseMap);
         }
 
     }
 
 
+    public static class SignalPhaseMap extends TreeMap<String, PhaseMap> {
+        public PhaseMap getPhaseMap(String signalId) {
+            if (!containsKey(signalId)) return new PhaseMap();
+            return get(signalId);
+        }
+        public void putPhaseMap(String signalId, PhaseMap phaseMap) {
+            put(signalId, phaseMap);
+        }
+        public void putEvent(String signalId, ProcessedControllerEvent event) {
+            if (containsKey(signalId)) {
+                getPhaseMap(signalId).putEvent(event.getPhase(), event);
+            } else {
+                PhaseMap phaseMap = new PhaseMap();
+                phaseMap.putEvent(event.getPhase(), event);
+                putPhaseMap(signalId, phaseMap);
+            }
+        }
+    }
 
+    public static class PhaseMap extends TreeMap<Integer, List<ProcessedControllerEvent>> {
+        public List<ProcessedControllerEvent> getEventList(int phase) {
+            if (!containsKey(phase)) return new ArrayList<>();
+            return get(phase);
+        }
+        public void putEventList(int phase, List<ProcessedControllerEvent> eventList) {
+            put(phase, eventList);
+        }
+        public void putEvent(int phase, ProcessedControllerEvent event) {
+            if (containsKey(phase)) {
+                get(phase).add(event);
+            } else {
+                List<ProcessedControllerEvent> eventList = new ArrayList<>();
+                eventList.add(event);
+                put(phase, eventList);
+            }
+        }
+
+        public Optional<ProcessedControllerEvent> findEventInWindow(final int phase, final EventCode eventCode,
+                                                                    final Instant timestamp, final Duration window) {
+            if (!containsKey(phase)) return Optional.empty();
+            List<ProcessedControllerEvent> eventList = get(phase);
+            Optional<ProcessedControllerEvent> nearest = eventList.stream()
+                    .filter(event -> event.getEventCode() == eventCode)
+                    .min(Comparator.comparing(ProcessedControllerEvent::getTimestamp));
+            if (nearest.isEmpty()) {
+                log.warn("No nearest event found for phase {} with event code {}", phase, eventCode);
+                return Optional.empty();
+            }
+            ProcessedControllerEvent event = nearest.get();
+            Duration diff = Duration.between(timestamp, event.getTimestamp()).abs();
+            if (diff.compareTo(window) <= 0) {
+                // In window
+                return Optional.of(event);
+            } else {
+                // Not in window
+                return Optional.empty();
+            }
+        }
+    }
 
 
 }

@@ -10,16 +10,15 @@ import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedCont
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.TimestampedIndication;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.spat.ProcessedSpatService;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -41,29 +40,45 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
 
     @Override
     public AtspmSpatPairLog atpsmSpatLogs(int routeId, Instant startTime, Instant endTime) {
+
+        // Get Route Config
         RouteConfig routeConfig = parameters.findRouteConfig(routeId);
         if (!routeConfig.enabledSignals()) {
             log.warn("No enabled signals for route {}, not doing this", routeId);
             return new AtspmSpatPairLog();
         }
+
+        // Get ATSPM Events for route
         LocalDateTime localStartTime = LocalDateTime.ofInstant(startTime, parameters.getLocalTimeZone());
         LocalDateTime localEndTime = LocalDateTime.ofInstant(endTime, parameters.getLocalTimeZone());
-        List<ControllerEventLog> eventLogs = atspmClientService.controllerEventLogs(localStartTime, localEndTime, routeId);
-        log.info("Got eventLogs with {} items", eventLogs.size());
-        var atspmLog = new ProcessedControllerEventLog(routeId, startTime, endTime, eventLogs, clock, parameters.getLocalTimeZone());
-        log.info("Got {} processed log items", atspmLog.size());
+        ProcessedControllerEventLog atspmLog = atspmClientService.processedEventLogs(localStartTime, localEndTime, routeId);
+        log.info("Got eventLogs with {} items", atspmLog.size());
+        ProcessedControllerEventLog.SignalPhaseMap astpmEventMap = atspmLog.getSignalPhaseMap();
 
-        Map<Integer, SignalGroupIndicationLog> spatLogMap = new LinkedHashMap<>();
+        // Get Spats for each intersection/signal on the route
         for (SignalConfig signal : routeConfig.getSignals()) {
-            Integer intersectionId = signal.getIntersectionId();
+            final Integer intersectionId = signal.getIntersectionId();
             if (intersectionId == null) {
                 log.warn("Missing intersection id for signal {}", signal);
                 continue;
             }
             SignalGroupIndicationLog spatLog = spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
-            spatLogMap.put(intersectionId, spatLog);
+            log.info("Got spatLog for signal {}", signal);
+
+            final String signalId = signal.getSignalId();
+
+            SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
+            for (final Integer signalGroup : signalGroupMap.keySet()) {
+                List<TimestampedIndication> indications = signalGroupMap.getIndications(signalGroup);
+                for (TimestampedIndication indication : indications) {
+                    Instant spatTimestamp = indication.getTimestamp();
+                    SpatSignalIndication spatColor = indication.getIndication();
+                }
+            }
         }
 
+
+        return  null;
 
 
     }

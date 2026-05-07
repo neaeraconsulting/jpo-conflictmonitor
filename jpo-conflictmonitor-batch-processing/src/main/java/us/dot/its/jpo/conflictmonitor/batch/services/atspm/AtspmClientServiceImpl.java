@@ -1,12 +1,18 @@
 package us.dot.its.jpo.conflictmonitor.batch.services.atspm;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -16,10 +22,15 @@ public class AtspmClientServiceImpl implements AtspmClientService {
 
     private final RestClient restClient;
     private final AtspmToken token;
+    private final Clock clock;
+    private final AtspmSpatValidationParameters parameters;
 
-    public AtspmClientServiceImpl(RestClient restClient, AtspmToken token) {
+    @Autowired
+    public AtspmClientServiceImpl(RestClient restClient, AtspmToken token, Clock clock, AtspmSpatValidationParameters parameters) {
         this.restClient = restClient;
         this.token = token;
+        this.clock = clock;
+        this.parameters = parameters;
     }
 
     @Override
@@ -77,6 +88,17 @@ public class AtspmClientServiceImpl implements AtspmClientService {
         return retrieveList(returnTypeRef,
                 "/controllerEventLogs?StartTime={startTime}&EndTime={endTime}&RouteIds={routeId}",
                 localTimeFormat.format(startTime), localTimeFormat.format(endTime), routeId);
+    }
+
+    @Override
+    public ProcessedControllerEventLog processedEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId) {
+        List<ControllerEventLog> eventLogs = controllerEventLogs(startTime, endTime, routeId);
+        log.info("Got eventLogs with {} items", eventLogs.size());
+        Instant startInstant = startTime.toInstant(ZoneOffset.UTC);
+        Instant endInstant = endTime.toInstant(ZoneOffset.UTC);
+        var atspmLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock, parameters.getLocalTimeZone());
+        log.info("Got {} processed log items", atspmLog.size());
+        return atspmLog;
     }
 
     private final static DateTimeFormatter localTimeFormat =  DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");

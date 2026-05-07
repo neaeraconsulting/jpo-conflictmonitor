@@ -74,7 +74,7 @@ public class AtspmSpatValidationTask
 
         log.info("Processed event log has {} items", processedLog.size());
 
-        if (!processedLog.getEvents().isEmpty()) {
+        if (!processedLog.getSignalPhaseMap().isEmpty()) {
             log.info("saving processed event log to mongo");
             mongoTemplate.insert(processedLog);
         }

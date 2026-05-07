@@ -9,6 +9,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringTaskScheduler;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.*;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
+import us.dot.its.jpo.conflictmonitor.batch.services.atspm_spat_validation.AtspmSpatValidationService;
 
 
 import java.time.Clock;
@@ -24,11 +25,13 @@ public class AtspmSpatValidationTaskScheduler
     private final AtspmTokenService tokenService;
     private final AtspmClientService clientService;
     private final MongoTemplate mongoTemplate;
+    private final AtspmSpatValidationService atspmSpatValidationService;
 
     @Autowired
     public AtspmSpatValidationTaskScheduler(ThreadPoolTaskScheduler taskScheduler, Clock clock,
                                             AtspmSpatValidationParameters parameters, AtspmTokenService tokenService,
-                                            AtspmClientService clientService, MongoTemplate mongoTemplate) {
+                                            AtspmClientService clientService, MongoTemplate mongoTemplate,
+                                            AtspmSpatValidationService atspmSpatValidationService) {
         super(taskScheduler, clock);
         this.interval = parameters.getInterval();
         this.intervalUnits = parameters.getIntervalUnits();
@@ -41,12 +44,14 @@ public class AtspmSpatValidationTaskScheduler
         this.tokenService = tokenService;
         this.clientService = clientService;
         this.mongoTemplate = mongoTemplate;
+        this.atspmSpatValidationService = atspmSpatValidationService;
     }
 
     @Override
     protected AtspmSpatValidationTask createTask(
             RouteConfig routeConfig, AtspmSpatValidationParameters atspmSpatValidationParameters) {
-        return new AtspmSpatValidationTask(routeConfig, parameters, tokenService, clientService, clock, mongoTemplate);
+        return new AtspmSpatValidationTask(routeConfig, parameters, tokenService, clientService, clock, mongoTemplate,
+                atspmSpatValidationService);
     }
 
 

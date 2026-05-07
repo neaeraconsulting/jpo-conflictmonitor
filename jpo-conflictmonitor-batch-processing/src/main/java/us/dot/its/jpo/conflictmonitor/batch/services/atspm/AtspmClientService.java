@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.batch.services.atspm;
 
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 
 import java.time.LocalDateTime;
@@ -16,4 +17,5 @@ public interface AtspmClientService {
     Approach approachConfig(int approachId);
     Detector detectorConfig(String detectorId);
     List<ControllerEventLog> controllerEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId);
+    ProcessedControllerEventLog processedEventLogs(LocalDateTime startTime, LocalDateTime endTime, int routeId);
 }

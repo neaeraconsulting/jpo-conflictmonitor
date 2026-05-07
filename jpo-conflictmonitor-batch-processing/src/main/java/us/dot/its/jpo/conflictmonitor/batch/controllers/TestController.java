@@ -112,7 +112,14 @@ public class TestController {
 
     }
 
+    @GetMapping(path = "/processedEventLogs")
+    public ProcessedControllerEventLog processedEventLogs(
+            @RequestParam("StartTime") LocalDateTime startTime,
+            @RequestParam("EndTime") LocalDateTime endTime,
+            @RequestParam("RouteIds") int routeId) {
+        return clientService.processedEventLogs(startTime, endTime, routeId);
 
+    }
 
     @GetMapping(path = "/ProcessedSignal/{signalId}")
     public ProcessedSignal processedSignal(@PathVariable String signalId) {

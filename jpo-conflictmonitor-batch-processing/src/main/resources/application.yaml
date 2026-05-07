@@ -57,6 +57,23 @@ cm:
               intersection-id: 44383
               description: "Daisy Mountain Dr & Gavilan Peak Pkwy"
               enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 3
+                  primary-phase: 3
+                - signal-group-id: 4
+                  primary-phase: 4
+                - signal-group-id: 5
+                  primary-phase: 5
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 7
+                  primary-phase: 7
+                - signal-group-id: 8
+                  primary-phase: 8
             - signal-id: "1106118"
               intersection-id: 0  # Missing MAP
               description: "Daisy Mountain Dr & Dedication Trail"
@@ -65,10 +82,40 @@ cm:
               intersection-id: 54749
               description: "Daisy Mountain Dr & Meridian Dr"
               enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 3
+                  primary-phase: 3
+                - signal-group-id: 4
+                  primary-phase: 4
+                - signal-group-id: 5
+                  primary-phase: 5
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 7
+                  primary-phase: 7
+                - signal-group-id: 8
+                  primary-phase: 8
             - signal-id: "11061114"
               intersection-id: 63397
               description: "Daisy Mountain Dr & Hastings Way"
               enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 3
+                  primary-phase: 3
+                - signal-group-id: 5
+                  primary-phase: 5
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 8
+                  primary-phase: 8
             - signal-id: "1106112"
               intersection-id: 13710
               description: "Daisy Mountain Dr & Memorial Dr"
@@ -77,6 +124,23 @@ cm:
               intersection-id: 22391
               description: "Anthem Way & Daisy Mountain Dr"
               enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 3
+                  primary-phase: 3
+                - signal-group-id: 4
+                  primary-phase: 4
+                - signal-group-id: 5
+                  primary-phase: 5
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 7
+                  primary-phase: 7
+                - signal-group-id: 8
+                  primary-phase: 8
         - routeId: 9999
           description: "Fake route for testing scalability"
           signals:
