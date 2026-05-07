@@ -43,7 +43,8 @@ public class AtspmSpatValidationTask
 
     @Override
     public void run() {
-        log.info("Running AtspmSpatValidationTask with metadata: {}", taskMetadata);
+        log.info("Running AtspmSpatValidationTask");
+        log.debug("metadata: {}", taskMetadata);
         AtspmToken token = tokenService.token();
         log.info("Got token.");
         String authentication = clientService.authenticate();
@@ -78,5 +79,8 @@ public class AtspmSpatValidationTask
             log.info("saving processed event log to mongo");
             mongoTemplate.insert(processedLog);
         }
+
+        // Git signal group alignment events
+        //atspmSpatService.atspmSpatSignalGroupAlignmentEvents(routeId, startInstant, endInstant);
     }
 }

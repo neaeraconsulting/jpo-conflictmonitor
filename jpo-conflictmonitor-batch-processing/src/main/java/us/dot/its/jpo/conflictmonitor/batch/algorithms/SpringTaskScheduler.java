@@ -57,7 +57,7 @@ public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask exten
             var task = createTask(taskMetadata, parameters);
             var futureTask = taskScheduler.scheduleAtFixedRate(task, offsetStartTime, Duration.of(interval, intervalUnits));
             futureTasks.add(futureTask);
-            log.info("Task for {} scheduled at {} with interval {} {}", taskMetadata, offsetStartTime, interval, intervalUnits);
+            log.debug("Task for {} scheduled at {} with interval {} {}", taskMetadata, offsetStartTime, interval, intervalUnits);
             offsetStartTime = offsetStartTime.plus(taskStartTimeStagger, taskStartTimeStaggerUnits);
         }
     }

@@ -32,8 +32,11 @@ spring:
 cm:
   batch:
     clock:
+      # In normal operation, set offset to false for system time.
+      # Or for testing or historical queries, set to true with start-timestamp set to the
+      # time in the past to start querying from.
       offset: true
-      start-timestamp: "2026-04-26T01:00:00Z"
+      start-timestamp: "2026-04-26T03:00:00Z"
     scheduler:
       thread.pool.size: 10
     atspm.spat.validation:
@@ -47,8 +50,12 @@ cm:
       interval-units: MINUTES
       task-start-time-stagger: 1
       task-start-time-stagger-units: MINUTES
-      grace-period-offset: 2
-      grace-period-offset-units: HOURS
+      # Offset time to run scheduled queries.
+      # Set to an appropriate offset to ensure all data is present in the database for the
+      # time period being queried.
+      # It's not recommended to set this to 0, as current data in transit might be missed.
+      grace-period-offset: 30
+      grace-period-offset-units: MINUTES
       routes:
         - routeId: 6
           description: "Daisy Mountain Dr"
