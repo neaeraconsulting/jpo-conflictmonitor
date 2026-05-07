@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairEvent;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
 @JsonTypeInfo(
