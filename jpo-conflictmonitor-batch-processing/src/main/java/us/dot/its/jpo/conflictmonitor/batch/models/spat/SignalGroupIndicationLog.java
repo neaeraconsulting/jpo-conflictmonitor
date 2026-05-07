@@ -1,10 +1,12 @@
 package us.dot.its.jpo.conflictmonitor.batch.models.spat;
 
 import lombok.Data;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.*;
 
+@Document("CmAtspmSpatSignalGroupIndicationLog")
 @Data
 public class SignalGroupIndicationLog {
     private int intersectionId;
