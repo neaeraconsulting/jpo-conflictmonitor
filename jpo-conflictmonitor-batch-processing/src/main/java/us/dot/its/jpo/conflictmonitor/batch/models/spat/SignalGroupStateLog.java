@@ -14,16 +14,16 @@ import java.util.Map;
  * Signal Group Delta Series for an intersection
  */
 @Data
-public class SignalGroupLog {
+public class SignalGroupStateLog {
     private int intersectionId;
     private Instant startTime;
     private Instant endTime;
-    private Map<Integer, List<SignalGroupState>> stateMap;
-    public static SignalGroupLog fromSpatLog(SpatLog spatLog) {
-        SignalGroupLog signalGroupLog = new SignalGroupLog();
-        signalGroupLog.setIntersectionId(spatLog.getIntersectionId());
-        signalGroupLog.setStartTime(spatLog.getStartTime());
-        signalGroupLog.setEndTime(spatLog.getEndTime());
+    private Map<Integer, List<TimestampedState>> signalGroupStates;
+    public static SignalGroupStateLog fromSpatLog(SpatLog spatLog) {
+        var log = new SignalGroupStateLog();
+        log.setIntersectionId(spatLog.getIntersectionId());
+        log.setStartTime(spatLog.getStartTime());
+        log.setEndTime(spatLog.getEndTime());
 
         ListMultimap<Integer, SignalGroupState> sigMultimap = ArrayListMultimap.create();
 
@@ -34,22 +34,22 @@ public class SignalGroupLog {
             }
         }
 
-        signalGroupLog.stateMap = new LinkedHashMap<>();
+        log.signalGroupStates = new LinkedHashMap<>();
 
         // Remove unchanged signal group states from each signal group,
         // keep only first changes signal state
         for (int signalGroup : sigMultimap.keySet()) {
             List<SignalGroupState> states = sigMultimap.get(signalGroup);
-            List<SignalGroupState> stateDeltas = new ArrayList<>();
+            List<TimestampedState> stateDeltas = new ArrayList<>();
             SignalGroupState previousState = null;
             for (SignalGroupState state : states) {
                 if (previousState == null || state.getEventState() != previousState.getEventState()) {
-                    stateDeltas.add(state);
+                    stateDeltas.add(TimestampedState.fromSignalGroupState(state));
                 }
                 previousState = state;
             }
-            signalGroupLog.stateMap.put(signalGroup, stateDeltas);
+            log.signalGroupStates.put(signalGroup, stateDeltas);
         }
-        return signalGroupLog;
+        return log;
     }
 }

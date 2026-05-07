@@ -6,7 +6,8 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupStateLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.Spat;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatLog;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
@@ -53,8 +54,14 @@ public class ProcessedSpatServiceImpl implements ProcessedSpatService {
     }
 
     @Override
-    public SignalGroupLog signalGroupLogs(int intersectionId, Instant startTime, Instant endTime) {
+    public SignalGroupStateLog signalGroupLogs(int intersectionId, Instant startTime, Instant endTime) {
         SpatLog spatLog = spatLogs(intersectionId, startTime, endTime);
-        return SignalGroupLog.fromSpatLog(spatLog);
+        return SignalGroupStateLog.fromSpatLog(spatLog);
+    }
+
+    @Override
+    public SignalGroupIndicationLog signalGroupIndicationLogs(int intersectionId, Instant startTime, Instant endTime) {
+        SignalGroupStateLog stateLog = signalGroupLogs(intersectionId, startTime, endTime);
+        return SignalGroupIndicationLog.fromSignalGroupStateLog(stateLog);
     }
 }

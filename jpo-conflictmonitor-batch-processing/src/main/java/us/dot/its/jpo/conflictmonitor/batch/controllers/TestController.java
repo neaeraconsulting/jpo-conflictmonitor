@@ -18,7 +18,8 @@ import us.dot.its.jpo.conflictmonitor.batch.client.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.client.spat.ProcessedSpatService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
-import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupStateLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatLog;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
@@ -139,12 +140,21 @@ public class TestController {
     }
 
     @GetMapping(path = "/signalGroupLogs/{intersectionId}")
-    public SignalGroupLog signalGroupLogs(
+    public SignalGroupStateLog signalGroupLogs(
             @PathVariable int intersectionId,
             @RequestParam Instant startTime,
             @RequestParam Instant endTime) {
         log.info("intersectionID: {}, startTime: {}, endTime: {}", intersectionId, startTime, endTime);
         return spatService.signalGroupLogs(intersectionId, startTime, endTime);
+    }
+
+    @GetMapping(path = "/signalGroupIndicationLogs/{intersectionId}")
+    public SignalGroupIndicationLog signalGroupIndicationLogs(
+            @PathVariable int intersectionId,
+            @RequestParam Instant startTime,
+            @RequestParam Instant endTime) {
+        log.info("intersectionID: {}, startTime: {}, endTime: {}", intersectionId, startTime, endTime);
+        return spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
     }
 
     @ExceptionHandler(Throwable.class)
