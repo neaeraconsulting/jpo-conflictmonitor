@@ -68,18 +68,22 @@ cm:
               phases:
                 - signal-group-id: 1
                   primary-phase: 1
+                  secondary-phase: 6
                 - signal-group-id: 2
                   primary-phase: 2
                 - signal-group-id: 3
                   primary-phase: 3
+                  secondary-phase: 8
                 - signal-group-id: 4
                   primary-phase: 4
                 - signal-group-id: 5
                   primary-phase: 5
+                  secondary-phase: 2
                 - signal-group-id: 6
                   primary-phase: 6
                 - signal-group-id: 7
                   primary-phase: 7
+                  secondary-phase: 4
                 - signal-group-id: 8
                   primary-phase: 8
             - signal-id: "1106118"

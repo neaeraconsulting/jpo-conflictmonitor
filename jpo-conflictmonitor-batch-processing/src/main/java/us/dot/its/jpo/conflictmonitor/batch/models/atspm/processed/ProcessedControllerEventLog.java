@@ -103,9 +103,8 @@ public class ProcessedControllerEventLog {
                                                                     final Instant timestamp, final Duration window) {
             if (!containsKey(phase)) return new FindEventInWindowResult(false, null);
             List<ProcessedControllerEvent> eventList = getEventList(phase);
-//            Optional<ProcessedControllerEvent> nearest = eventList.stream()
-//                    .filter(event -> event.getEventCode() == eventCode)
-//                    .min(Comparator.comparing(ProcessedControllerEvent::getTimestamp));
+
+            // A binary search would be better, but this works fine
             long maxDiff = Long.MAX_VALUE;
             ProcessedControllerEvent nearest = null;
             for (var event : eventList) {
