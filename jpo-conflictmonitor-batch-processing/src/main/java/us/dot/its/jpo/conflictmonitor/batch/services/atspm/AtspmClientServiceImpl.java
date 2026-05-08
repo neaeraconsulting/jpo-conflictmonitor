@@ -77,11 +77,14 @@ public class AtspmClientServiceImpl implements AtspmClientService {
     @Override
     public ProcessedSignal processedSignalConfig(String signalId) {
         Signal signal = signalConfig(signalId);
-        List<ControllerType> controllerTypes = controllerType();
-        List<MovementType> movementTypes = movementType();
-        List<LaneType> laneTypes = laneType();
-        List<DirectionType> directionTypes = directionType();
-        return ProcessedSignal.fromSignal(signal, controllerTypes, movementTypes, laneTypes, directionTypes);
+        if (signal != null) {
+            List<ControllerType> controllerTypes = controllerType();
+            List<MovementType> movementTypes = movementType();
+            List<LaneType> laneTypes = laneType();
+            List<DirectionType> directionTypes = directionType();
+            return ProcessedSignal.fromSignal(signal, controllerTypes, movementTypes, laneTypes, directionTypes);
+        }
+        return null;
     }
 
     @Override
