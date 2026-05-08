@@ -93,7 +93,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
 
 
             if (!signalPhaseMap.containsKey(signalId)) {
-                String msg = String.format("ATSPM Signal phase map has no entries for signalId {}", signalId);
+                String msg = String.format("ATSPM Signal phase map has no entries for signalId %s", signalId);
                 pairLog.setError(msg);
                 log.warn(msg);
                 continue;
