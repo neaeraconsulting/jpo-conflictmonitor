@@ -48,11 +48,6 @@ public class AtspmSpatPairEvent extends Event {
      */
     private List<AtspmSpatPair> atspmSpatPairs;
 
-    /**
-     * Error message, or null of no errors
-     */
-    private String error;
-
     private double percentPaired;
     private double percentRedPaired;
     private double percentYellowPaired;
@@ -63,7 +58,6 @@ public class AtspmSpatPairEvent extends Event {
         AtspmSpatPairEvent event = new AtspmSpatPairEvent();
         event.setIntersectionID(log.getIntersectionId());
         event.setAtspmSpatPairs(log.getAtspmSpatPairs());
-        event.setError(log.getError());
         event.setRouteId(log.getRouteId());
         event.setSignalId(log.getSignalId());
         event.setStartTime(log.getStartTime());
