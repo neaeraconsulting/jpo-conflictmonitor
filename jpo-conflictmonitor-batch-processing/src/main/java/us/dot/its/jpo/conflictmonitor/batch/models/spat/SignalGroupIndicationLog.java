@@ -36,19 +36,22 @@ public class SignalGroupIndicationLog {
             }
         }
 
-        // Remove unchanged indications
-        for (int signalGroup : log.indicationsMap.keySet()) {
-            List<TimestampedIndication> indications = log.indicationsMap.get(signalGroup);
-            List<TimestampedIndication> indicationDeltas = new ArrayList<>();
-            TimestampedIndication previousIndication = null;
-            for (TimestampedIndication indication : indications) {
-                if (previousIndication == null || indication.getIndication() != previousIndication.getIndication()) {
-                    indicationDeltas.add(indication);
-                }
-                previousIndication = indication;
-            }
-            log.indicationsMap.replace(signalGroup, indicationDeltas);
-        }
+
+        // Don't deduplicate indications at this point
+        // eg. if "stop-The-Proceed" follows "stop-And-Remain", etc, leave both REDs
+
+//        for (int signalGroup : log.indicationsMap.keySet()) {
+//            List<TimestampedIndication> indications = log.indicationsMap.get(signalGroup);
+//            List<TimestampedIndication> indicationDeltas = new ArrayList<>();
+//            TimestampedIndication previousIndication = null;
+//            for (TimestampedIndication indication : indications) {
+//                if (previousIndication == null || indication.getIndication() != previousIndication.getIndication()) {
+//                    indicationDeltas.add(indication);
+//                }
+//                previousIndication = indication;
+//            }
+//            log.indicationsMap.replace(signalGroup, indicationDeltas);
+//        }
         return log;
     }
 

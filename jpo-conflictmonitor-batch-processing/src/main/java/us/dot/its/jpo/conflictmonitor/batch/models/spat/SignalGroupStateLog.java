@@ -3,16 +3,15 @@ package us.dot.its.jpo.conflictmonitor.batch.models.spat;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import lombok.Data;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Signal Group Delta Series for an intersection
  */
+@Document("CmAtspmSpatSignalGroupStateLog")
 @Data
 public class SignalGroupStateLog {
     private int intersectionId;
@@ -34,7 +33,7 @@ public class SignalGroupStateLog {
             }
         }
 
-        log.signalGroupStates = new LinkedHashMap<>();
+        log.signalGroupStates = new TreeMap<>();
 
         // Remove unchanged signal group states from each signal group,
         // keep only first changes signal state

@@ -15,6 +15,7 @@ import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatPairEvent;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupStateLog;
 import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatMaterializedViewUpdater;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmToken;
@@ -135,9 +136,12 @@ public class AtspmSpatValidationTask
                 log.warn(msg);
                 continue;
             }
-            SignalGroupIndicationLog spatLog = spatService.signalGroupIndicationLogs(intersectionId, startInstant, endInstant);
-            log.info("Got spatLog for signal {}", signal);
-            mongoTemplate.insert(spatLog);
+            SignalGroupStateLog spatStateLog = spatService.signalGroupLogs(intersectionId, startInstant, endInstant);
+            log.info("Got spat state log for intersection {}", intersectionId);
+            mongoTemplate.insert(spatStateLog);
+            SignalGroupIndicationLog spatIndicationLog = spatService.signalGroupIndicationLogs(intersectionId, startInstant, endInstant);
+            log.info("Got spat indication log for intersection {}", intersectionId);
+            mongoTemplate.insert(spatIndicationLog);
         }
 
         // Get signal metadata and save to mongo
