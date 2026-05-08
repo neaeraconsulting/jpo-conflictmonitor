@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 import org.springframework.data.mongodb.core.mapping.Document;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatStatistics;
 
 import java.time.Instant;
 import java.util.List;
@@ -52,6 +53,12 @@ public class AtspmSpatPairEvent extends Event {
      */
     private String error;
 
+    private double percentPaired;
+    private double percentRedPaired;
+    private double percentYellowPaired;
+    private double percentGreenPaired;
+    private AtspmSpatStatistics signalGroupStatistics;
+
     public static AtspmSpatPairEvent fromLog(AtspmSpatPairLog log) {
         AtspmSpatPairEvent event = new AtspmSpatPairEvent();
         event.setIntersectionID(log.getIntersectionId());
@@ -61,6 +68,11 @@ public class AtspmSpatPairEvent extends Event {
         event.setSignalId(log.getSignalId());
         event.setStartTime(log.getStartTime());
         event.setEndTime(log.getEndTime());
+        event.setPercentPaired(log.getPercentPaired());
+        event.setPercentRedPaired(log.getPercentRedPaired());
+        event.setPercentYellowPaired(log.getPercentYellowPaired());
+        event.setPercentGreenPaired(log.getPercentGreenPaired());
+        event.setSignalGroupStatistics(log.getSignalGroupStatistics());
         return event;
     }
 
