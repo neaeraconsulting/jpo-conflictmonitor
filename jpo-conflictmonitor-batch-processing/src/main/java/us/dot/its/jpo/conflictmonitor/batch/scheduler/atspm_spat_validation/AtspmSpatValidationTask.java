@@ -1,7 +1,12 @@
 package us.dot.its.jpo.conflictmonitor.batch.scheduler.atspm_spat_validation;
 
 import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.aggregation.SetOperation;
+
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringScheduledTask;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
@@ -9,6 +14,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.Sig
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
+import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatMaterializedViewUpdater;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
@@ -30,6 +36,7 @@ public class AtspmSpatValidationTask
     private final MongoTemplate mongoTemplate;
     private final AtspmSpatValidationService atspmSpatService;
     private final ProcessedSpatService spatService;
+    private final ProcessedSpatMaterializedViewUpdater spatUpdater;
 
 
     public AtspmSpatValidationTask(
@@ -40,24 +47,30 @@ public class AtspmSpatValidationTask
             Clock clock,
             MongoTemplate mongoTemplate,
             AtspmSpatValidationService atspmSpatService,
-            ProcessedSpatService spatService) {
+            ProcessedSpatService spatService,
+            ProcessedSpatMaterializedViewUpdater spatUpdater) {
         super(taskMetadata, parameters, clock);
         this.tokenService = tokenService;
         this.clientService = clientService;
         this.mongoTemplate = mongoTemplate;
         this.atspmSpatService = atspmSpatService;
         this.spatService = spatService;
+        this.spatUpdater = spatUpdater;
     }
 
     @Override
     public void run() {
         log.info("Running AtspmSpatValidationTask");
         log.debug("metadata: {}", taskMetadata);
-        AtspmToken token = tokenService.token();
+        tokenService.token();
         log.info("Got token.");
         String authentication = clientService.authenticate();
         log.info("Got authentication response: {}", authentication);
         int routeId = taskMetadata.getRouteId();
+
+        // Update the ProcessedSpat_MV Materialized View in Mongo
+        spatUpdater.updateMaterializedView();
+        log.info("Updated ProcessedSpat_MV");
 
         // Offset time to query by the grace period
         Duration gracePeriod = Duration.of(parameters.getGracePeriodOffset(), parameters.getGracePeriodOffsetUnits());
