@@ -102,15 +102,26 @@ public class ProcessedControllerEventLog {
         public FindEventInWindowResult findEventInWindow(final int phase, final EventCode eventCode,
                                                                     final Instant timestamp, final Duration window) {
             if (!containsKey(phase)) return new FindEventInWindowResult(false, null);
-            List<ProcessedControllerEvent> eventList = get(phase);
-            Optional<ProcessedControllerEvent> nearest = eventList.stream()
-                    .filter(event -> event.getEventCode() == eventCode)
-                    .min(Comparator.comparing(ProcessedControllerEvent::getTimestamp));
-            if (nearest.isEmpty()) {
+            List<ProcessedControllerEvent> eventList = getEventList(phase);
+//            Optional<ProcessedControllerEvent> nearest = eventList.stream()
+//                    .filter(event -> event.getEventCode() == eventCode)
+//                    .min(Comparator.comparing(ProcessedControllerEvent::getTimestamp));
+            long maxDiff = Long.MAX_VALUE;
+            ProcessedControllerEvent nearest = null;
+            for (var event : eventList) {
+                if (event.getEventCode() != eventCode) continue;
+                long diff = Math.abs(event.getTimestamp().getEpochSecond() - timestamp.getEpochSecond());
+                if (diff < maxDiff) {
+                    maxDiff = diff;
+                    nearest = event;
+                }
+            }
+
+            if (nearest != null) {
                 log.warn("No nearest event found for phase {} with event code {}", phase, eventCode);
                 return new FindEventInWindowResult(false, null);
             }
-            ProcessedControllerEvent event = nearest.get();
+            ProcessedControllerEvent event = nearest;
             Duration diff = Duration.between(timestamp, event.getTimestamp()).abs();
             if (diff.compareTo(window) <= 0) {
                 // In window

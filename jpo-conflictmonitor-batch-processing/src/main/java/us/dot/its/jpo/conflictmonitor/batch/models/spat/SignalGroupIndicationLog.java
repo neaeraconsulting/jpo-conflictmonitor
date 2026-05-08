@@ -38,7 +38,7 @@ public class SignalGroupIndicationLog {
 
 
         // Don't deduplicate indications at this point
-        // eg. if "stop-The-Proceed" follows "stop-And-Remain", etc, leave both REDs
+        // eg. if "protected clearance" follows "permissive clearance", etc, leave both YELLOWs
 
 //        for (int signalGroup : log.indicationsMap.keySet()) {
 //            List<TimestampedIndication> indications = log.indicationsMap.get(signalGroup);
