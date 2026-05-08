@@ -117,7 +117,7 @@ public class ProcessedControllerEventLog {
                 }
             }
 
-            if (nearest != null) {
+            if (nearest == null) {
                 log.warn("No nearest event found for phase {} with event code {}", phase, eventCode);
                 return new FindEventInWindowResult(false, null);
             }
