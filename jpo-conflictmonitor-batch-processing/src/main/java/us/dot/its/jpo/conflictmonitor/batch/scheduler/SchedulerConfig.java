@@ -35,14 +35,4 @@ public class SchedulerConfig implements SchedulingConfigurer {
         return scheduler;
     }
 
-    /**
-     * Reference clock for scheduler.
-     * Usually use UTC time.
-     * Can override this for testing the scheduler.
-     * @return Clock to get current instant from
-     */
-    @Bean
-    public Clock clock() {
-        return Clock.systemUTC();
-    }
 }

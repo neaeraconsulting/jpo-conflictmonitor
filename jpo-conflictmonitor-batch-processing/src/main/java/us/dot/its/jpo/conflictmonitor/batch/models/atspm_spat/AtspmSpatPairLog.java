@@ -3,6 +3,8 @@ package us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+
+import org.springframework.data.annotation.AccessType;
 import org.springframework.data.mongodb.core.mapping.Document;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
@@ -53,6 +55,7 @@ public class AtspmSpatPairLog {
     private String error;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @AccessType(AccessType.Type.PROPERTY)
     public double getPercentPaired() {
         if (atspmSpatPairs == null) return 0;
         double numPaired = atspmSpatPairs.stream().filter(AtspmSpatPair::isPaired).count();
@@ -60,21 +63,28 @@ public class AtspmSpatPairLog {
         if (total == 0) return 0;
         return (numPaired  / total) * 100.0;
     }
+    //public void setPercentPaired(double percentPaired) {}
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private double getPercentGreenPaired() {
+    @AccessType(AccessType.Type.PROPERTY)
+    public double getPercentGreenPaired() {
         return percentPaired(SpatSignalIndication.GREEN);
     }
+    //public void setPercentGreenPaired(double percentGreenPaired) {}
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private double getPercentRedPaired() {
+    @AccessType(AccessType.Type.PROPERTY)
+    public double getPercentRedPaired() {
         return percentPaired(SpatSignalIndication.RED);
     }
+    //public void setPercentRedPaired(double percentRedPaired) {}
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private double getPercentYellowPaired() {
+    @AccessType(AccessType.Type.PROPERTY)
+    public double getPercentYellowPaired() {
         return percentPaired(SpatSignalIndication.YELLOW);
     }
+    //public void setPercentYellowPaired(double percentYellowPaired) {}
 
     private double percentPaired(final SpatSignalIndication indication) {
         if (atspmSpatPairs == null) return 0;
@@ -118,7 +128,8 @@ public class AtspmSpatPairLog {
     }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private AtspmSpatStatistics getSignalGroupStatistics() {
+    @AccessType(AccessType.Type.PROPERTY)
+    public AtspmSpatStatistics getSignalGroupStatistics() {
         Set<Integer> uniqueSignalGroups = uniqueSignalGroups();
         AtspmSpatStatistics stats = new AtspmSpatStatistics();
         for (Integer signalGroupId : uniqueSignalGroups) {
@@ -131,6 +142,7 @@ public class AtspmSpatPairLog {
         }
         return stats;
     }
+    //public void setSignalGroupStatistics(AtspmSpatStatistics stats) {}
 
 
 }

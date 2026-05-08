@@ -31,14 +31,15 @@ spring:
 
 cm:
   batch:
-    clock:
-      # In normal operation, set offset to false for system time.
-      # Or for testing or historical queries, set to true with start-timestamp set to the
-      # time in the past to start querying from.
-      offset: true
-      start-timestamp: "2026-04-26T03:00:00Z"
     scheduler:
       thread.pool.size: 10
+    # Clock config:
+    # In normal operation, set offset to false for system time.
+    # Or for testing or historical queries, set to true with start-timestamp set to the
+    # time in the past to start querying from.
+    clock:
+      offset: true
+      start-timestamp: "2026-04-26T02:00:00Z"
     atspm.spat.validation:
       algorithm: defaultAtspmSpatValidationAlgorithm
       client:
@@ -46,16 +47,16 @@ cm:
         username: ${CM_ATSPM_CLIENT_USERNAME:username}
         password: ${CM_ATSPM_CLIENT_PASSWORD:password}
       local-time-zone: "America/Phoenix"
-      interval: 10
-      interval-units: MINUTES
-      task-start-time-stagger: 1
+      interval: 1
+      interval-units: HOURS
+      task-start-time-stagger: 2
       task-start-time-stagger-units: MINUTES
-      # Offset time to run scheduled queries.
-      # Set to an appropriate offset to ensure all data is present in the database for the
+      # grace-period: Offset time to run scheduled queries.
+      # Set to an appropriate offset to ensure all data is present in the ATSPM and CIMMS databases for the
       # time period being queried.
       # It's not recommended to set this to 0, as current data in transit might be missed.
-      grace-period-offset: 30
-      grace-period-offset-units: MINUTES
+      grace-period-offset: 1
+      grace-period-offset-units: HOURS
       routes:
         - routeId: 6
           description: "Daisy Mountain Dr"

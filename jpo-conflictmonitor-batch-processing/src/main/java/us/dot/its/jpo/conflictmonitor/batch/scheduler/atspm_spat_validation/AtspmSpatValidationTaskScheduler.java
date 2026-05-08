@@ -10,6 +10,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.*;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm_spat_validation.AtspmSpatValidationService;
+import us.dot.its.jpo.conflictmonitor.batch.services.spat.ProcessedSpatService;
 
 
 import java.time.Clock;
@@ -26,12 +27,14 @@ public class AtspmSpatValidationTaskScheduler
     private final AtspmClientService clientService;
     private final MongoTemplate mongoTemplate;
     private final AtspmSpatValidationService atspmSpatValidationService;
+    private final ProcessedSpatService spatService;
 
     @Autowired
     public AtspmSpatValidationTaskScheduler(ThreadPoolTaskScheduler taskScheduler, Clock clock,
                                             AtspmSpatValidationParameters parameters, AtspmTokenService tokenService,
                                             AtspmClientService clientService, MongoTemplate mongoTemplate,
-                                            AtspmSpatValidationService atspmSpatValidationService) {
+                                            AtspmSpatValidationService atspmSpatValidationService,
+                                            ProcessedSpatService spatService) {
         super(taskScheduler, clock);
         this.interval = parameters.getInterval();
         this.intervalUnits = parameters.getIntervalUnits();
@@ -45,13 +48,14 @@ public class AtspmSpatValidationTaskScheduler
         this.clientService = clientService;
         this.mongoTemplate = mongoTemplate;
         this.atspmSpatValidationService = atspmSpatValidationService;
+        this.spatService = spatService;
     }
 
     @Override
     protected AtspmSpatValidationTask createTask(
             RouteConfig routeConfig, AtspmSpatValidationParameters atspmSpatValidationParameters) {
         return new AtspmSpatValidationTask(routeConfig, parameters, tokenService, clientService, clock, mongoTemplate,
-                atspmSpatValidationService);
+                atspmSpatValidationService, spatService);
     }
 
 
