@@ -2,6 +2,7 @@ package us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed;
 
 import lombok.Data;
 
+import org.springframework.data.mongodb.core.mapping.Document;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
  * MovementType, etc) into a condensed data structure with information useful for this algorithm
  * to match with MAP and SPAT data.
  */
+@Document("CmAtspmProcessedSignalConfig")
 @Data
 public class ProcessedSignal {
     private String signalID;

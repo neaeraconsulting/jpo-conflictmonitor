@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 import us.dot.its.jpo.conflictmonitor.batch.time.TimeUtil;
 
@@ -71,6 +72,16 @@ public class AtspmClientServiceImpl implements AtspmClientService {
     @Override
     public Signal signalConfig(String signalId) {
         return retrieveObject(Signal.class, "/SignalConfig/{signalId}", signalId);
+    }
+
+    @Override
+    public ProcessedSignal processedSignalConfig(String signalId) {
+        Signal signal = signalConfig(signalId);
+        List<ControllerType> controllerTypes = controllerType();
+        List<MovementType> movementTypes = movementType();
+        List<LaneType> laneTypes = laneType();
+        List<DirectionType> directionTypes = directionType();
+        return ProcessedSignal.fromSignal(signal, controllerTypes, movementTypes, laneTypes, directionTypes);
     }
 
     @Override

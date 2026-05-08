@@ -129,12 +129,7 @@ public class TestController {
 
     @GetMapping(path = "/ProcessedSignal/{signalId}")
     public ProcessedSignal processedSignal(@PathVariable String signalId) {
-        Signal signal = clientService.signalConfig(signalId);
-        List<ControllerType> controllerTypes = clientService.controllerType();
-        List<MovementType> movementTypes = clientService.movementType();
-        List<LaneType> laneTypes = clientService.laneType();
-        List<DirectionType> directionTypes = clientService.directionType();
-        return ProcessedSignal.fromSignal(signal, controllerTypes, movementTypes, laneTypes, directionTypes);
+        return clientService.processedSignalConfig(signalId);
     }
 
     @GetMapping(path = "/processedSpats/{intersectionId}")

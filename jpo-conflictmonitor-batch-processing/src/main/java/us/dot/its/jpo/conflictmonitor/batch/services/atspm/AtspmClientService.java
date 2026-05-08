@@ -1,6 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.batch.services.atspm;
 
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ public interface AtspmClientService {
     String authenticate();
     String forall();
     Signal signalConfig(String signalId);
+    ProcessedSignal processedSignalConfig(String signalId);
     List<ControllerType> controllerType();
     List<DirectionType> directionType();
     List<LaneType> laneType();

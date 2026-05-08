@@ -115,5 +115,11 @@ public class AtspmSpatValidationTask
             mongoTemplate.insert(spatLog);
         }
 
+        // Get signal metadata and save to mongo
+        for (SignalConfig signal : routeConfig.getSignals()) {
+            var processedSignalConfig = clientService.processedSignalConfig(signal.getSignalId());
+            mongoTemplate.insert(processedSignalConfig);
+        }
+
     }
 }
