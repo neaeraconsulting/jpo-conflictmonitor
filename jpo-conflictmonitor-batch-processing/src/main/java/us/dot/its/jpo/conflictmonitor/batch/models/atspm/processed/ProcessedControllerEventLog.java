@@ -1,5 +1,8 @@
 package us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.MultimapBuilder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -120,5 +123,21 @@ public class ProcessedControllerEventLog {
     }
 
     public record FindEventInWindowResult(boolean paired, ProcessedControllerEvent event) {}
+
+    @JsonIgnore
+    public Multimap<String, Integer> signalToPhaseMultimap() {
+        ProcessedControllerEventLog.SignalPhaseMap signalPhaseMap = getSignalPhaseMap();
+        Multimap<String, Integer> phaseMultimap = MultimapBuilder.hashKeys().arrayListValues().build();
+        for (String signalId : signalPhaseMap.keySet()) {
+            ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
+            for (final Integer phase : phaseMap.keySet()) {
+                List<ProcessedControllerEvent> eventList = phaseMap.getEventList(phase);
+                for (final ProcessedControllerEvent event : eventList) {
+                    phaseMultimap.put(signalId, event.getPhase());
+                }
+            }
+        }
+        return phaseMultimap;
+    }
 
 }

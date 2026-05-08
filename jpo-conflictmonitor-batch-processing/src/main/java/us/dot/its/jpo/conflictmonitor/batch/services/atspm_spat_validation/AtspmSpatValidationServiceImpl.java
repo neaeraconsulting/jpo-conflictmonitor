@@ -13,7 +13,6 @@ import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignment
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.EventCode;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
@@ -35,15 +34,13 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
     private final AtspmSpatValidationParameters parameters;
     private final AtspmClientService atspmClientService;
     private final ProcessedSpatService spatService;
-    private final Clock clock;
 
     @Autowired
     public AtspmSpatValidationServiceImpl(AtspmSpatValidationParameters parameters,
-            AtspmClientService atspmClientService, ProcessedSpatService spatService, Clock clock) {
+            AtspmClientService atspmClientService, ProcessedSpatService spatService) {
         this.parameters = parameters;
         this.atspmClientService = atspmClientService;
         this.spatService = spatService;
-        this.clock = clock;
     }
 
     @Override
@@ -62,6 +59,9 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         LocalDateTime localEndTime = LocalDateTime.ofInstant(endTime, parameters.getLocalTimeZone());
         ProcessedControllerEventLog atspmLog = atspmClientService.processedEventLogs(localStartTime, localEndTime, routeId);
         log.info("Got eventLogs with {} items", atspmLog.size());
+
+        Multimap<String, Integer> phaseMultimap = atspmLog.signalToPhaseMultimap();
+
         ProcessedControllerEventLog.SignalPhaseMap signalPhaseMap = atspmLog.getSignalPhaseMap();
 
         // Get Spats for each intersection/signal on the route
@@ -100,10 +100,20 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             }
             final ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
             SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
-
+            Set<Integer> signalGroupSet = spatLog.getIndicationsMap().keySet();
+            Set<Integer> phaseSet = new HashSet<>(phaseMultimap.get(signalId));
+            Set<Integer> commonSignalGroupPhaseNumbers = Sets.intersection(signalGroupSet, phaseSet);
 
 
             for (final Integer signalGroup : signalGroupMap.keySet()) {
+
+                if (!commonSignalGroupPhaseNumbers.contains(signalGroup)) {
+                    log.info("SignalGroup {} (of intersectionId {}, signalId {}) doesn't have any matching phases," +
+                                    " ignoring it, see AtspmSpatSignalGroupAlignmentEvent",
+                            signalGroup, intersectionId, signalId);
+                    continue;
+                }
+
                 List<TimestampedIndication> indications = signalGroupMap.getIndications(signalGroup);
 
                 for (TimestampedIndication indication : indications) {
@@ -151,17 +161,8 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         LocalDateTime localEndTime = LocalDateTime.ofInstant(endTime, parameters.getLocalTimeZone());
         ProcessedControllerEventLog atspmLog = atspmClientService.processedEventLogs(localStartTime, localEndTime, routeId);
         log.info("Got eventLogs with {} items", atspmLog.size());
-        ProcessedControllerEventLog.SignalPhaseMap signalPhaseMap = atspmLog.getSignalPhaseMap();
-        Multimap<String, Integer> phaseMultimap = MultimapBuilder.hashKeys().arrayListValues().build();
-        for (String signalId : signalPhaseMap.keySet()) {
-            ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
-            for (final Integer phase : phaseMap.keySet()) {
-                List<ProcessedControllerEvent> eventList = phaseMap.getEventList(phase);
-                for (final ProcessedControllerEvent event : eventList) {
-                    phaseMultimap.put(signalId, event.getPhase());
-                }
-            }
-        }
+
+        Multimap<String, Integer> phaseMultimap = atspmLog.signalToPhaseMultimap();
 
         // Get Spats for each intersection/signal on the route
         for (SignalConfig signal : routeConfig.getSignals()) {
@@ -200,4 +201,6 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         return result;
 
     }
+
+
 }

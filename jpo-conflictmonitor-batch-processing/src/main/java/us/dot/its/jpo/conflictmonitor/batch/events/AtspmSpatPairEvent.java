@@ -3,11 +3,15 @@ package us.dot.its.jpo.conflictmonitor.batch.events;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.data.mongodb.core.mapping.Document;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
+
+import java.time.Instant;
+import java.util.List;
 
 /**
  * Events are produced per intersection and per time period if the percentage
- * of paired ATSPM and SPAT events is less than 90%.
+ * of paired ATSPM and SPAT events is less than 90% for any indication (RED, YELLOW, or GREEN)
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -18,5 +22,46 @@ public class AtspmSpatPairEvent extends Event {
         super("AtspmSpatPair");
     }
 
-    private AtspmSpatPairLog log;
+    /**
+     * ATSPM Route ID
+     */
+    private int routeId;
+
+    /**
+     * ATSPM Signal ID
+     */
+    private String signalId;
+
+    /**
+     * Start time of batch period
+     */
+    private Instant startTime;
+
+    /**
+     * End time of batch period
+     */
+    private Instant endTime;
+
+    /**
+     * ATSMP-SPAT event pairs
+     */
+    private List<AtspmSpatPair> atspmSpatPairs;
+
+    /**
+     * Error message, or null of no errors
+     */
+    private String error;
+
+    public static AtspmSpatPairEvent fromLog(AtspmSpatPairLog log) {
+        AtspmSpatPairEvent event = new AtspmSpatPairEvent();
+        event.setIntersectionID(log.getIntersectionId());
+        event.setAtspmSpatPairs(log.getAtspmSpatPairs());
+        event.setError(log.getError());
+        event.setRouteId(log.getRouteId());
+        event.setSignalId(log.getSignalId());
+        event.setStartTime(log.getStartTime());
+        event.setEndTime(log.getEndTime());
+        return event;
+    }
+
 }

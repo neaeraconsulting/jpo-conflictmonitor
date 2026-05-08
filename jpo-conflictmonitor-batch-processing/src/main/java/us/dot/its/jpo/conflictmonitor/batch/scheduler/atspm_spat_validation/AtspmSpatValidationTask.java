@@ -11,6 +11,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringScheduledTask;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.SignalConfig;
+import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatPairEvent;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
@@ -92,7 +93,8 @@ public class AtspmSpatValidationTask
         List<ControllerEventLog> eventLogs = clientService.controllerEventLogs(startTimeLocal, endTimeLocal, routeId);
         log.info("Got eventLogs with {} items", eventLogs.size());
 
-        var processedLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock, parameters.getLocalTimeZone());
+        var processedLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock,
+                parameters.getLocalTimeZone());
 
         log.info("Processed event log has {} items", processedLog.size());
 
@@ -102,7 +104,8 @@ public class AtspmSpatValidationTask
         }
 
         // Get signal group alignment events
-        List<AtspmSpatSignalGroupAlignmentEvent> alignmentEvents = atspmSpatService.atspmSpatSignalGroupAlignmentEvents(routeId, startInstant, endInstant);
+        List<AtspmSpatSignalGroupAlignmentEvent> alignmentEvents
+                = atspmSpatService.atspmSpatSignalGroupAlignmentEvents(routeId, startInstant, endInstant);
         for (AtspmSpatSignalGroupAlignmentEvent event : alignmentEvents) {
             mongoTemplate.insert(event);
         }
@@ -111,10 +114,18 @@ public class AtspmSpatValidationTask
         var atspmSpatLogs = atspmSpatService.atpsmSpatLogs(routeId, startInstant, endInstant);
         for (AtspmSpatPairLog log : atspmSpatLogs) {
             mongoTemplate.insert(log);
+
+            // Write an event to mongo if any indication has less than 90% paired
+            double green = log.getPercentGreenPaired();
+            double red = log.getPercentRedPaired();
+            double yellow = log.getPercentYellowPaired();
+            if (green < 90.0 || red < 90.0 || yellow < 90.0) {
+                var pairEvent = AtspmSpatPairEvent.fromLog(log);
+                mongoTemplate.insert(pairEvent);
+            }
         }
 
         // Get the re-processed spat data for intersections on the route to save in Mongo
-        // TODO consolidate this
         RouteConfig routeConfig = parameters.findRouteConfig(routeId);
         for (SignalConfig signal : routeConfig.getSignals()) {
             final Integer intersectionId = signal.getIntersectionId();

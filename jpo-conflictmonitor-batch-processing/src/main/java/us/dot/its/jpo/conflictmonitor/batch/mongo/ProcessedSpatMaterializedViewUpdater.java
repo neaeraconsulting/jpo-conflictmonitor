@@ -34,14 +34,14 @@ public class ProcessedSpatMaterializedViewUpdater {
                                 new Document("dateString", "$utcTimeStamp")
                                         .append("onError", null).append("onNull", null))));
 
-        // Change odeReceivedAt from string to timestmamp
+        // Change odeReceivedAt from string to timestamp
         AggregationOperation setOdeReceivedAt = context -> new Document("$set",
                 new Document("odeReceivedAt",
                         new Document("$dateFromString",
                                 new Document("dateString", "$odeReceivedAt")
                                         .append("onError", null).append("onNull", null))));
 
-        // merge from ProcessedSpat into ProcessedSpat_MV
+        // merge into ProcessedSpat_MV
         AggregationOperation merge = context -> new Document("$merge",
                 new Document("into", PROCESSED_SPAT_MV)
                         .append("whenMatched", "replace").append("whenNotMatched", "insert")
@@ -53,7 +53,7 @@ public class ProcessedSpatMaterializedViewUpdater {
                 merge
         );
 
-        // Aggregate creates or update ProcessedSpat_MV
+        // Aggregate from ProcessedSpat, creates or updates ProcessedSpat_MV
         mongoTemplate.aggregate(aggregation, PROCESSED_SPAT, Document.class);
 
         // Create indexes
