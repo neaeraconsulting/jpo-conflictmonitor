@@ -98,7 +98,11 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
                 log.warn(msg);
                 continue;
             }
-            final ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
+
+
+            ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
+
+
             SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
             Set<Integer> signalGroupSet = spatLog.getIndicationsMap().keySet();
             Set<Integer> phaseSet = new HashSet<>(phaseMultimap.get(signalId));
@@ -143,6 +147,12 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         }
         return logs;
     }
+
+    public Phases configuredPhases() {
+
+    }
+
+    public record Phases(Integer primaryPhase, Integer secondaryPhase) {}
 
     @Override
     public List<AtspmSpatSignalGroupAlignmentEvent> atspmSpatSignalGroupAlignmentEvents(int routeId, Instant startTime, Instant endTime) {

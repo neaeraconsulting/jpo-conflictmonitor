@@ -116,11 +116,11 @@ public class AtspmSpatValidationTask
         for (AtspmSpatPairLog log : atspmSpatLogs) {
             mongoTemplate.insert(log);
 
-            // Write an event to mongo if any indication has less than 90% paired
+            // Write an event to mongo if any indication has less than 90% paired, and there are more than 0 events
             double green = log.getPercentGreenPaired();
             double red = log.getPercentRedPaired();
             double yellow = log.getPercentYellowPaired();
-            if ((log.getError() == null && log.getAtspmSpatPairs() != null && !log.getAtspmSpatPairs().isEmpty())
+            if ((log.getAtspmSpatPairs() != null && !log.getAtspmSpatPairs().isEmpty())
                     && (green < 90.0 || red < 90.0 || yellow < 90.0)) {
                 var pairEvent = AtspmSpatPairEvent.fromLog(log);
                 mongoTemplate.insert(pairEvent);
