@@ -118,7 +118,9 @@ public class AtspmSpatValidationTask
         // Get signal metadata and save to mongo
         for (SignalConfig signal : routeConfig.getSignals()) {
             var processedSignalConfig = clientService.processedSignalConfig(signal.getSignalId());
-            mongoTemplate.insert(processedSignalConfig);
+            if (processedSignalConfig != null) {
+                mongoTemplate.insert(processedSignalConfig);
+            }
         }
 
     }
