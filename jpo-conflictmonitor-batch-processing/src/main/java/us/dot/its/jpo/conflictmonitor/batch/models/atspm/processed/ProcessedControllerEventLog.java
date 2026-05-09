@@ -6,7 +6,9 @@ import com.google.common.collect.MultimapBuilder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.mapping.Document;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupPhaseMap;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -23,6 +25,9 @@ public class ProcessedControllerEventLog {
     private Instant startTime;
     private Instant endTime;
 
+    @JsonIgnore
+    private final SignalGroupPhaseMap signalGroupPhaseMap;
+
     private SignalIdToPhaseEventsMap signalPhaseMap;
 
     public long size() {
@@ -38,10 +43,11 @@ public class ProcessedControllerEventLog {
 
     public ProcessedControllerEventLog(
             int routeId, Instant startTime, Instant endTime, Collection<ControllerEventLog> controllerEvent,
-            Clock clock, ZoneId localTimeZone) {
+            Clock clock, ZoneId localTimeZone, SignalGroupPhaseMap signalGroupPhaseMap) {
         this.routeId = routeId;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.signalGroupPhaseMap = signalGroupPhaseMap;
 
         // Group by signal ID and Phase
         signalPhaseMap = new SignalIdToPhaseEventsMap();
@@ -59,6 +65,27 @@ public class ProcessedControllerEventLog {
             }
         }
 
+        // Merge secondary with primary phases
+        for (String signalId : signalPhaseMap.keySet()) {
+            PhaseToEventsMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
+            for (final int phase : phaseMap.keySet()) {
+                // primary phases for which this is secondary
+                Set<Integer> primaryPhases = signalGroupPhaseMap.primaryPhasesForSecondary(phase);
+                for (final int primaryPhase : primaryPhases) {
+                    List<ProcessedControllerEvent> primaryEventList = phaseMap.getEventList(primaryPhase);
+                    List<ProcessedControllerEvent> secondaryEventList = phaseMap.getEventList(phase);
+                    List<ProcessedControllerEvent> mergedList = merge(primaryEventList, secondaryEventList);
+                    phaseMap.replace(primaryPhase, mergedList);
+                }
+            }
+        }
+
+
+
+    }
+
+    private List<ProcessedControllerEvent> merge(List<ProcessedControllerEvent> primaryEventList, List<ProcessedControllerEvent> secondaryEventList) {
+        return primaryEventList;
     }
 
     @JsonIgnore

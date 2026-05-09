@@ -1,9 +1,8 @@
 package us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupPhaseMap;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,11 +31,4 @@ public class SignalConfig {
 
     private List<PhaseConfig> phases;
 
-    public SignalGroupPhaseMap signalGroupPhaseMap() {
-        var map = new SignalGroupPhaseMap();
-        if (phases == null) return map;
-        Map<Integer, PhaseConfig> sgPhaseMap = phases.stream()
-                .collect(Collectors.toUnmodifiableMap(PhaseConfig::getSignalGroupId, sg -> sg));
-        return new SignalGroupPhaseMap(sgPhaseMap);
-    }
 }

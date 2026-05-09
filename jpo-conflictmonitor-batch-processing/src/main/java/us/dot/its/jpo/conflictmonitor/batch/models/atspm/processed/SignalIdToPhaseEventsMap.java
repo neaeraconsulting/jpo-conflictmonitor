@@ -7,15 +7,18 @@ public class SignalIdToPhaseEventsMap extends TreeMap<String, PhaseToEventsMap> 
         if (!containsKey(signalId)) return new PhaseToEventsMap();
         return get(signalId);
     }
-    public void putPhaseMap(String signalId, PhaseToEventsMap phaseMap) {
+
+    private void putPhaseMap(String signalId, PhaseToEventsMap phaseMap) {
         put(signalId, phaseMap);
     }
+
     public void putEvent(String signalId, ProcessedControllerEvent event) {
         if (containsKey(signalId)) {
             getPhaseMap(signalId).putEvent(event.getPhase(), event);
         } else {
             PhaseToEventsMap phaseMap = new PhaseToEventsMap();
-            phaseMap.putEvent(event.getPhase(), event);
+            int phase = event.getPhase();
+            phaseMap.putEvent(phase, event);
             putPhaseMap(signalId, phaseMap);
         }
     }

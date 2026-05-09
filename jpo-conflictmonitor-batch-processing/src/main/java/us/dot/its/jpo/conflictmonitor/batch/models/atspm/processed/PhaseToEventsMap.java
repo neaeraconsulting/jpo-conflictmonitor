@@ -15,7 +15,7 @@ public class PhaseToEventsMap extends TreeMap<Integer, List<ProcessedControllerE
         return get(phase);
     }
 
-    public void putEventList(int phase, List<ProcessedControllerEvent> eventList) {
+    private void putEventList(int phase, List<ProcessedControllerEvent> eventList) {
         put(phase, eventList);
     }
 
@@ -25,7 +25,7 @@ public class PhaseToEventsMap extends TreeMap<Integer, List<ProcessedControllerE
         } else {
             List<ProcessedControllerEvent> eventList = new ArrayList<>();
             eventList.add(event);
-            put(phase, eventList);
+            putEventList(phase, eventList);
         }
     }
     public FindEventInWindowResult findEventInWindow(final int phase, final EventCode eventCode,

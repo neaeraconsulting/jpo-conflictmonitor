@@ -12,6 +12,8 @@ import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignment
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupPhaseMap;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupPhases;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.TimestampedIndication;
@@ -56,15 +58,16 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         ProcessedControllerEventLog atspmLog = atspmClientService.processedEventLogs(localStartTime, localEndTime, routeId);
         log.info("Got eventLogs with {} items", atspmLog.size());
 
+        // Map of signal IDs to phase numbers contained in the log file
         Multimap<String, Integer> phaseMultimap = atspmLog.signalToPhaseMultimap();
 
         SignalIdToPhaseEventsMap signalPhaseMap = atspmLog.getSignalPhaseMap();
 
         // Get Spats for each intersection/signal on the route
-        for (SignalConfig signal : routeConfig.getSignals()) {
+        for (SignalConfig signalConfig : routeConfig.getSignals()) {
 
-            final Integer intersectionId = signal.getIntersectionId();
-            final String signalId = signal.getSignalId();
+            final Integer intersectionId = signalConfig.getIntersectionId();
+            final String signalId = signalConfig.getSignalId();
 
             AtspmSpatPairLog pairLog = new AtspmSpatPairLog();
             pairLog.setRouteId(routeId);
@@ -76,7 +79,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             logs.add(pairLog);
 
             if (intersectionId == null) {
-                String msg = String.format("Missing intersection id for signal %s", signal);
+                String msg = String.format("Missing intersection id for signal %s", signalConfig);
                 pairLog.setError(msg);
                 log.warn(msg);
                 continue;
@@ -85,7 +88,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             pairLog.setIntersectionId(intersectionId);
 
             SignalGroupIndicationLog spatLog = spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
-            log.info("Got spatLog for signal {}", signal);
+            log.info("Got spatLog for signal {}", signalConfig);
 
 
             if (!signalPhaseMap.containsKey(signalId)) {
@@ -98,19 +101,23 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
 
             final PhaseToEventsMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
 
+            var signalGroupPhaseMap = SignalGroupPhaseMap.fromSignalConfig(signalConfig);
+            SignalGroupPhases signalGroupPhases = signalGroupPhaseMap.phases();
 
             SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
             Set<Integer> signalGroupSet = spatLog.getIndicationsMap().keySet();
-            Set<Integer> phaseSet = new HashSet<>(phaseMultimap.get(signalId));
-            Set<Integer> commonSignalGroupPhaseNumbers = Sets.intersection(signalGroupSet, phaseSet);
+            Set<Integer> mappedPhaseSetFromSpats = signalGroupPhases.phases(signalGroupSet);
+            Set<Integer> phaseSetFromAtspm = new HashSet<>(phaseMultimap.get(signalId));
+            Set<Integer> commonSignalGroupPhaseNumbers = Sets.intersection(mappedPhaseSetFromSpats, phaseSetFromAtspm);
 
 
             for (final Integer signalGroup : signalGroupMap.keySet()) {
 
                 if (!commonSignalGroupPhaseNumbers.contains(signalGroup)) {
-                    log.info("SignalGroup {} (of intersectionId {}, signalId {}) doesn't have any matching phases," +
-                                    " ignoring it, see AtspmSpatSignalGroupAlignmentEvent",
-                            signalGroup, intersectionId, signalId);
+                    log.info("Mapped phases {} for signal group {} (of intersectionId {}, signalId {}) from the SPATs" +
+                                    " don't have any matching phases in the ATSPM data," +
+                                    " ignoring this signal group, see AtspmSpatSignalGroupAlignmentEvent",
+                            mappedPhaseSetFromSpats, signalGroup, intersectionId, signalId);
                     continue;
                 }
 
@@ -165,35 +172,45 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
 
         Multimap<String, Integer> phaseMultimap = atspmLog.signalToPhaseMultimap();
 
+
         // Get Spats for each intersection/signal on the route
-        for (SignalConfig signal : routeConfig.getSignals()) {
+        for (SignalConfig signalConfig : routeConfig.getSignals()) {
 
-            final String signalId = signal.getSignalId();
+            var signalGroupPhaseMap = SignalGroupPhaseMap.fromSignalConfig(signalConfig);
+            SignalGroupPhases signalGroupPhases = signalGroupPhaseMap.phases();
 
-            final Integer intersectionId = signal.getIntersectionId();
+            final String signalId = signalConfig.getSignalId();
+
+            final Integer intersectionId = signalConfig.getIntersectionId();
             if (intersectionId == null) {
-                String msg = String.format("Missing intersection id for signal %s", signal);
+                String msg = String.format("Missing intersection id for signal %s", signalConfig);
                 log.warn(msg);
                 continue;
             }
 
             SignalGroupIndicationLog spatLog = spatService.signalGroupIndicationLogs(intersectionId, startTime, endTime);
-            log.info("Got spatLog for signal {}", signal);
+            log.info("Got spatLog for signal {}", signalConfig);
 
             Set<Integer> signalGroupSet = spatLog.getIndicationsMap().keySet();
+            Set<Integer> mappedPhaseSetFromSpats = signalGroupPhases.phases(signalGroupSet);
+
             var alignmentEvent = new AtspmSpatSignalGroupAlignmentEvent();
             alignmentEvent.setSignalId(signalId);
             alignmentEvent.setIntersectionID(intersectionId);
-            alignmentEvent.setIntersectionDescription(signal.getDescription());
+            alignmentEvent.setIntersectionDescription(signalConfig.getDescription());
             alignmentEvent.getSpatSignalGroupIds().addAll(signalGroupSet);
+            alignmentEvent.getMappedPhasesFromSpats().addAll(mappedPhaseSetFromSpats);
             alignmentEvent.setStartTime(startTime);
             alignmentEvent.setEndTime(endTime);
             if (phaseMultimap.containsKey(signalId)) {
                 Collection<Integer> phases = phaseMultimap.get(signalId);
                 alignmentEvent.getAtspmPhases().addAll(phases);
             }
-            var setDiff = Sets.symmetricDifference(alignmentEvent.getSpatSignalGroupIds(), alignmentEvent.getAtspmPhases());
-            if (!setDiff.isEmpty()) {
+            var setDiff = Sets.symmetricDifference(alignmentEvent.getMappedPhasesFromSpats(), alignmentEvent.getAtspmPhases());
+
+            // Check if both unmapped signal group ids, and that mapped phases for signal groups map actual atspm phases
+            if (alignmentEvent.getSpatSignalGroupIds().size() != alignmentEvent.getAtspmPhases().size()
+                    || !setDiff.isEmpty()) {
                 result.add(alignmentEvent);
             }
         }

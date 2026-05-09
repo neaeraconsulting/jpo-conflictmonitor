@@ -23,5 +23,6 @@ public class AtspmSpatSignalGroupAlignmentEvent extends Event {
     private Instant endTime;
 
     private Set<Integer> spatSignalGroupIds = new TreeSet<>();
+    private Set<Integer> mappedPhasesFromSpats = new TreeSet<>();
     private Set<Integer> atspmPhases = new TreeSet<>();
 }
