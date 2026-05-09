@@ -11,7 +11,7 @@ public class TimeUtil {
      * For time zones with DST changes, the offset may be off by one within 1 hour of "spring forward" or
      * "fall back" time, but it will always be correct for America/Phoenix time which doesn't have DST.
      *
-     * @param localTime The local time to be converter
+     * @param localTime The local time to be converted
      * @param zoneId The time zone id
      * @param clock The clock
      * @return An instant at the time zone
