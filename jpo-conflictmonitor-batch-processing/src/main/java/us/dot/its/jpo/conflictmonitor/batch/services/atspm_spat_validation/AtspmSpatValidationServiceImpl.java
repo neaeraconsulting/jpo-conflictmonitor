@@ -1,7 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.batch.services.atspm_spat_validation;
 
 import com.google.common.collect.Multimap;
-import com.google.common.collect.MultimapBuilder;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +9,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.Ats
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.SignalConfig;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.EventCode;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEvent;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.*;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
@@ -21,7 +18,6 @@ import us.dot.its.jpo.conflictmonitor.batch.models.spat.TimestampedIndication;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.spat.ProcessedSpatService;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -62,7 +58,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
 
         Multimap<String, Integer> phaseMultimap = atspmLog.signalToPhaseMultimap();
 
-        ProcessedControllerEventLog.SignalPhaseMap signalPhaseMap = atspmLog.getSignalPhaseMap();
+        SignalIdToPhaseEventsMap signalPhaseMap = atspmLog.getSignalPhaseMap();
 
         // Get Spats for each intersection/signal on the route
         for (SignalConfig signal : routeConfig.getSignals()) {
@@ -100,7 +96,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             }
 
 
-            ProcessedControllerEventLog.PhaseMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
+            final PhaseToEventsMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
 
 
             SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
@@ -148,11 +144,6 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
         return logs;
     }
 
-    public Phases configuredPhases() {
-
-    }
-
-    public record Phases(Integer primaryPhase, Integer secondaryPhase) {}
 
     @Override
     public List<AtspmSpatSignalGroupAlignmentEvent> atspmSpatSignalGroupAlignmentEvents(int routeId, Instant startTime, Instant endTime) {
