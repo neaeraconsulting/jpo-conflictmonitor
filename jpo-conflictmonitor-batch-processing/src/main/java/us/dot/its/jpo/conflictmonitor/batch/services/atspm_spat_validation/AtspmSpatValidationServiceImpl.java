@@ -139,6 +139,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
                         pair.setAtspmTimestamp(event.getTimestamp());
                         pair.setAtspmEventCode(event.getEventCode());
                         pair.setAtspmPrimaryPhase(event.getPhase());
+                        pair.setAtspmSecondaryPhase(event.getSecondaryPhase());
                         pair.setPaired(eventResult.paired());
                     } else {
                         pair.setPaired(false);

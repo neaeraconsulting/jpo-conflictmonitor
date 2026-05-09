@@ -1,7 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed;
 
 import lombok.Data;
-import org.springframework.data.mongodb.core.mapping.Document;
+
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
 
 import java.time.*;
@@ -16,6 +16,7 @@ public class ProcessedControllerEvent {
     private Instant timestamp;
     private EventCode eventCode;
     private int phase;
+    private int secondaryPhase;
 
     // Formatter to parse timestamps with or without a tenth of second
     // eg. "2026-05-03T18:21:04.6"

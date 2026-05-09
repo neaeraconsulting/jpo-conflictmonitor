@@ -6,6 +6,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.*;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -111,7 +113,9 @@ public class AtspmClientServiceImpl implements AtspmClientService {
         log.info("Got eventLogs with {} items", eventLogs.size());
         Instant startInstant = TimeUtil.localTimeToInstantAtZone(startTime, parameters.getLocalTimeZone(), clock);
         Instant endInstant = TimeUtil.localTimeToInstantAtZone(endTime, parameters.getLocalTimeZone(), clock);
-        var atspmLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock, parameters.getLocalTimeZone());
+        // Get Route Config
+        RouteConfig routeConfig = parameters.findRouteConfig(routeId);
+        var atspmLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock, parameters.getLocalTimeZone(), routeConfig);
         log.info("Got {} processed log items", atspmLog.size());
         return atspmLog;
     }

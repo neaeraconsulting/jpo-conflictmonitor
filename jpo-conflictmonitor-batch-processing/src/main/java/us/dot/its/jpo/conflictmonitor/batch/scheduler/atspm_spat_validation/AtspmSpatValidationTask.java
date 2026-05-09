@@ -1,11 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.batch.scheduler.atspm_spat_validation;
 
 import lombok.extern.slf4j.Slf4j;
-import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
-import org.springframework.data.mongodb.core.aggregation.SetOperation;
 
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringScheduledTask;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
@@ -18,7 +14,6 @@ import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupStateLog;
 import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatMaterializedViewUpdater;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
-import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmToken;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
@@ -42,7 +37,7 @@ public class AtspmSpatValidationTask
 
 
     public AtspmSpatValidationTask(
-            RouteConfig taskMetadata,
+            RouteConfig routeConfig,
             AtspmSpatValidationParameters parameters,
             AtspmTokenService tokenService,
             AtspmClientService clientService,
@@ -51,7 +46,7 @@ public class AtspmSpatValidationTask
             AtspmSpatValidationService atspmSpatService,
             ProcessedSpatService spatService,
             ProcessedSpatMaterializedViewUpdater spatUpdater) {
-        super(taskMetadata, parameters, clock);
+        super(routeConfig, parameters, clock);
         this.tokenService = tokenService;
         this.clientService = clientService;
         this.mongoTemplate = mongoTemplate;
@@ -95,7 +90,7 @@ public class AtspmSpatValidationTask
         log.info("Got eventLogs with {} items", eventLogs.size());
 
         var processedLog = new ProcessedControllerEventLog(routeId, startInstant, endInstant, eventLogs, clock,
-                parameters.getLocalTimeZone());
+                parameters.getLocalTimeZone(), taskMetadata);
 
         log.info("Processed event log has {} items", processedLog.size());
 

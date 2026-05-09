@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.mapping.Document;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.SignalConfig;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupPhaseMap;
 
@@ -26,7 +27,7 @@ public class ProcessedControllerEventLog {
     private Instant endTime;
 
     @JsonIgnore
-    private final SignalGroupPhaseMap signalGroupPhaseMap;
+    private final RouteConfig routeConfig;
 
     private SignalIdToPhaseEventsMap signalPhaseMap;
 
@@ -43,11 +44,11 @@ public class ProcessedControllerEventLog {
 
     public ProcessedControllerEventLog(
             int routeId, Instant startTime, Instant endTime, Collection<ControllerEventLog> controllerEvent,
-            Clock clock, ZoneId localTimeZone, SignalGroupPhaseMap signalGroupPhaseMap) {
+            Clock clock, ZoneId localTimeZone, RouteConfig routeConfig) {
         this.routeId = routeId;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.signalGroupPhaseMap = signalGroupPhaseMap;
+        this.routeConfig = routeConfig;
 
         // Group by signal ID and Phase
         signalPhaseMap = new SignalIdToPhaseEventsMap();
@@ -61,12 +62,15 @@ public class ProcessedControllerEventLog {
             PhaseToEventsMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
             for (Integer phase : phaseMap.keySet()) {
                 List<ProcessedControllerEvent> eventList = phaseMap.get(phase);
-                eventList.sort(Comparator.comparingInt(ProcessedControllerEvent::getPhase));
+                // Sort by timestmap
+                eventList.sort(Comparator.comparing(ProcessedControllerEvent::getTimestamp));
             }
         }
 
         // Merge secondary with primary phases
         for (String signalId : signalPhaseMap.keySet()) {
+            SignalConfig signalConfig = routeConfig.signalConfig(signalId);
+            SignalGroupPhaseMap signalGroupPhaseMap = SignalGroupPhaseMap.fromSignalConfig(signalConfig);
             PhaseToEventsMap phaseMap = signalPhaseMap.getPhaseMap(signalId);
             for (final int phase : phaseMap.keySet()) {
                 // primary phases for which this is secondary
@@ -84,9 +88,81 @@ public class ProcessedControllerEventLog {
 
     }
 
-    private List<ProcessedControllerEvent> merge(List<ProcessedControllerEvent> primaryEventList, List<ProcessedControllerEvent> secondaryEventList) {
-        return primaryEventList;
+    // Assumes both lists are sorted
+    private List<ProcessedControllerEvent> merge(
+            List<ProcessedControllerEvent> primaryEventList,
+            List<ProcessedControllerEvent> secondaryEventList) {
+
+        List<MergedEvent> mergedList = new ArrayList<>();
+        for (ProcessedControllerEvent event : primaryEventList) {
+            mergedList.add(new MergedEvent(true, event));
+        }
+        for (ProcessedControllerEvent event : secondaryEventList) {
+            mergedList.add(new MergedEvent(false, event));
+        }
+        mergedList.sort(new Comparator<MergedEvent>() {
+            @Override
+            public int compare(MergedEvent me1, MergedEvent me2) {
+                int compareTimestamps = me1.event().getTimestamp().compareTo(me2.event().getTimestamp());
+                if (compareTimestamps != 0) return compareTimestamps;
+                // if timestamps are the same, sort by secondary first, then primary
+                return -Boolean.compare(me1.isPrimary, me2.isPrimary);
+            }
+        });
+
+        List<ProcessedControllerEvent> resultant = new ArrayList<>();
+
+        ProcessedControllerEvent mostRecentSecondaryEvent = null;
+
+        boolean primaryIsRed = false;
+        ProcessedControllerEvent redPrimaryEvent = null;
+
+        for (MergedEvent mergedEvent : mergedList) {
+            boolean isPrimary = mergedEvent.isPrimary();
+            var event = mergedEvent.event();
+            var eventCode = event.getEventCode();
+            if (isPrimary) {
+                // Primary phase event
+                primaryIsRed = (eventCode == EventCode.RED);
+                if (primaryIsRed) {
+                    redPrimaryEvent = event;
+                    // Primary is red: use the most recent secondary (if any)
+                    if (mostRecentSecondaryEvent != null) {
+                        resultant.add(mergeEvents(mostRecentSecondaryEvent, event));
+                    } else {
+                        resultant.add(event);
+                    }
+                } else {
+                    // Primary is not red: always use it
+                    redPrimaryEvent = null;
+                    resultant.add(event);
+                }
+            } else {
+                // Secondary phase event
+                mostRecentSecondaryEvent = event;
+                // This might be an update to the most recent secondary during a primary red phase:
+                // if so, use it
+                if (primaryIsRed) {
+                    resultant.add(mergeEvents(mostRecentSecondaryEvent, redPrimaryEvent));
+                }
+            }
+        }
+
+        return resultant;
     }
+
+    // Merge secondary with primary with secondary dominant (for when primary is red)
+    private ProcessedControllerEvent mergeEvents(ProcessedControllerEvent primaryEvent, ProcessedControllerEvent secondaryEvent) {
+        var event = new ProcessedControllerEvent();
+        event.setEventCode(secondaryEvent.getEventCode());
+        event.setTimestamp(secondaryEvent.getTimestamp());
+        event.setSignalId(secondaryEvent.getSignalId());
+        event.setSecondaryPhase(secondaryEvent.getSecondaryPhase());
+        event.setPhase(primaryEvent.getPhase());
+        return event;
+    }
+
+    public record MergedEvent(boolean isPrimary, ProcessedControllerEvent event) {}
 
     @JsonIgnore
     public Multimap<String, Integer> signalToPhaseMultimap() {
