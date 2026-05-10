@@ -90,40 +90,30 @@ cm:
               intersection-id: 0  # Missing MAP
               description: "Daisy Mountain Dr & Dedication Trail"
               enabled: false  # Missing SPATs
-            - signal-id: "11061116"
+            - signal-id: "1106116"
               intersection-id: 54749
               description: "Daisy Mountain Dr & Meridian Dr"
               enabled: true
               phases:
                 - signal-group-id: 1
                   primary-phase: 1
+                  secondary-phase: 6
                 - signal-group-id: 2
                   primary-phase: 2
-                - signal-group-id: 3
-                  primary-phase: 3
-                - signal-group-id: 4
-                  primary-phase: 4
-                - signal-group-id: 5
-                  primary-phase: 5
                 - signal-group-id: 6
                   primary-phase: 6
-                - signal-group-id: 7
-                  primary-phase: 7
                 - signal-group-id: 8
                   primary-phase: 8
-            - signal-id: "11061114"
+            - signal-id: "1106114"
               intersection-id: 63397
               description: "Daisy Mountain Dr & Hastings Way"
               enabled: true
               phases:
                 - signal-group-id: 1
                   primary-phase: 1
+                  secondary-phase: 6
                 - signal-group-id: 2
                   primary-phase: 2
-                - signal-group-id: 3
-                  primary-phase: 3
-                - signal-group-id: 5
-                  primary-phase: 5
                 - signal-group-id: 6
                   primary-phase: 6
                 - signal-group-id: 8
@@ -139,31 +129,34 @@ cm:
               phases:
                 - signal-group-id: 1
                   primary-phase: 1
+                  secondary-phase: 6
                 - signal-group-id: 2
                   primary-phase: 2
                 - signal-group-id: 3
                   primary-phase: 3
+                  secondary-phase: 8
                 - signal-group-id: 4
                   primary-phase: 4
                 - signal-group-id: 5
                   primary-phase: 5
+                  secondary-phase: 2
                 - signal-group-id: 6
                   primary-phase: 6
                 - signal-group-id: 7
                   primary-phase: 7
                 - signal-group-id: 8
                   primary-phase: 8
-        - routeId: 9999
-          description: "Fake route for testing scalability"
-          signals:
-            - signal-id: "1111111"
-              intersection-id: 1111111
-              description: "Fake signal 1"
-              enabled: false
-            - signal-id: "2222222"
-              intersection-id: 2222222
-              description: "Fake signal 2"
-              enabled: false
+#        - routeId: 9999
+#          description: "Fake route for testing scalability"
+#          signals:
+#            - signal-id: "1111111"
+#              intersection-id: 1111111
+#              description: "Fake signal 1"
+#              enabled: false
+#            - signal-id: "2222222"
+#              intersection-id: 2222222
+#              description: "Fake signal 2"
+#              enabled: false
 
 
 

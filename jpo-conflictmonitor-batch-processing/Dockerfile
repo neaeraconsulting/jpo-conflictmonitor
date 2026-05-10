@@ -30,5 +30,15 @@ COPY --from=build /home/target/jpo-conflictmonitor-batch-processing-*.jar jpo-co
 
 ENTRYPOINT ["java", \
     "-jar", \
+    "-Dlogback.configurationFile=/home/logback.xml", \
+    "-XX:+UseG1GC", \
+    "-XX:MaxGCPauseMillis=300", \
+    "-XX:InitiatingHeapOccupancyPercent=45", \
+    "-XX:MetaspaceSize=96m", \
+    "-XX:MinMetaspaceFreeRatio=50", \
+    "-XX:MaxMetaspaceFreeRatio=80", \
+    "-XX:+ExplicitGCInvokesConcurrent", \
+    "-XX:InitialRAMPercentage=5.0", \
+    "-XX:MaxRAMPercentage=90.0", \
     "-XX:+ExitOnOutOfMemoryError", \
     "/home/jpo-conflictmonitor-batch-processing.jar"]

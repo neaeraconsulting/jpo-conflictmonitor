@@ -75,6 +75,7 @@ public class ProcessedControllerEventLog {
             for (final int phase : phaseMap.keySet()) {
                 // primary phases for which this is secondary
                 Set<Integer> primaryPhases = signalGroupPhaseMap.primaryPhasesForSecondary(phase);
+                log.info("Primary phases are {} for secondary phase {}", primaryPhases, phase);
                 for (final int primaryPhase : primaryPhases) {
                     List<ProcessedControllerEvent> primaryEventList = phaseMap.getEventList(primaryPhase);
                     List<ProcessedControllerEvent> secondaryEventList = phaseMap.getEventList(phase);
@@ -125,7 +126,7 @@ public class ProcessedControllerEventLog {
                     redPrimaryEvent = event;
                     // Primary is red: use the most recent secondary (if any)
                     if (mostRecentSecondaryEvent != null) {
-                        resultant.add(mergeEvents(mostRecentSecondaryEvent, event));
+                        resultant.add(mergeEvents(event, mostRecentSecondaryEvent));
                     } else {
                         resultant.add(event);
                     }
@@ -140,7 +141,7 @@ public class ProcessedControllerEventLog {
                 // This might be an update to the most recent secondary during a primary red phase:
                 // if so, use it
                 if (primaryIsRed) {
-                    resultant.add(mergeEvents(mostRecentSecondaryEvent, redPrimaryEvent));
+                    resultant.add(mergeEvents(redPrimaryEvent, mostRecentSecondaryEvent));
                 }
             }
         }
