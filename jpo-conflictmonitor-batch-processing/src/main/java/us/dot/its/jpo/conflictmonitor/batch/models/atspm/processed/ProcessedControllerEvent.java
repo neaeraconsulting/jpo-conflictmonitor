@@ -15,8 +15,8 @@ public class ProcessedControllerEvent {
     private String signalId;
     private Instant timestamp;
     private EventCode eventCode;
-    private int phase;
-    private int secondaryPhase;
+    private Integer phase;
+    private Integer secondaryPhase;
 
     // Formatter to parse timestamps with or without a tenth of second
     // eg. "2026-05-03T18:21:04.6"
@@ -52,9 +52,6 @@ public class ProcessedControllerEvent {
         // Better guess from the given timestamp
         ZoneOffset zoneOffset1 = localTimeZone.getRules().getOffset(timestamp0);
         pce.timestamp = LocalDateTime.parse(event.getTimestamp(), DATE_TIME_FORMATTER).toInstant(zoneOffset1);
-        // Note this timestamp might not be correct within 1 hour of DST 'fall back' or 'spring forward', but will
-        // always work for the 'America/Phoenix' time zone which doesn't use DST.
-        // TODO fix edge case, live with it for now for MCDOT
 
         pce.phase = event.getEventParam();
         return Optional.of(pce);

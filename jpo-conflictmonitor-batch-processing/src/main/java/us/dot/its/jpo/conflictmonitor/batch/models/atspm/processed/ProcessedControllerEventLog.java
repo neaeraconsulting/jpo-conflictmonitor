@@ -100,14 +100,11 @@ public class ProcessedControllerEventLog {
         for (ProcessedControllerEvent event : secondaryEventList) {
             mergedList.add(new MergedEvent(false, event));
         }
-        mergedList.sort(new Comparator<MergedEvent>() {
-            @Override
-            public int compare(MergedEvent me1, MergedEvent me2) {
-                int compareTimestamps = me1.event().getTimestamp().compareTo(me2.event().getTimestamp());
-                if (compareTimestamps != 0) return compareTimestamps;
-                // if timestamps are the same, sort by secondary first, then primary
-                return -Boolean.compare(me1.isPrimary, me2.isPrimary);
-            }
+        mergedList.sort((me1, me2) -> {
+            int compareTimestamps = me1.event().getTimestamp().compareTo(me2.event().getTimestamp());
+            if (compareTimestamps != 0) return compareTimestamps;
+            // if timestamps are the same, sort by secondary first, then primary
+            return -Boolean.compare(me1.isPrimary, me2.isPrimary);
         });
 
         List<ProcessedControllerEvent> resultant = new ArrayList<>();
@@ -157,7 +154,7 @@ public class ProcessedControllerEventLog {
         event.setEventCode(secondaryEvent.getEventCode());
         event.setTimestamp(secondaryEvent.getTimestamp());
         event.setSignalId(secondaryEvent.getSignalId());
-        event.setSecondaryPhase(secondaryEvent.getSecondaryPhase());
+        event.setSecondaryPhase(secondaryEvent.getPhase());
         event.setPhase(primaryEvent.getPhase());
         return event;
     }
