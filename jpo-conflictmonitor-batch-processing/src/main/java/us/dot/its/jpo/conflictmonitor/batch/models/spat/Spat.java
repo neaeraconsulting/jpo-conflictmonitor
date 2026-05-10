@@ -14,8 +14,8 @@ public class Spat {
     private List<SignalGroupState> states;
     public static Spat fromProcessedSpat(ProcessedSpat spat) {
         final Spat rs = new Spat();
-        if (spat.getUtcTimeStamp() != null) {
-            rs.timestamp = spat.getUtcTimeStamp().toInstant();
+        if (spat.getUtcTimeStampTS() != null) {
+            rs.timestamp = spat.getUtcTimeStampTS();
         }
         rs.states = spat.getStates().stream()
                 .map(state -> SignalGroupState.fromMovementState(state, rs.timestamp))

@@ -7,7 +7,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringTaskScheduler;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.*;
-import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatMaterializedViewUpdater;
+import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatCollectionUpdater;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm_spat_validation.AtspmSpatValidationService;
@@ -29,7 +29,7 @@ public class AtspmSpatValidationTaskScheduler
     private final MongoTemplate mongoTemplate;
     private final AtspmSpatValidationService atspmSpatValidationService;
     private final ProcessedSpatService spatService;
-    private final ProcessedSpatMaterializedViewUpdater spatViewUpdater;
+    private final ProcessedSpatCollectionUpdater spatViewUpdater;
 
     @Autowired
     public AtspmSpatValidationTaskScheduler(ThreadPoolTaskScheduler taskScheduler, Clock clock,
@@ -37,7 +37,7 @@ public class AtspmSpatValidationTaskScheduler
                                             AtspmClientService clientService, MongoTemplate mongoTemplate,
                                             AtspmSpatValidationService atspmSpatValidationService,
                                             ProcessedSpatService spatService,
-                                            ProcessedSpatMaterializedViewUpdater spatViewUpdater) {
+                                            ProcessedSpatCollectionUpdater spatViewUpdater) {
         super(taskScheduler, clock);
         this.interval = parameters.getInterval();
         this.intervalUnits = parameters.getIntervalUnits();

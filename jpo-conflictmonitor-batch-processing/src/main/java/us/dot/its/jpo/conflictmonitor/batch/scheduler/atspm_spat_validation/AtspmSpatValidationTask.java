@@ -12,7 +12,7 @@ import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignment
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupStateLog;
-import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatMaterializedViewUpdater;
+import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatCollectionUpdater;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmClientService;
 import us.dot.its.jpo.conflictmonitor.batch.services.atspm.AtspmTokenService;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
@@ -33,7 +33,7 @@ public class AtspmSpatValidationTask
     private final MongoTemplate mongoTemplate;
     private final AtspmSpatValidationService atspmSpatService;
     private final ProcessedSpatService spatService;
-    private final ProcessedSpatMaterializedViewUpdater spatUpdater;
+    private final ProcessedSpatCollectionUpdater spatUpdater;
 
 
     public AtspmSpatValidationTask(
@@ -45,7 +45,7 @@ public class AtspmSpatValidationTask
             MongoTemplate mongoTemplate,
             AtspmSpatValidationService atspmSpatService,
             ProcessedSpatService spatService,
-            ProcessedSpatMaterializedViewUpdater spatUpdater) {
+            ProcessedSpatCollectionUpdater spatUpdater) {
         super(routeConfig, parameters, clock);
         this.tokenService = tokenService;
         this.clientService = clientService;
@@ -66,7 +66,7 @@ public class AtspmSpatValidationTask
         int routeId = taskMetadata.getRouteId();
 
         // Update the ProcessedSpat_MV Materialized View in Mongo
-        spatUpdater.updateMaterializedView();
+        spatUpdater.updateTimestamp();
         log.info("Updated ProcessedSpat_MV");
 
         // Offset time to query by the grace period

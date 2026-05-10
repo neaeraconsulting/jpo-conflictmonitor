@@ -29,7 +29,7 @@
         <dependency>
             <groupId>usdot.jpo.ode</groupId>
             <artifactId>jpo-geojsonconverter</artifactId>
-            <version>3.3.0-alpha6</version>
+            <version>3.3.0-alpha7</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
