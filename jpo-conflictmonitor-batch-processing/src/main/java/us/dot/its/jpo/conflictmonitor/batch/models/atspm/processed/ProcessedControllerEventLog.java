@@ -113,7 +113,9 @@ public class ProcessedControllerEventLog {
         ProcessedControllerEvent mostRecentSecondaryEvent = null;
 
         boolean primaryIsRed = false;
+        boolean primaryIsYellow = false;
         ProcessedControllerEvent redPrimaryEvent = null;
+        ProcessedControllerEvent yellowPrimaryEvent = null;
 
         for (MergedEvent mergedEvent : mergedList) {
             boolean isPrimary = mergedEvent.isPrimary();
@@ -122,9 +124,20 @@ public class ProcessedControllerEventLog {
             if (isPrimary) {
                 // Primary phase event
                 primaryIsRed = (eventCode == EventCode.RED);
+                primaryIsYellow = (eventCode == EventCode.YELLOW);
                 if (primaryIsRed) {
                     redPrimaryEvent = event;
+                    yellowPrimaryEvent = null;
                     // Primary is red: use the most recent secondary (if any)
+                    if (mostRecentSecondaryEvent != null) {
+                        resultant.add(mergeEvents(event, mostRecentSecondaryEvent));
+                    } else {
+                        resultant.add(event);
+                    }
+                } else if (primaryIsYellow) {
+                    yellowPrimaryEvent = event;
+                    redPrimaryEvent = null;
+                    // Primary is yellow: use the most recent secondary (if any)
                     if (mostRecentSecondaryEvent != null) {
                         resultant.add(mergeEvents(event, mostRecentSecondaryEvent));
                     } else {
@@ -133,15 +146,18 @@ public class ProcessedControllerEventLog {
                 } else {
                     // Primary is not red: always use it
                     redPrimaryEvent = null;
+                    yellowPrimaryEvent = null;
                     resultant.add(event);
                 }
             } else {
                 // Secondary phase event
                 mostRecentSecondaryEvent = event;
-                // This might be an update to the most recent secondary during a primary red phase:
+                // This might be an update to the most recent secondary during a primary red or yellow phase:
                 // if so, use it
                 if (primaryIsRed) {
                     resultant.add(mergeEvents(redPrimaryEvent, mostRecentSecondaryEvent));
+                } else if (primaryIsYellow) {
+                    resultant.add(mergeEvents(yellowPrimaryEvent, mostRecentSecondaryEvent));
                 }
             }
         }
