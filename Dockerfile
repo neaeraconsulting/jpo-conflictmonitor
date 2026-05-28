@@ -2,9 +2,11 @@ FROM maven:3.8-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /home
 
+ARG MAVEN_GITHUB_TOKEN_NAME
 ARG MAVEN_GITHUB_TOKEN
 ARG MAVEN_GITHUB_ORG
 
+ENV MAVEN_GITHUB_TOKEN_NAME=$MAVEN_GITHUB_TOKEN_NAME
 ENV MAVEN_GITHUB_TOKEN=$MAVEN_GITHUB_TOKEN
 ENV MAVEN_GITHUB_ORG=$MAVEN_GITHUB_ORG
 
@@ -13,6 +15,7 @@ COPY ./settings.xml ./jpo-conflictmonitor/
 
 # Download dependencies alone to cache them first
 WORKDIR /home/jpo-conflictmonitor
+#CMD [ "tail", "-f", "/dev/null" ]
 RUN mvn -s settings.xml dependency:resolve
 
 # Copy the source code and build the conflict monitor

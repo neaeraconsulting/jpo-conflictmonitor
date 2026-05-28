@@ -19,13 +19,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static java.util.Map.entry;
+
 /**
  * Base class for testing Event Aggregation topologies in isolation.
+ *
  * @param <TEventKey> Key Type
- * @param <TEvent> Event Type
- * @param <TAggKey> Aggregation Key Type
+ * @param <TEvent>    Event Type
+ * @param <TAggKey>   Aggregation Key Type
  * @param <TAggEvent> Aggregation Event Type
- * @param <TTopo> The topology to test
+ * @param <TTopo>     The topology to test
  */
 public abstract class BaseAggregationTopologyTest<
         TEventKey,
@@ -46,13 +49,21 @@ public abstract class BaseAggregationTopologyTest<
     protected final Instant initialWallClock = Instant.parse("2024-11-25T10:00:00Z");
 
     abstract String outputTopicName();
+
     abstract Serde<TEventKey> eventKeySerde();
+
     abstract Serde<TEvent> eventSerde();
+
     abstract Serde<TAggKey> aggKeySerde();
+
     abstract Serde<TAggEvent> aggEventSerde();
+
     abstract TEventKey createKey();
+
     abstract TEvent createEvent();
+
     abstract TTopo createTopology();
+
     abstract KStream<TAggKey, TEvent> selectAggKey(KStream<TEventKey, TEvent> instream);
 
     protected List<KeyValue<TAggKey, TAggEvent>> runTestTopology() {
@@ -116,7 +127,6 @@ public abstract class BaseAggregationTopologyTest<
     }
 
 
-
     protected AggregationParameters createAggParameters() {
         var aggParams = new AggregationParameters();
         aggParams.setDebug(true);
@@ -130,14 +140,19 @@ public abstract class BaseAggregationTopologyTest<
     }
 
     protected EventTopicMap createEventTopicMap() {
-        var map = Map.of(
-                "SpatMinimumDataAggregation", "topic.CmSpatMinimumDataEventAggregation",
-                "MapMinimumDataAggregation", "topic.CmMapMinimumDataEventAggregation",
-                "IntersectionReferenceAlignmentAggregation", "topic.CmIntersectionReferenceAlignmentEventAggregation",
-                "SignalGroupAlignmentAggregation", "topic.CmSignalGroupAlignmentEventAggregation",
-                "SignalStateConflictAggregation", "topic.CmSignalStateConflictEventAggregation",
-                "TimeChangeDetailsAggregation", "topic.CmSpatTimeChangeDetailsEventAggregation",
-                "EventStateProgressionAggregation", "topic.CmEventStateProgressionEventAggregation"
+        var map = Map.ofEntries(
+                entry("SpatMinimumDataAggregation", "topic.CmSpatMinimumDataEventAggregation"),
+                entry("MapMinimumDataAggregation", "topic.CmMapMinimumDataEventAggregation"),
+                entry("IntersectionReferenceAlignmentAggregation", "topic.CmIntersectionReferenceAlignmentEventAggregation"),
+                entry("SignalGroupAlignmentAggregation", "topic.CmSignalGroupAlignmentEventAggregation"),
+                entry("SignalStateConflictAggregation", "topic.CmSignalStateConflictEventAggregation"),
+                entry("TimeChangeDetailsAggregation", "topic.CmSpatTimeChangeDetailsEventAggregation"),
+                entry("EventStateProgressionAggregation", "topic.CmEventStateProgressionEventAggregation"),
+                entry("BsmMessageCountProgressionAggregation", "topic.CmBsmMessageCountProgressionEventAggregation"),
+                entry("RtcmMessageCountProgressionAggregation", "topic.CmRtcmMessageCountProgressionEventAggregation"),
+                entry("MapMessageCountProgressionAggregation", "topic.CmMapMessageCountProgressionEventAggregation"),
+                entry("SpatMessageCountProgressionAggregation", "topic.CmSpatMessageCountProgressionEventAggregation"),
+                entry("RevocableEnabledLaneAlignmentAggregation", "topic.CmRevocableEnabledLaneAlignmentEventAggregation")
         );
         var eventTopicMap = new EventTopicMap();
         eventTopicMap.putAll(map);

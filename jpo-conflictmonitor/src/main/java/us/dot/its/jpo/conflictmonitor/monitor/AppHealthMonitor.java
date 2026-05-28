@@ -345,6 +345,11 @@ public class AppHealthMonitor {
      *
      * @return response entity containing a list of all spatial index items
      */
+    /**
+     * Returns all items in the spatial index (quadtree).
+     *
+     * @return response entity containing a list of all spatial index items
+     */
     @GetMapping(value = "/spatial-indexes")
     public @ResponseBody ResponseEntity<List> spatial() {
         if (mapIndex == null) {

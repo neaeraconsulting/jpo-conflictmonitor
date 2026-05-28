@@ -74,11 +74,19 @@ public abstract class BaseAggregationTopology<TKey, TEvent extends Event, TAggEv
                                 eventName),
                         eventStoreName, keyStoreName);
 
-        aggEventStream.to(eventAggregationTopic,
-                        Produced.with(
-                                keySerde(),
-                                eventAggregationSerde(),
-                                eventAggregationPartitioner()));
+        var partitioner = eventAggregationPartitioner();
+        if (partitioner != null) {
+            aggEventStream.to(eventAggregationTopic,
+                    Produced.with(
+                            keySerde(),
+                            eventAggregationSerde(),
+                            eventAggregationPartitioner()));
+        } else {
+            aggEventStream.to(eventAggregationTopic,
+                    Produced.with(
+                            keySerde(),
+                            eventAggregationSerde()));
+        }
 
         // Return the KStream for topologies that produce notifications
         return aggEventStream;
