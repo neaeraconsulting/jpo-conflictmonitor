@@ -11,8 +11,13 @@
             <id>osgeo</id>
         </server>
         <server>
-            <id>github</id>
-            <username>${env.MAVEN_GITHUB_TOKEN_NAME}</username>
+            <id>github_ode</id>
+            <username>jpo_deduplicator</username>
+            <password>${env.MAVEN_GITHUB_TOKEN}</password>
+        </server>
+        <server>
+            <id>github_gjc</id>
+            <username>jpo_deduplicator</username>
             <password>${env.MAVEN_GITHUB_TOKEN}</password>
         </server>
     </servers>
@@ -21,9 +26,17 @@
             <id>default</id>
             <repositories>
                 <repository>
-                    <id>github</id>
-                    <name>GitHub JPO Conflict Monitor</name>
-                    <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/*</url>
+                    <id>github_ode</id>
+                    <name>GitHub JPO Geojson Converter</name>
+                    <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/jpo-ode</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>github_gjc</id>
+                    <name>GitHub JPO Geojson Converter</name>
+                    <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/jpo-geojsonconverter</url>
                     <snapshots>
                         <enabled>false</enabled>
                     </snapshots>
