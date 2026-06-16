@@ -32,5 +32,4 @@ jobs:
             -Dsonar.projectKey=usdot-jpo-ode_jpo-conflictmonitor \
             -Dsonar.projectName=jpo-conflictmonitor \
             -Dsonar.organization=usdot-jpo-ode \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.branch.name=$GITHUB_REF_NAME
+            -Dsonar.host.url=https://sonarcloud.io 
