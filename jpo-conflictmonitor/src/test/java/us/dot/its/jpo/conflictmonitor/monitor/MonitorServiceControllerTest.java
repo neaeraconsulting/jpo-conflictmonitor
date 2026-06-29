@@ -1,6 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.monitor;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
