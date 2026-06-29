@@ -1,3 +1,5 @@
+# Script to stress test the cimms map-spat topologies for optimizing thread configuration
+# by repeatedly sending pairs of MAPs and SPATs on several different intersections
 import socket
 import time
 import os
