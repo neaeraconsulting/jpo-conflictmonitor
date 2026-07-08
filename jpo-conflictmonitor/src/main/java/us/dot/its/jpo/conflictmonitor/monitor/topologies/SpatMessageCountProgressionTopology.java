@@ -97,7 +97,7 @@ public class SpatMessageCountProgressionTopology
             eventStream.to(parameters.getSpatMessageCountProgressionEventOutputTopicName(),
                     Produced.with(JsonSerdes.RsuIntersectionKey(), us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.SpatMessageCountProgressionEvent()));
         }
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
     @Override

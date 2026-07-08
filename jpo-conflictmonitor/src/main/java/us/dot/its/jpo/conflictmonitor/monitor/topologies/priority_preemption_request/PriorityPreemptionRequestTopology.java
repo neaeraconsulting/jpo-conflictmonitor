@@ -360,7 +360,7 @@ public class PriorityPreemptionRequestTopology
                         JsonSerdes.PriorityRequestMetrics(),
                         new IntersectionIdPartitioner<>()));
 
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
     @Override

@@ -2,9 +2,11 @@ FROM maven:3.8-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /home
 
+ARG MAVEN_GITHUB_TOKEN_NAME
 ARG MAVEN_GITHUB_TOKEN
 ARG MAVEN_GITHUB_ORG
 
+ENV MAVEN_GITHUB_TOKEN_NAME=$MAVEN_GITHUB_TOKEN_NAME
 ENV MAVEN_GITHUB_TOKEN=$MAVEN_GITHUB_TOKEN
 ENV MAVEN_GITHUB_ORG=$MAVEN_GITHUB_ORG
 
@@ -13,6 +15,7 @@ COPY ./settings.xml ./jpo-conflictmonitor/
 
 # Download dependencies alone to cache them first
 WORKDIR /home/jpo-conflictmonitor
+#CMD [ "tail", "-f", "/dev/null" ]
 RUN mvn -s settings.xml dependency:resolve
 
 # Copy the source code and build the conflict monitor
@@ -38,6 +41,13 @@ ENV LD_PRELOAD="/usr/lib64/libjemalloc.so"
 # Entrypoint for prod: JMX not exposed.
 # GC settings similar to Kafka recommendations, see: https://kafka.apache.org/documentation.html#java
 # Set max Java heap usage as percentage of total available memory.
+# Always exit on out-of-memory-error so the app can restart
+# Adjust Max RAM Percentage to allow the remainder off heap.
+# Off heap includes RockDB allocation + other off heap.
+# Examples:
+#   * If off heap is approx 500M, and total memory is 1G, set -XX:MaxRAMPercentage=50.0
+#   * If off heap is approx 1G, and total memory is 4G, set -XX:MaxRAMPercentage=75.0
+#   * If off heap is 1G and total memory is 8G, set -XX:MaxRAMPercentage=85.0 (~7/8)
 ENTRYPOINT ["java", \
 	"-Dlogback.configurationFile=/home/logback.xml", \
     "-XX:+UseG1GC", \
@@ -48,7 +58,8 @@ ENTRYPOINT ["java", \
     "-XX:MaxMetaspaceFreeRatio=80", \
     "-XX:+ExplicitGCInvokesConcurrent", \
     "-XX:InitialRAMPercentage=5.0", \
-    "-XX:MaxRAMPercentage=50.0", \
+    "-XX:MaxRAMPercentage=65.0", \
+    "-XX:+ExitOnOutOfMemoryError", \
 	"-jar", \
 	"/home/jpo-conflictmonitor.jar"]
 

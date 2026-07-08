@@ -79,42 +79,44 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
                 new QueryConfig(false));
 
         if (result.isSuccess()) {
-            VersionedRecordIterator<ProcessedSpat> iterator = result.getResult();
-            ProcessedSpat previousState = null;
-            int recordCount = 0;
+            try (VersionedRecordIterator<ProcessedSpat> iterator = result.getResult()) {
+                ProcessedSpat previousState = null;
+                int recordCount = 0;
 
-            while (iterator.hasNext()) {
-                final VersionedRecord<ProcessedSpat> state = iterator.next();
-                final ProcessedSpat thisState = state.value();
-                recordCount++;
+                while (iterator.hasNext()) {
+                    final VersionedRecord<ProcessedSpat> state = iterator.next();
+                    final ProcessedSpat thisState = state.value();
+                    recordCount++;
 
-                // Skip records older than the last processed state
-                if (lastProcessedSpat != null && thisState.getUtcTimeStamp().isBefore(lastProcessedSpat.getUtcTimeStamp())) {
-                    continue;
-                }
+                    // Skip records older than the last processed state
+                    if (lastProcessedSpat != null && thisState.getUtcTimeStamp().isBefore(lastProcessedSpat.getUtcTimeStamp())) {
+                        continue;
+                    }
 
-                if (previousState != null) {
-                    long timeDifference = thisState.getUtcTimeStamp().toInstant().toEpochMilli() - previousState.getUtcTimeStamp().toInstant().toEpochMilli();
+                    if (previousState != null) {
+                        long timeDifference = thisState.getUtcTimeStamp().toInstant().toEpochMilli() - previousState.getUtcTimeStamp().toInstant().toEpochMilli();
 
-                    if (timeDifference < parameters.getBufferTimeMs()) {
-                        int previousHash = calculateHash(previousState);
-                        int currentHash = calculateHash(thisState);
-                        int previousRevision = previousState.getRevision();
-                        int currentRevision = thisState.getRevision();
+                        if (timeDifference < parameters.getBufferTimeMs()) {
+                            int previousHash = calculateHash(previousState);
+                            int currentHash = calculateHash(thisState);
+                            int previousRevision = previousState.getRevision();
+                            int currentRevision = thisState.getRevision();
 
-                        if (previousHash == currentHash && previousRevision == currentRevision); // No change
-                        else if (previousHash != currentHash && (previousRevision + 1) % 128 == currentRevision); // changed with valid increment, including wrap-around from 127 to 0
-                        else {
-                            SpatMessageCountProgressionEvent event = createEvent(previousState, thisState);
-                            context().forward(new Record<>(key, event, state.timestamp()));
+                            if (previousHash == currentHash && previousRevision == currentRevision) ; // No change
+                            else if (previousHash != currentHash && (previousRevision + 1) % 128 == currentRevision)
+                                ; // changed with valid increment, including wrap-around from 127 to 0
+                            else {
+                                SpatMessageCountProgressionEvent event = createEvent(previousState, thisState);
+                                context().forward(new Record<>(key, event, state.timestamp()));
+                            }
                         }
                     }
+                    previousState = thisState;
                 }
-                previousState = thisState;
-            }
-            if (recordCount > 1) {
-                // Update last processed state
-                lastProcessedStateStore.put(key, previousState);
+                if (recordCount > 1) {
+                    // Update last processed state
+                    lastProcessedStateStore.put(key, previousState);
+                }
             }
         }
     }
