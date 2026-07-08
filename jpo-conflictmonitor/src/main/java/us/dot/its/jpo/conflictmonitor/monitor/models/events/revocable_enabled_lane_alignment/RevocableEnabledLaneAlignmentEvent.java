@@ -5,7 +5,6 @@ import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.Event;
-import us.dot.its.jpo.ode.plugin.j2735.J2735MovementPhaseState;
 
 import java.util.Set;
 

@@ -1,6 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Generated;
 import lombok.NoArgsConstructor;

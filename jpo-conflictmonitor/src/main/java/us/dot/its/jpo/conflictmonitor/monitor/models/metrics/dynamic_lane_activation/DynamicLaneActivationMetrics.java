@@ -1,12 +1,10 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.LaneTypeAttributesMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.Metrics;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 

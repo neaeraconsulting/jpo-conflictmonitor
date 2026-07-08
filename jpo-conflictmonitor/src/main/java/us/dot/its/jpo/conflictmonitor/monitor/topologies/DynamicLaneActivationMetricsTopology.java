@@ -20,6 +20,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.processors.DiagnosticProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.DynamicLaneActivationMetricsTickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.Timestamps;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 
 
@@ -65,7 +66,7 @@ public class DynamicLaneActivationMetricsTopology
                 Stores.keyValueStoreBuilder(
                         Stores.persistentKeyValueStore(timestampStoreName),
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                        TickProcessor.TimestampsSerdes());
+                        Timestamps.TimestampsSerdes());
         builder.addStateStore(timestampStoreBuilder);
 
         KStream<RsuIntersectionKey, DynamicLaneActivationMetrics> metricsStream = inputStream
