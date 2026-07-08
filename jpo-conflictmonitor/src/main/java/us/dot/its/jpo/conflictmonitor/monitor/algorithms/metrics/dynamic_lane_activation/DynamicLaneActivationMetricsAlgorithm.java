@@ -1,6 +1,5 @@
 package us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation;
 
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.ConfigurableAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.MetricsAlgorithmInterface;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation.DynamicLaneActivationMetrics;
