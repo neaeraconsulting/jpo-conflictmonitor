@@ -35,7 +35,7 @@ public class DynamicLaneActivationMetrics extends Metrics<RsuIntersectionKey> {
      * The SPAT source (usually the IP address of the RSU)
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private String getSource() {
+    public String getSource() {
         return key != null ? key.getRsuId() : null;
     }
 
@@ -43,7 +43,7 @@ public class DynamicLaneActivationMetrics extends Metrics<RsuIntersectionKey> {
      * The intersection ID
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private int getIntersectionID() {
+    public int getIntersectionID() {
         return key != null ? key.getIntersectionId() : -1;
     }
 
@@ -51,7 +51,7 @@ public class DynamicLaneActivationMetrics extends Metrics<RsuIntersectionKey> {
      * The RoadRegulatorID (region)
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private int getRoadRegulatorID() {
+    public int getRoadRegulatorID() {
         return key != null ? key.getRegion() : -1;
     }
 
