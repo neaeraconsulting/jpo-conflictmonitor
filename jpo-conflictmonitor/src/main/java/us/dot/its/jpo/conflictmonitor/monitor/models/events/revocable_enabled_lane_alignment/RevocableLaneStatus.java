@@ -19,12 +19,14 @@ import java.util.Set;
 public class RevocableLaneStatus {
 
     public RevocableLaneStatus(RevocableEnabledLaneAlignmentEvent event) {
-        this.source = event.getSource();
-        this.intersectionID = event.getIntersectionID();
-        this.roadRegulatorID = event.getRoadRegulatorID();
-        this.timestamp = event.getTimestamp();
-        this.revocableLaneList = event.getRevocableLaneList();
-        this.enabledLaneList = event.getEnabledLaneList();
+        if (event != null) {
+            this.source = event.getSource();
+            this.intersectionID = event.getIntersectionID();
+            this.roadRegulatorID = event.getRoadRegulatorID();
+            this.timestamp = event.getTimestamp();
+            this.revocableLaneList = event.getRevocableLaneList();
+            this.enabledLaneList = event.getEnabledLaneList();
+        }
     }
 
     /**
