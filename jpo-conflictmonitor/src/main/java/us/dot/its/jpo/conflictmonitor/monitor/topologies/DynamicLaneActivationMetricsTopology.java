@@ -139,7 +139,7 @@ public class DynamicLaneActivationMetricsTopology
                             return metrics;
                         },
                         Named.as("dynamic-lane-activation-metrics-aggregation"),
-                        Materialized.<RsuIntersectionKey, DynamicLaneActivationMetrics, WindowStore<Bytes, byte[]>>as("dynamic-lane-activation-metricsd-aggregation-store")
+                        Materialized.<RsuIntersectionKey, DynamicLaneActivationMetrics, WindowStore<Bytes, byte[]>>as("dynamic-lane-activation-metrics-aggregation-store")
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.DynamicLaneActivationMetrics())
                                 .withRetention(storeRetentionTime)
