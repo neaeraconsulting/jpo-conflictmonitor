@@ -5,6 +5,8 @@ import time
 import os
 
 UDP_IP = os.getenv('DOCKER_HOST_IP')
+if not UDP_IP:
+    raise SystemExit("DOCKER_HOST_IP environment variable is required (e.g., export DOCKER_HOST_IP=127.0.0.1)")
 MAP_PORT = 44920
 SPAT_PORT = 44910
 
