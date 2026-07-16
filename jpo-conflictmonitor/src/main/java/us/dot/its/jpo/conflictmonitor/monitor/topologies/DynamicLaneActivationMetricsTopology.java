@@ -127,6 +127,10 @@ public class DynamicLaneActivationMetricsTopology
                                 }
 
                                 final RevocableEnabledStatus lastStatus = statusList.getLast();
+                                if (lastStatus != null && timestamp == lastStatus.timestamp()) {
+                                    log.warn("Duplicate timestamp at {} in dynamic lane activation metrics aggregation will be ignored: {}",
+                                            timestamp, metrics);
+                                }
                                 if (lastStatus != null && timestamp > lastStatus.timestamp() && enabled != lastStatus.enabled()) {
                                     statusList.add(new RevocableEnabledStatus(timestamp, enabled));
                                 }
