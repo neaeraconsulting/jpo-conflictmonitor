@@ -55,6 +55,7 @@ while True:
     sock.sendto(bytes.fromhex(MAP12105), (UDP_IP, MAP_PORT))
     sock.sendto(bytes.fromhex(MAP12104), (UDP_IP, MAP_PORT))
     sock.sendto(bytes.fromhex(MAP12103), (UDP_IP, MAP_PORT))
+    sock.sendto(bytes.fromhex(MAP12102), (UDP_IP, MAP_PORT))
     sock.sendto(bytes.fromhex(MAP12101), (UDP_IP, MAP_PORT))
     for i in range(1,10):
         time.sleep(0.1)
@@ -70,4 +71,5 @@ while True:
         sock.sendto(bytes.fromhex(SPAT12105), (UDP_IP, SPAT_PORT))
         sock.sendto(bytes.fromhex(SPAT12104), (UDP_IP, SPAT_PORT))
         sock.sendto(bytes.fromhex(SPAT12103), (UDP_IP, SPAT_PORT))
+        sock.sendto(bytes.fromhex(SPAT12102), (UDP_IP, SPAT_PORT))
         sock.sendto(bytes.fromhex(SPAT12101), (UDP_IP, SPAT_PORT))
