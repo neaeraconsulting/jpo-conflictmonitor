@@ -4,14 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
-import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 
 import static net.javacrumbs.jsonunit.JsonMatchers.jsonPartEquals;
 import static net.javacrumbs.jsonunit.JsonMatchers.jsonPartMatches;
