@@ -1085,17 +1085,27 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
             AlwaysContinueProductionExceptionHandler.class.getName());
 
       streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
-      var threadConfig = topologyStreamsConfig.getTopologies()
-              .stream()
-              .collect(Collectors.toMap(
-                      TopologyStreamsConfig.TopologyConfig::topology, TopologyStreamsConfig.TopologyConfig::threads));
-      if (threadConfig.containsKey(name)) {
-         int numThreads = threadConfig.get(name);
-         logger.info("Using {} threads for {} topology", numThreads, name);
-         streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, numThreads);
+
+      var topologies = topologyStreamsConfig != null ? topologyStreamsConfig.getTopologies() : null;
+      if (topologies != null && !topologies.isEmpty()) {
+         var threadConfig = topologyStreamsConfig.getTopologies()
+                 .stream()
+                 .collect(Collectors.toMap(
+                         TopologyStreamsConfig.TopologyConfig::topology,
+                         TopologyStreamsConfig.TopologyConfig::threads,
+                         // Merge function, so won't throw exception on duplicate keys
+                         (existing, replacement) -> existing));
+         Integer numThreads = threadConfig.get(name);
+         if (numThreads != null) {
+            logger.info("Using {} threads for {} topology", numThreads, name);
+            streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, numThreads);
+         } else {
+            logger.warn("Number of threads for {} topology is not configured," +
+                    " using default: {}", name, streamsConfigNumStreamThreads);
+            streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
+         }
       } else {
-         logger.warn("Number of threads for {} topology is not configured," +
-                 " using default: {}", name, streamsConfigNumStreamThreads);
+         logger.warn("Thread configuration is missing for {}, using default: {}", name, streamsConfigNumStreamThreads);
          streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
       }
 
