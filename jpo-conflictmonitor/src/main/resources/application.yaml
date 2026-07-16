@@ -44,6 +44,8 @@ streams.config:
       threads: 10
     - topology: spatValidation
       threads: 10
+    - topology: rtcmValidation
+      threads: 10
     - topology: spatTimeChangeDetails
       threads: 20
     - topology: mapSpatAlignment
@@ -65,6 +67,8 @@ streams.config:
     - topology: spatMessageCountProgression
       threads: 10
     - topology: bsmMessageCountProgression
+      threads: 10
+    - topology: rtcmMessageCountProgression
       threads: 10
     - topology: priorityPreemptionRequest
       threads: 70
