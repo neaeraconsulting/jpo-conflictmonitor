@@ -92,12 +92,24 @@ public class DynamicLaneActivationMetricsTopologyTest {
             assertThat(metrics.getKey().getIntersectionId(), equalTo(intersectionId));
             assertThat(metrics.getTimePeriod(), notNullValue());
             assertThat(metrics.getRevocableEnabledLaneStatusTable(), hasSize(2));
-            assertThat(metrics.getRevocableEnabledLaneStatusTable().getChangesForLaneID(16), notNullValue());
-            assertThat(metrics.getRevocableEnabledLaneStatusTable().getChangesForLaneID(17), notNullValue());
-            assertThat(metrics.getRevocableEnabledLaneStatusTable().getChangesForLaneID(16)
-                    .getStatusChanges(), hasSize(2));
-            assertThat(metrics.getRevocableEnabledLaneStatusTable().getChangesForLaneID(17)
-                    .getStatusChanges(), hasSize(2));
+
+            var lane16Changes = metrics.getRevocableEnabledLaneStatusTable()
+                    .getChangesForLaneID(16).getStatusChanges();
+            assertThat(lane16Changes, hasSize(2));
+            // Lane 16: initially enabled, then disabled at +2000ms
+            assertThat(lane16Changes.get(0).timestamp(), equalTo(startTimestamp));
+            assertThat(lane16Changes.get(0).enabled(), equalTo(true));
+            assertThat(lane16Changes.get(1).timestamp(), equalTo(startTimestamp + 2000));
+            assertThat(lane16Changes.get(1).enabled(), equalTo(false));
+
+            var lane17Changes = metrics.getRevocableEnabledLaneStatusTable()
+                    .getChangesForLaneID(17).getStatusChanges();
+            assertThat(lane17Changes, hasSize(2));
+            // Lane 17: initially disabled, then enabled at +1000ms
+            assertThat(lane17Changes.get(0).timestamp(), equalTo(startTimestamp));
+            assertThat(lane17Changes.get(0).enabled(), equalTo(false));
+            assertThat(lane17Changes.get(1).timestamp(), equalTo(startTimestamp + 1000L));
+            assertThat(lane17Changes.get(1).enabled(), equalTo(true));
         }
     }
 

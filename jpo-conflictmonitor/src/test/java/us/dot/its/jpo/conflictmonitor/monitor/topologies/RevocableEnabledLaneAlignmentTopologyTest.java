@@ -12,6 +12,9 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
@@ -168,9 +171,9 @@ public class RevocableEnabledLaneAlignmentTopologyTest {
         return (ProcessedMap<LineString>)mapper.readValue(mapStr, ProcessedMap.class);
     }
 
-    private us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm
+    private DynamicLaneActivationMetricsAlgorithm
     getDynamicLaneActivationMetricsAlgorithm() {
-        var commonParameters = new us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters();
+        var commonParameters = new CommonMetricsParameters();
         commonParameters.setInterval(30);
         commonParameters.setIntervalUnits(java.time.temporal.ChronoUnit.SECONDS);
         commonParameters.setGracePeriodMs(0);
@@ -179,7 +182,7 @@ public class RevocableEnabledLaneAlignmentTopologyTest {
         commonParameters.setRetentionTime(1);
         commonParameters.setRetentionTimeUnits(java.time.temporal.ChronoUnit.MINUTES);
 
-        var metricsParameters = new us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters();
+        var metricsParameters = new DynamicLaneActivationMetricsParameters();
         metricsParameters.setDebug(debug);
         metricsParameters.setAlgorithm("defaultDynamicLaneActivationMetricsAlgorithm");
         metricsParameters.setOutputMetricTopic(dynamicLaneActivationMetricsTopicName);
