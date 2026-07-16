@@ -99,7 +99,8 @@ public class RevocableEnabledLaneAlignmentTopology
                     Set<Integer> revocableLanes = event.getRevocableLaneList();
                     return !revocableLanes.isEmpty();
                 })
-                .mapValues(RevocableLaneStatus::new);
+                .mapValues(value
+                        -> value != null ? new RevocableLaneStatus(value) : null);
 
         // Plug in Dynamic Lane Activate Metrics algorithm
         var dynamicLaneActivationMetricsStream =
