@@ -115,12 +115,6 @@ public class RevocableEnabledLaneAlignmentTopologyTest {
             List<KeyValue<RsuIntersectionKey, RevocableEnabledLaneAlignmentNotification>> notifications =
                     notificationTopic.readKeyValuesToList();
 
-//            if (expectEvent) {
-//                assertThat("expected 1 notification",notifications, hasSize(1));
-//            } else {
-//                assertThat("expected no notifications", notifications, hasSize(0));
-//            }
-
         }
     }
 
