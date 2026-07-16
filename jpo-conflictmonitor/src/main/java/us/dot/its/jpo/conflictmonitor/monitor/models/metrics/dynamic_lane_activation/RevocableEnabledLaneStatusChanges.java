@@ -3,7 +3,7 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activ
 import lombok.Data;
 
 /**
- * A time series of enabled/disabled status changes for one revocable one Lane.
+ * A time series of enabled/disabled status changes for one revocable Lane.
  */
 @Data
 public class RevocableEnabledLaneStatusChanges {
