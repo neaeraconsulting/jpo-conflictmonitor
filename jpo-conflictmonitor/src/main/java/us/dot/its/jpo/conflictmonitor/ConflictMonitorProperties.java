@@ -1096,17 +1096,15 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
                          // Merge function, so won't throw exception on duplicate keys
                          (existing, replacement) -> existing));
          Integer numThreads = threadConfig.get(name);
-         if (numThreads != null) {
+         if (numThreads != null && numThreads > 0) {
             logger.info("Using {} threads for {} topology", numThreads, name);
             streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, numThreads);
          } else {
-            logger.warn("Number of threads for {} topology is not configured," +
+            logger.warn("Number of threads for {} topology is not configured or the configured value is not a positive integer," +
                     " using default: {}", name, streamsConfigNumStreamThreads);
-            streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
          }
       } else {
          logger.warn("Thread configuration is missing for {}, using default: {}", name, streamsConfigNumStreamThreads);
-         streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
       }
 
       streamProps.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, streamsConfigReplicationFactor);
