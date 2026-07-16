@@ -32,7 +32,7 @@
             <repositories>
                 <repository>
                     <id>github_ode</id>
-                    <name>GitHub JPO Geojson Converter</name>
+                    <name>GitHub JPO ODE</name>
                     <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/jpo-ode</url>
                     <snapshots>
                         <enabled>false</enabled>
@@ -48,7 +48,7 @@
                 </repository>
                 <repository>
                     <id>github_cm</id>
-                    <name>GitHub JPO Geojson Converter</name>
+                    <name>GitHub JPO Conflict Monitor</name>
                     <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/jpo-conflictmonitor</url>
                     <snapshots>
                         <enabled>false</enabled>
