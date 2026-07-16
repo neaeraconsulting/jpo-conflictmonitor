@@ -12,12 +12,17 @@
         </server>
         <server>
             <id>github_ode</id>
-            <username>jpo_deduplicator</username>
+            <username>jpo_ode</username>
             <password>${env.MAVEN_GITHUB_TOKEN}</password>
         </server>
         <server>
             <id>github_gjc</id>
-            <username>jpo_deduplicator</username>
+            <username>jpo_gjc</username>
+            <password>${env.MAVEN_GITHUB_TOKEN}</password>
+        </server>
+        <server>
+            <id>github_cm</id>
+            <username>jpo_conflictmonitor</username>
             <password>${env.MAVEN_GITHUB_TOKEN}</password>
         </server>
     </servers>
@@ -37,6 +42,14 @@
                     <id>github_gjc</id>
                     <name>GitHub JPO Geojson Converter</name>
                     <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/jpo-geojsonconverter</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>github_cm</id>
+                    <name>GitHub JPO Geojson Converter</name>
+                    <url>https://maven.pkg.github.com/${env.MAVEN_GITHUB_ORG}/jpo-conflictmonitor</url>
                     <snapshots>
                         <enabled>false</enabled>
                     </snapshots>
