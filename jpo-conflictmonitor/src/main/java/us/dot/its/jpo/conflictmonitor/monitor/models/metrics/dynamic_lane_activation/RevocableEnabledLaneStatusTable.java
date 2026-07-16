@@ -39,6 +39,10 @@ public class RevocableEnabledLaneStatusTable extends AbstractList<RevocableEnabl
         RevocableEnabledLaneStatusChanges previous = list.get(index);
         list.set(index, statusChanges);
         laneIdMap.put(statusChanges.getLaneID(), statusChanges);
+        // Just in case the list gets sorted and index changes, prevent keeping stale entry
+        if (previous.getLaneID() != statusChanges.getLaneID() && !laneIdMap.containsValue(previous)) {
+            laneIdMap.remove(previous.getLaneID());
+        }
         return previous;
     }
 

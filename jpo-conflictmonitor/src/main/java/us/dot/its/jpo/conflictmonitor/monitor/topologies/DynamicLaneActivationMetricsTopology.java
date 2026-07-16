@@ -57,9 +57,9 @@ public class DynamicLaneActivationMetricsTopology
         final var interval = commonParameters.getInterval();
         final var intervalUnits = commonParameters.getIntervalUnits();
         final Duration tumblingWindowDuration = Duration.of(interval, intervalUnits);
-        final Duration storeRetentionTime = Duration.of(interval * 2L, intervalUnits);
         final var gracePeriodMs = commonParameters.getGracePeriodMs();
         final Duration gracePeriodDuration = Duration.ofMillis(gracePeriodMs);
+        final Duration storeRetentionTime = Duration.of(interval, intervalUnits).plus(gracePeriodDuration).multipliedBy(2);
         final String timestampStoreName = "revocableLaneStatusTimestampStore";
 
         final var timestampStoreBuilder =
