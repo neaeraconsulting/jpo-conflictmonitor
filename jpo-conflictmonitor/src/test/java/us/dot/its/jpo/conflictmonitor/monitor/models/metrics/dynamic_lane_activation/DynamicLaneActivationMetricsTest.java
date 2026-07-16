@@ -18,7 +18,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static us.dot.its.jpo.conflictmonitor.testutils.DynamicLaneActivationMetricsTestUtils.createMetrics;
 
 /**
- * Test serializing/deeserializing the data structure
+ * Test serializing/deserializing the data structure
  */
 @Slf4j
 public class DynamicLaneActivationMetricsTest {
