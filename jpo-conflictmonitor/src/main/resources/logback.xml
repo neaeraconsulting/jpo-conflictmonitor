@@ -8,8 +8,9 @@
 		</encoder>
 	</appender>
 	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="WARN"/>
-	<logger name="us.dot.its.jpo.conflictmonitor" level="WARN"/>
-	<root level="ERROR">
+	<logger name="us.dot.its.jpo.conflictmonitor.BoundedMemoryRocksDBConfig" level="WARN"/>
+	<logger name="us.dot.its.jpo.conflictmonitor" level="INFO"/>
+	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>
 </configuration>

@@ -26,28 +26,28 @@ spat_template_17_81 = (spat_template_17_81
 
 lines = []
 
-# Generate MAP messages at 1 Hz (every 1000ms) for 2 seconds
+# Generate MAP messages at 1 Hz (every 1000ms) for 45 seconds
 print("Generating MAP messages at 1 Hz...")
-for i in range(2):
+for i in range(45):
     timestamp_ms = i * 1000
     lines.append(f'ProcessedMap;172.18.0.1;3416,{timestamp_ms},{map_template}')
 
-# Generate SPAT messages at 10 Hz (every 100ms) for 2 seconds
-# Phase 1: lanes 16,80 active (0-5000ms = 50 SPATs)
+# Generate SPAT messages at 10 Hz (every 100ms) for 45 seconds
+# Phase 1: lanes 16,80 active (0-15000ms = 150 SPATs)
 print("Generating SPAT messages at 10 Hz for Phase 1 (lanes 16,80)...")
-for i in range(50):
+for i in range(150):
     timestamp_ms = i * 100
     lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_template_16_80}')
 
-# Phase 2: lanes 17,81 active (5000-10000ms = 50 SPATs)
+# Phase 2: lanes 17,81 active (15000-30000ms = 150 SPATs)
 print("Generating SPAT messages at 10 Hz for Phase 2 (lanes 17,81)...")
-for i in range(50, 100):
+for i in range(150, 300):
     timestamp_ms = i * 100
     lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_template_17_81}')
 
-# Phase 3: lanes 16,80 active again (10000-15000ms = 50 SPATs)
+# Phase 3: lanes 16,80 active again (30000-45000ms = 150 SPATs)
 print("Generating SPAT messages at 10 Hz for Phase 3 (lanes 16,80 again)...")
-for i in range(100, 150):
+for i in range(300, 450):
     timestamp_ms = i * 100
     lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_template_16_80}')
 
@@ -62,10 +62,10 @@ with open(output_file, 'w') as f:
     f.write('\n'.join(lines))
 
 print(f"Done! Generated {len(lines)} total messages:")
-print(f"  - 2 MAP messages (1 Hz)")
-print(f"  - 150 SPAT messages (10 Hz)")
-print(f"  - Duration: 15 seconds")
-print(f"  - Phase 1 (0-5s): lanes 16,80")
-print(f"  - Phase 2 (5-10s): lanes 17,81")
-print(f"  - Phase 3 (10-15s): lanes 16,80")
+print(f"  - 45 MAP messages (1 Hz)")
+print(f"  - 450 SPAT messages (10 Hz)")
+print(f"  - Duration: 45 seconds")
+print(f"  - Phase 1 (0-15s): lanes 16,80")
+print(f"  - Phase 2 (15-30s): lanes 17,81")
+print(f"  - Phase 3 (30-45s): lanes 16,80")
 
