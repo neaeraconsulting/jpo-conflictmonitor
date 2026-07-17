@@ -158,7 +158,7 @@ public class StopLineStopAssessmentTopology
             Produced.with(Serdes.String(),
                     JsonSerdes.StopLineStopNotification()));
 
-        return builder.build();
+        return builder.build(streamsProperties);
     }    
 
 

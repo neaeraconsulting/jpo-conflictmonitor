@@ -232,7 +232,7 @@ public class SpatValidationTopology
                         new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>())
         );
 
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
 

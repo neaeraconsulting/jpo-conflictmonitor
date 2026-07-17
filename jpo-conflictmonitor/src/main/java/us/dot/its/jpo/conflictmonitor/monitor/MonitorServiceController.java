@@ -373,7 +373,7 @@ public class MonitorServiceController {
 
             //Spat Message Count Progression Topology
             startSpatMessageCountProgressionAlgorithm();
-            
+
             //Bsm Message Count Progression Topology
             startBsmMessageCountProgressionAlgorithm();
 
