@@ -82,6 +82,11 @@ public class MapSpatMessageAssessmentParameters {
         updateType = READ_ONLY)
     boolean aggregateSignalStateConflictEvents;
 
+    @ConfigData(key = "map.spat.message.assessment.alignmentSampleIntervalMs",
+        description = "Minimum interval (ms) to re-emit unchanged alignment events as a CTI sample heartbeat",
+        updateType = DEFAULT)
+    long alignmentSampleIntervalMs = 10000L;
+
     @ConfigData(key = "spat.time.change.details.intersectionReferenceAlignmentNotificationAggTopicName",
             description = "The name of the topic to write intersection reference alignment notifications to",
             updateType = READ_ONLY)

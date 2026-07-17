@@ -22,7 +22,8 @@ streams-config-replication-factor: ${CM_STREAMS_CONFIG_REPLICATION_FACTOR:1}
 # May use 0 or 1 for dev
 streams-config-acks: ${CM_STREAMS_CONFIG_ACKS:1}
 # Default 10 threads to match Connect default
-streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:10}
+# Keep near partition count; excess threads add overhead when partitions are few
+streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:2}
 streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING:1048576}
 streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:100}
 streams-config-compression-type: ${CM_STREAMS_CONFIG_COMPRESSION_TYPE:zstd}
@@ -68,7 +69,8 @@ kafakTopicCmVehicleStopEvent: topic.CmStopLineStopEvent
 # TODO Remove, use jpo-utils instead
 kafka.topics:
   autoCreateTopics: false  # Topic creating disabled, using jpo-utils
-  numPartitions: 1
+  # Scale with intersection count for Streams parallelism (override via jpo-utils topic creation)
+  numPartitions: ${CM_KAFKA_NUM_PARTITIONS:8}
   numReplicas: 1
   createTopics:
     - name: topic.CmAppHealthNotifications
@@ -325,6 +327,8 @@ map.spat.message.assessment:
   aggregateIntersectionReferenceAlignmentEvents: ${ENABLE_AGGREGATE_INTERSECTION_REFERENCE_ALIGNMENT_EVENTS:false}
   aggregateSignalGroupAlignmentEvents: ${ENABLE_AGGREGATE_SIGNAL_GROUP_ALIGNMENT_EVENTS:false}
   aggregateSignalStateConflictEvents: ${ENABLE_AGGREGATE_SIGNAL_STATE_CONFLICT_EVENTS:false}
+  # Re-emit alignment events at least this often even if sets are unchanged (CTI sample heartbeat)
+  alignmentSampleIntervalMs: ${CM_MAP_SPAT_ALIGNMENT_SAMPLE_INTERVAL_MS:10000}
 
 
 # MAP Time Change Details
@@ -572,7 +576,7 @@ spat.timestamp.delta:
 
 event.state.progression:
   algorithm: defaultEventStateProgressionAlgorithm
-  debug: true
+  debug: false
   outputTopicName: topic.CmEventStateProgressionEvent
   notificationTopicName: topic.CmEventStateProgressionNotification
   aggNotificationTopicName: topic.CmEventStateProgressionNotificationAggregation
@@ -649,7 +653,7 @@ aggregation:
 
 revocable.enabled.lane.alignment:
   algorithm: defaultRevocableEnabledLaneAlignmentAlgorithm
-  debug: true
+  debug: false
   aggregateEvents: false
   outputTopicName: topic.CmRevocableEnabledLaneAlignmentEvent
   notificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotification
@@ -661,7 +665,7 @@ rtcm.validation:
   upper-bound: 11
   msm-lower-bound: 9
   msm-upper-bound: 110
-  debug: true
+  debug: false
   grace-period-milliseconds: 5000
   output-interval-seconds: 5
   rolling-period-seconds: 10
@@ -685,7 +689,7 @@ rtcm.message.count.progression:
 
 priority.preemption.request:
   algorithm: defaultPriorityPreemptionRequestAlgorithm
-  debug: true
+  debug: false
   processed-srm-input-topic: topic.ProcessedSrm
   processed-ssm-input-topic: topic.ProcessedSsm
   output-event-topic: topic.CmPriorityPreemptionRequestEvent
@@ -709,7 +713,7 @@ metrics:
     retention-time-units: MINUTES
   priority.request:
     algorithm: defaultPriorityRequestMetricsAlgorithm
-    debug: true
+    debug: false
     input-event-topic: topic.CmPriorityPreemptionRequestEvent
     output-metric-topic: topic.CmPriorityRequestMetrics
 

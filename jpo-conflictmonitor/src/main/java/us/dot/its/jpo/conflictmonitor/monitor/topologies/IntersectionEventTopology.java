@@ -395,7 +395,11 @@ public class IntersectionEventTopology
                             JsonSerdes.BsmEvent(),
                             new IntersectionIdPartitioner<>()));
 
-        bsmEventStream.process(() -> new DiagnosticProcessor<>("bsmEventStream", logger));
+        if (messageIngestAlgorithm != null
+                && messageIngestAlgorithm.getParameters() != null
+                && messageIngestAlgorithm.getParameters().isDebug()) {
+            bsmEventStream.process(() -> new DiagnosticProcessor<>("bsmEventStream", logger));
+        }
 
 
  

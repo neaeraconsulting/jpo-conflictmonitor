@@ -43,7 +43,7 @@ services:
       ENABLE_AGGREGATE_EVENT_STATE_PROGRESSION: ${ENABLE_AGGREGATE_EVENT_STATE_PROGRESSION:-false}
       streams-config-replication-factor: ${CM_STREAMS_CONFIG_REPLICATION_FACTOR:-1}
       streams-config-acks: ${CM_STREAMS_CONFIG_ACKS:-1}
-      streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:-10}
+      streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:-2}
       streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING:-1048576}
       streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:-100}
       streams-config-compression-type: ${CM_STREAMS_CONFIG_COMPRESSION_TYPE:-zstd}
@@ -97,7 +97,7 @@ services:
       ENABLE_AGGREGATE_EVENT_STATE_PROGRESSION: ${ENABLE_AGGREGATE_EVENT_STATE_PROGRESSION:-false}
       streams-config-replication-factor: ${CM_STREAMS_CONFIG_REPLICATION_FACTOR:-1}
       streams-config-acks: ${CM_STREAMS_CONFIG_ACKS:-1}
-      streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:-10}
+      streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:-2}
       streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING:-1048576}
       streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:-100}
       streams-config-compression-type: ${CM_STREAMS_CONFIG_COMPRESSION_TYPE:-zstd}
