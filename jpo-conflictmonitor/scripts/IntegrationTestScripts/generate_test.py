@@ -12,50 +12,44 @@ spat_template_16_80 = '{{"schemaVersion":-1,"messageType":"SPAT","odeReceivedAt"
 
 spat_template_17_81 = '{{"schemaVersion":-1,"messageType":"SPAT","odeReceivedAt":"{timestamp}","originIp":"172.18.0.1","name":"INT1","intersectionId":3416,"cti4501Conformant":true,"validationMessages":[],"revision":2,"status":{{"manualControlIsEnabled":false,"stopTimeIsActivated":false,"failureFlash":false,"preemptIsActive":false,"signalPriorityIsActive":false,"fixedTimeOperation":false,"trafficDependentOperation":false,"standbyOperation":false,"failureMode":false,"off":false,"recentMAPmessageUpdate":false,"recentChangeInMAPassignedLanesIDsUsed":false,"noValidMAPisAvailableAtThisTime":false,"noValidSPATisAvailableAtThisTime":false}},"utcTimeStamp":"{timestamp}","enabledLanes":[17,81],"states":[{{"signalGroup":3,"stateTimeSpeed":[{{"eventState":"PERMISSIVE_MOVEMENT_ALLOWED","timing":{{"minEndTime":"{end_time}","maxEndTime":"{end_time}"}}}}]}},{{"signalGroup":4,"stateTimeSpeed":[{{"eventState":"PERMISSIVE_MOVEMENT_ALLOWED","timing":{{"minEndTime":"{end_time}","maxEndTime":"{end_time}"}}}}]}}]}}'
 
+# Convert templates to use test runner placeholders so the script runner fills in
+# current timestamps at run time rather than embedding stale fixed timestamps.
+map_template = map_template.replace('{timestamp}', '@ISO_DATE_TIME@')
+spat_template_16_80 = (spat_template_16_80
+    .replace('{timestamp}', '@ISO_DATE_TIME@')
+    .replace('{end_time}', '@OFFSET_SECONDS_15.0@')
+    .replace('{{', '{').replace('}}', '}'))
+spat_template_17_81 = (spat_template_17_81
+    .replace('{timestamp}', '@ISO_DATE_TIME@')
+    .replace('{end_time}', '@OFFSET_SECONDS_15.0@')
+    .replace('{{', '{').replace('}}', '}'))
+
 lines = []
 
 # Generate MAP messages at 1 Hz (every 1000ms) for 2 seconds
 print("Generating MAP messages at 1 Hz...")
 for i in range(2):
     timestamp_ms = i * 1000
-    seconds = timestamp_ms / 1000.0
-    timestamp = f'2026-02-11T10:00:{int(seconds):02d}.{int((seconds % 1) * 1000):03d}Z'
-    map_json = map_template.replace('{timestamp}', timestamp)
-    lines.append(f'ProcessedMap;172.18.0.1;3416,{timestamp_ms},{map_json}')
+    lines.append(f'ProcessedMap;172.18.0.1;3416,{timestamp_ms},{map_template}')
 
 # Generate SPAT messages at 10 Hz (every 100ms) for 2 seconds
 # Phase 1: lanes 16,80 active (0-5000ms = 50 SPATs)
 print("Generating SPAT messages at 10 Hz for Phase 1 (lanes 16,80)...")
 for i in range(50):
     timestamp_ms = i * 100
-    seconds = timestamp_ms / 1000.0
-    timestamp = f'2026-02-11T10:00:{int(seconds):02d}.{int((seconds % 1) * 1000):03d}Z'
-    end_seconds = (timestamp_ms + 15000) / 1000.0
-    end_time = f'2026-02-11T10:00:{int(end_seconds):02d}.{int((end_seconds % 1) * 1000):03d}Z'
-    spat_json = spat_template_16_80.replace('{timestamp}', timestamp).replace('{end_time}', end_time)
-    lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_json}')
+    lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_template_16_80}')
 
 # Phase 2: lanes 17,81 active (5000-10000ms = 50 SPATs)
 print("Generating SPAT messages at 10 Hz for Phase 2 (lanes 17,81)...")
 for i in range(50, 100):
     timestamp_ms = i * 100
-    seconds = timestamp_ms / 1000.0
-    timestamp = f'2026-02-11T10:00:{int(seconds):02d}.{int((seconds % 1) * 1000):03d}Z'
-    end_seconds = (timestamp_ms + 15000) / 1000.0
-    end_time = f'2026-02-11T10:00:{int(end_seconds):02d}.{int((end_seconds % 1) * 1000):03d}Z'
-    spat_json = spat_template_17_81.replace('{timestamp}', timestamp).replace('{end_time}', end_time)
-    lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_json}')
+    lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_template_17_81}')
 
 # Phase 3: lanes 16,80 active again (10000-15000ms = 50 SPATs)
 print("Generating SPAT messages at 10 Hz for Phase 3 (lanes 16,80 again)...")
 for i in range(100, 150):
     timestamp_ms = i * 100
-    seconds = timestamp_ms / 1000.0
-    timestamp = f'2026-02-11T10:00:{int(seconds):02d}.{int((seconds % 1) * 1000):03d}Z'
-    end_seconds = (timestamp_ms + 15000) / 1000.0
-    end_time = f'2026-02-11T10:00:{int(end_seconds):02d}.{int((end_seconds % 1) * 1000):03d}Z'
-    spat_json = spat_template_16_80.replace('{timestamp}', timestamp).replace('{end_time}', end_time)
-    lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_json}')
+    lines.append(f'ProcessedSpat;172.18.0.1;3416,{timestamp_ms},{spat_template_16_80}')
 
 # Sort by timestamp (important!)
 print("Sorting messages by timestamp...")
