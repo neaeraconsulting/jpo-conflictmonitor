@@ -33,6 +33,9 @@ cm:
   batch:
     scheduler:
       thread.pool.size: 10
+      # Set to false to disable starting the batch algorithms on application startup,
+      # e.g. for tests that only need the Spring context to load.
+      enabled: true
     # Clock config:
     # In normal operation, set offset to false for system time.
     # Or for testing or historical queries, set to true with start-timestamp set to the

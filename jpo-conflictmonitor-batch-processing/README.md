@@ -106,10 +106,14 @@ dependency or Kafka topic shared between them.
 - `algorithms/atspm_spat_validation` — Configuration/parameters for the ATSPM/SPaT
   comparison algorithm: routes, signals, phase mappings, scheduling interval, grace
   period, etc. (bound from `application.yaml` via `AtspmSpatValidationParameters`).
-- `scheduler` / `scheduler/atspm_spat_validation` — Spring `TaskScheduler`-based
-  implementation that runs one recurring task per configured route
-  (`AtspmSpatValidationTask`), staggered (`task-start-time-stagger`) so as not to hit the
-  ATSPM server with simultaneous requests for every route at once.
+- `scheduler` — `SchedulerConfig`/`ScheduledTaskErrorHandler` configure the shared
+  `ThreadPoolTaskScheduler` used by all algorithms, including its error handler (an
+  uncaught exception in a scheduled task is logged and swallowed, not left to silently
+  cancel that task's future executions).
+- `scheduler/atspm_spat_validation` — Spring `TaskScheduler`-based implementation that
+  runs one recurring task per configured route (`AtspmSpatValidationTask`), staggered
+  (`task-start-time-stagger`) so as not to hit the ATSPM server with simultaneous
+  requests for every route at once.
 - `services/atspm` — HTTP client for the ATSPM API (`AtspmClientService`), plus token
   acquisition/refresh (`AtspmTokenService`) for ATSPM's OAuth-style password grant.
 - `services/spat` — Reads previously-processed SPaT data that the core streams
@@ -138,10 +142,13 @@ dependency or Kafka topic shared between them.
   `ProcessedSpat_MV` materialized-view collection (see the "Add timestamp field to processed
   spat instead of using materialized view" commit).
 - `controllers` — `ConflictMonitorBatchProcessingController` starts the configured
-  scheduled algorithm(s) on application startup. `TestController` exposes read-only
-  `/test/**` HTTP endpoints that pass through to the ATSPM client and internal services,
-  for manual testing/debugging (see `http-tests/`) — it is not part of the production data
-  flow.
+  scheduled algorithm(s) once the Spring context has finished loading. It runs as an
+  `ApplicationRunner` (not from a bean constructor) so that loading the context - e.g. in
+  tests - doesn't by itself start live scheduled tasks against real external services; it
+  can be disabled entirely via `cm.batch.scheduler.enabled: false`. `TestController`
+  exposes read-only `/test/**` HTTP endpoints that pass through to the ATSPM client and
+  internal services, for manual testing/debugging (see `http-tests/`) — it is not part of
+  the production data flow.
 - `time` — `ClockConfig` provides the application's `Clock` bean, which can optionally be
   offset to a fixed start time (`cm.batch.clock.offset` / `start-timestamp`) instead of
   system time. This is useful for re-running the comparison over a historical time window
