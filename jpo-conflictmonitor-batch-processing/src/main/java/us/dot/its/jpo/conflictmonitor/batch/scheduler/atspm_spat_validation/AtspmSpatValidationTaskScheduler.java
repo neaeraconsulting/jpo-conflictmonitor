@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ErrorHandler;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.SpringTaskScheduler;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.*;
 import us.dot.its.jpo.conflictmonitor.batch.mongo.ProcessedSpatCollectionUpdater;
@@ -37,8 +38,9 @@ public class AtspmSpatValidationTaskScheduler
                                             AtspmClientService clientService, MongoTemplate mongoTemplate,
                                             AtspmSpatValidationService atspmSpatValidationService,
                                             ProcessedSpatService spatService,
-                                            ProcessedSpatCollectionUpdater spatViewUpdater) {
-        super(taskScheduler, clock);
+                                            ProcessedSpatCollectionUpdater spatViewUpdater,
+                                            ErrorHandler errorHandler) {
+        super(taskScheduler, clock, errorHandler);
         this.interval = parameters.getInterval();
         this.intervalUnits = parameters.getIntervalUnits();
         this.taskStartTimeStagger = parameters.getTaskStartTimeStagger();

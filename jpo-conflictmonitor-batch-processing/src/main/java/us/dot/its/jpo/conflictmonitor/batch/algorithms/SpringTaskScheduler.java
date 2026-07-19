@@ -5,6 +5,9 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.scheduling.support.DelegatingErrorHandlingRunnable;
+import org.springframework.scheduling.support.TaskUtils;
+import org.springframework.util.ErrorHandler;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -32,10 +35,13 @@ public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask exten
     protected final ThreadPoolTaskScheduler taskScheduler;
     protected final List<ScheduledFuture<?>> futureTasks = new ArrayList<>();
     protected final Clock clock;
+    protected final ErrorHandler errorHandler;
 
-    public SpringTaskScheduler(ThreadPoolTaskScheduler taskScheduler, Clock clock) {
+    public SpringTaskScheduler(ThreadPoolTaskScheduler taskScheduler, Clock clock,
+                               ErrorHandler errorHandler) {
         this.taskScheduler = taskScheduler;
         this.clock = clock;
+        this.errorHandler = errorHandler;
     }
 
 
@@ -55,7 +61,10 @@ public abstract class SpringTaskScheduler<TParameters, TaskMetadata, TTask exten
         for (TaskMetadata taskMetadata : taskMetadata) {
             log.info("Start time {}", offsetStartTime);
             var task = createTask(taskMetadata, parameters);
-            var futureTask = taskScheduler.scheduleAtFixedRate(task, offsetStartTime, Duration.of(interval, intervalUnits));
+            // Wrap the task with an error handler to prevent any exceptions due to transient outages while running
+            // a scheduled task from stopping future tasks from running
+            DelegatingErrorHandlingRunnable taskWithErrorHandler = TaskUtils.decorateTaskWithErrorHandler(task, errorHandler, true);
+            var futureTask = taskScheduler.scheduleAtFixedRate(taskWithErrorHandler, offsetStartTime, Duration.of(interval, intervalUnits));
             futureTasks.add(futureTask);
             log.debug("Task for {} scheduled at {} with interval {} {}", taskMetadata, offsetStartTime, interval, intervalUnits);
             offsetStartTime = offsetStartTime.plus(taskStartTimeStagger, taskStartTimeStaggerUnits);
