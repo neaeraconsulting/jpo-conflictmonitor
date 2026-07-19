@@ -95,7 +95,10 @@ class ProcessedControllerEventLogTest {
 
         ProcessedControllerEvent merged = phase2Events.get(1);
         assertThat(merged.getEventCode(), is(EventCode.GREEN));
-        assertThat(merged.getTimestamp(), is(Instant.parse("2026-05-03T10:00:15Z")));
+        // Timestamped at the primary's own red-transition time, not the (earlier) secondary
+        // transition's own timestamp - this entry represents the inferred indication as of
+        // when the primary went red, per the design doc's worked example.
+        assertThat(merged.getTimestamp(), is(Instant.parse("2026-05-03T10:00:20Z")));
         assertThat(merged.getPhase(), is(2));
         assertThat(merged.getSecondaryPhase(), is(6));
     }

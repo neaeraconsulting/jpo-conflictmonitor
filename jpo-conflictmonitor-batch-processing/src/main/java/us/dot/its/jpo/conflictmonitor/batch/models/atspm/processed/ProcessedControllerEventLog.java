@@ -124,9 +124,13 @@ public class ProcessedControllerEventLog {
                 primaryIsRed = (eventCode == EventCode.RED);
                 if (primaryIsRed) {
                     redPrimaryEvent = event;
-                    // Primary is red: use the most recent secondary (if any)
+                    // Primary is red: use the most recent secondary (if any), timestamped at
+                    // the moment the primary itself went red - not the (possibly much older)
+                    // timestamp of that secondary transition - since this resultant entry
+                    // represents the inferred indication as of *now*, not a re-emission of
+                    // that earlier secondary transition.
                     if (mostRecentSecondaryEvent != null) {
-                        resultant.add(mergeEvents(event, mostRecentSecondaryEvent));
+                        resultant.add(mergeEvents(event, mostRecentSecondaryEvent, event.getTimestamp()));
                     } else {
                         resultant.add(event);
                     }
@@ -139,9 +143,9 @@ public class ProcessedControllerEventLog {
                 // Secondary phase event
                 mostRecentSecondaryEvent = event;
                 // This might be an update to the most recent secondary during a primary red phase:
-                // if so, use it
+                // if so, use it, timestamped at this (current) secondary transition.
                 if (primaryIsRed) {
-                    resultant.add(mergeEvents(redPrimaryEvent, mostRecentSecondaryEvent));
+                    resultant.add(mergeEvents(redPrimaryEvent, mostRecentSecondaryEvent, mostRecentSecondaryEvent.getTimestamp()));
                 }
             }
         }
@@ -149,11 +153,15 @@ public class ProcessedControllerEventLog {
         return resultant;
     }
 
-    // Merge secondary with primary with secondary dominant (for when primary is red)
-    private ProcessedControllerEvent mergeEvents(ProcessedControllerEvent primaryEvent, ProcessedControllerEvent secondaryEvent) {
+    // Merge secondary with primary with secondary dominant (for when primary is red).
+    // The caller supplies the timestamp explicitly, since it must be the timestamp of
+    // whichever transition (primary or secondary) is actually driving this resultant entry -
+    // it is not always the secondary event's own timestamp.
+    private ProcessedControllerEvent mergeEvents(
+            ProcessedControllerEvent primaryEvent, ProcessedControllerEvent secondaryEvent, Instant timestamp) {
         var event = new ProcessedControllerEvent();
         event.setEventCode(secondaryEvent.getEventCode());
-        event.setTimestamp(secondaryEvent.getTimestamp());
+        event.setTimestamp(timestamp);
         event.setSignalId(secondaryEvent.getSignalId());
         event.setSecondaryPhase(secondaryEvent.getPhase());
         event.setPhase(primaryEvent.getPhase());
