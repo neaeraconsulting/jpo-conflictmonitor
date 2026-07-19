@@ -109,6 +109,14 @@ public class AtspmSpatPairLog {
         return (numPaired / total) * 100.0;
     }
 
+    private long count(final SpatSignalIndication indication, final int signalGroup) {
+        if (atspmSpatPairs == null) return 0;
+        return atspmSpatPairs.stream()
+                .filter(pair -> pair.getSpatSignalGroupId() == signalGroup)
+                .filter(pair -> pair.getSpatIndication() == indication)
+                .count();
+    }
+
     private double percentPaired(final int signalGroup) {
         if (atspmSpatPairs == null) return 0;
         double numPaired = atspmSpatPairs.stream()
@@ -137,7 +145,11 @@ public class AtspmSpatPairLog {
             double yellow = percentPaired(SpatSignalIndication.YELLOW, signalGroupId);
             double red = percentPaired(SpatSignalIndication.RED, signalGroupId);
             double all = percentPaired(signalGroupId);
-            SignalGroupStatistics sgStats = new SignalGroupStatistics(signalGroupId, green, yellow, red, all);
+            long greenCount = count(SpatSignalIndication.GREEN, signalGroupId);
+            long yellowCount = count(SpatSignalIndication.YELLOW, signalGroupId);
+            long redCount = count(SpatSignalIndication.RED, signalGroupId);
+            SignalGroupStatistics sgStats = new SignalGroupStatistics(
+                    signalGroupId, green, yellow, red, all, greenCount, yellowCount, redCount);
             stats.put(signalGroupId, sgStats);
         }
         return stats;
