@@ -5,7 +5,6 @@ import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.Event;
-import us.dot.its.jpo.ode.plugin.j2735.J2735MovementPhaseState;
 
 import java.util.Set;
 
@@ -35,7 +34,7 @@ public class RevocableEnabledLaneAlignmentEvent extends Event {
     private LaneTypeAttributesMap laneTypeAttributes;
 
     /**
-     * Set of LanIDs with the 'revocable' bit set in the MAP message.
+     * Set of LaneIDs with the 'revocable' bit set in the MAP message.
      */
     private Set<Integer> revocableLaneList;
 

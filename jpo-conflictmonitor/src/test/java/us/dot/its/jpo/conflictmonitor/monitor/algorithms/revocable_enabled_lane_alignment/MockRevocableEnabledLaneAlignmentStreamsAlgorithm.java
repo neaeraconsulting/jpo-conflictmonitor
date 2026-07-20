@@ -3,6 +3,7 @@ package us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KStream;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 
@@ -14,6 +15,11 @@ public class MockRevocableEnabledLaneAlignmentStreamsAlgorithm implements Revoca
 
     @Override
     public void setAggregationAlgorithm(RevocableEnabledLaneAlignmentAggregationAlgorithm aggregationAlgorithm) {
+        // Do nothing
+    }
+
+    @Override
+    public void setDynamicLaneActivationMetricsAlgorithm(DynamicLaneActivationMetricsAlgorithm dynamicLaneActivationMetricsAlgorithm) {
         // Do nothing
     }
 
