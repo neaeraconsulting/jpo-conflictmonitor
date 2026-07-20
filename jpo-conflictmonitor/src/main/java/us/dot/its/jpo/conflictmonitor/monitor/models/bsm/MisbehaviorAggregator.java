@@ -69,9 +69,18 @@ public class MisbehaviorAggregator {
                     longitude
                 );
 
-
-
-                calculatedSpeed = (distance / timeDelta) * 2.236936;
+                
+                if(distance > 0){
+                    if(timeDelta == 0){
+                        // Prevent divide by zero error and avoid setting float to a non standard or NaN value. Setting to Double.MAX_VALUE will ensure a misbehavior event is generated for this case.
+                        calculatedSpeed = Double.MAX_VALUE;
+                    }else{
+                        calculatedSpeed = (distance / timeDelta) * 2.236936;
+                    }
+                }else{
+                    calculatedSpeed = 0;
+                }
+                
             }
             latitude = newLatitude;
             longitude = newLongitude;
