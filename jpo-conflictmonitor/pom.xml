@@ -397,7 +397,7 @@
   <!-- GitHub Artifact publishing configuration -->
   <distributionManagement>
     <repository>
-      <id>github</id>
+      <id>github_cm</id>
       <name>GitHub Packages</name>
       <url>https://maven.pkg.github.com/${github_organization}/jpo-conflictmonitor</url>
     </repository>
