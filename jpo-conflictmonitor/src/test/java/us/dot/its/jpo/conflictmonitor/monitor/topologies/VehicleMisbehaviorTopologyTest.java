@@ -1,10 +1,12 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies;
 
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.junit.Test;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
@@ -55,9 +57,17 @@ public class VehicleMisbehaviorTopologyTest {
     long processedBsm1Timestamp = 1744650797477L;
     long processedBsm2Timestamp = 1744650797477L + 100;
 
-    DateJsonMapper objectMapper = new DateJsonMapper();
+    ObjectMapper objectMapper = DateJsonMapper.getInstance();
 
     TypeReference<ProcessedBsm<Point>> bsmType = new TypeReference<ProcessedBsm<Point>>(){};
+
+    private ProcessedBsm<Point> deserializeBsm(String json) {
+        try {
+            return objectMapper.readValue(json, bsmType);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to deserialize sample BSM JSON", e);
+        }
+    }
 
 
     public Topology getTopology(){
@@ -91,20 +101,20 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, noEventBsm1);
-            inputProcessedBsmTopic.pipeInput(key, noEventBsm2);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(noEventBsm1));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(noEventBsm2));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(0, eventResults.size());
@@ -118,20 +128,20 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, mismatchedSpeedEventBsm1);
-            inputProcessedBsmTopic.pipeInput(key, mismatchedSpeedEventBsm2);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedSpeedEventBsm1));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedSpeedEventBsm2));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -149,19 +159,19 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, speedEventBsm1);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(speedEventBsm1));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -179,20 +189,20 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, mismatchedHeadingEventBsm1);
-            inputProcessedBsmTopic.pipeInput(key, mismatchedHeadingEventBsm2);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedHeadingEventBsm1));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedHeadingEventBsm2));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -210,19 +220,19 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, headingEventBsm1);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(headingEventBsm1));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -239,19 +249,19 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, accelerationEventBsm1);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(accelerationEventBsm1));
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
@@ -268,19 +278,19 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, accelerationEventBsm2);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(accelerationEventBsm2));
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
@@ -297,19 +307,19 @@ public class VehicleMisbehaviorTopologyTest {
 
         try (TopologyTestDriver driver = new TopologyTestDriver(topology)) {
 
-            var inputProcessedBsmTopic = driver.createInputTopic(
+            TestInputTopic<RsuLogKey, ProcessedBsm<Point>> inputProcessedBsmTopic = driver.createInputTopic(
                 bsmInputTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().serializer(),
-                    Serdes.String().serializer()
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm().serializer()
             );
 
-            var outputEventTopic = driver.createOutputTopic(
+            TestOutputTopic<RsuLogKey, us.dot.its.jpo.conflictmonitor.monitor.models.events.VehicleMisbehaviorEvent> outputEventTopic = driver.createOutputTopic(
                     outputEventTopicName,
                     us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey().deserializer(),
                     JsonSerdes.VehicleMisbehaviorEvent().deserializer()
             );
 
-            inputProcessedBsmTopic.pipeInput(key, accelerationEventBsm3);
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(accelerationEventBsm3));
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
