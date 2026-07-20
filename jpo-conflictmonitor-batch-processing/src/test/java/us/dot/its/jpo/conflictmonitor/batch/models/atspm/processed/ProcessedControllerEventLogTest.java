@@ -95,9 +95,9 @@ class ProcessedControllerEventLogTest {
 
         ProcessedControllerEvent merged = phase2Events.get(1);
         assertThat(merged.getEventCode(), is(EventCode.GREEN));
-        // Timestamped at the primary's own red-transition time, not the (earlier) secondary
-        // transition's own timestamp - this entry represents the inferred indication as of
-        // when the primary went red, per the design doc's worked example.
+        // Timestamped at the primary's own red-transition time, not the secondary
+        // transition's earlier timestamp, since this entry represents the inferred
+        // indication as of when the primary went red.
         assertThat(merged.getTimestamp(), is(Instant.parse("2026-05-03T10:00:20Z")));
         assertThat(merged.getPhase(), is(2));
         assertThat(merged.getSecondaryPhase(), is(6));
@@ -120,9 +120,8 @@ class ProcessedControllerEventLogTest {
 
     @Test
     void mergedEventListStaysSortedByTimestamp() {
-        // Regression case: a primary RED event merges with a *stale* secondary event whose
-        // timestamp is earlier than an intervening non-red primary event that was already
-        // added directly. See code review notes on ProcessedControllerEventLog#merge.
+        // A primary RED event merges with a stale secondary event whose timestamp is
+        // earlier than an intervening non-red primary event already added to the list.
         RouteConfig routeConfig = routeConfig(2, 6);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:05", GREEN, 6),  // stale secondary

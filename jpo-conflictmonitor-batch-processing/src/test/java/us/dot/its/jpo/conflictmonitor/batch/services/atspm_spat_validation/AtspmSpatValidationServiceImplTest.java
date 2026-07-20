@@ -177,15 +177,9 @@ class AtspmSpatValidationServiceImplTest {
 
     @Test
     void atpsmSpatLogsPairsEachSpatIndicationWithNearestMatchingAtspmEvent() {
-        // signalGroupId (1) intentionally differs from primaryPhase (5), to exercise the
-        // configured mapping rather than relying on them numerically coinciding.
-        //
-        // NOTE: this currently fails. AtspmSpatValidationServiceImpl#atpsmSpatLogs uses the
-        // raw SPaT signalGroupId directly as if it were the ATSPM phase number (see
-        // commonSignalGroupPhaseNumbers.contains(signalGroup) and
-        // phaseMap.findEventInWindow(signalGroup, ...)), instead of mapping through the
-        // configured primaryPhase. It only happens to work when signalGroupId == primaryPhase
-        // numerically, which is not guaranteed by anything in the config model.
+        // signalGroupId (1) intentionally differs from primaryPhase (5), to verify pairing
+        // goes through the configured mapping rather than relying on the two numbers
+        // coinciding.
         RouteConfig routeConfig = routeConfig(1,
                 signalConfig("SIG1", 100, true, phaseConfig(1, 5, null)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);

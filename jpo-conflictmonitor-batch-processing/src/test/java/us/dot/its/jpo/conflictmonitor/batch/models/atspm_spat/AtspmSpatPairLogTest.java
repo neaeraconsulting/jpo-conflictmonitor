@@ -25,17 +25,17 @@ class AtspmSpatPairLogTest {
 
     @Test
     void getPercentPairedReturnsZeroWhenPairListIsNullOrEmpty() {
-        AtspmSpatPairLog nullList = new AtspmSpatPairLog();
+        var nullList = new AtspmSpatPairLog();
         assertThat(nullList.getPercentPaired(), is(0.0));
 
-        AtspmSpatPairLog emptyList = new AtspmSpatPairLog();
+        var emptyList = new AtspmSpatPairLog();
         emptyList.setAtspmSpatPairs(new ArrayList<>());
         assertThat(emptyList.getPercentPaired(), is(0.0));
     }
 
     @Test
     void getPercentPairedComputesOverallPairedPercentageAcrossAllIndications() {
-        AtspmSpatPairLog log = new AtspmSpatPairLog();
+        var log = new AtspmSpatPairLog();
         log.setAtspmSpatPairs(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.RED, true),
@@ -47,7 +47,7 @@ class AtspmSpatPairLogTest {
 
     @Test
     void getPercentGreenRedYellowPairedFilterByIndicationColorOnly() {
-        AtspmSpatPairLog log = new AtspmSpatPairLog();
+        var log = new AtspmSpatPairLog();
         log.setAtspmSpatPairs(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.GREEN, false),
@@ -62,7 +62,7 @@ class AtspmSpatPairLogTest {
 
     @Test
     void getSignalGroupStatisticsBreaksDownPercentagesPerSignalGroup() {
-        AtspmSpatPairLog log = new AtspmSpatPairLog();
+        var log = new AtspmSpatPairLog();
         log.setAtspmSpatPairs(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.GREEN, false),
@@ -77,7 +77,7 @@ class AtspmSpatPairLogTest {
 
     @Test
     void getSignalGroupStatisticsHandlesSignalGroupWithNoPairsOfAGivenColor() {
-        AtspmSpatPairLog log = new AtspmSpatPairLog();
+        var log = new AtspmSpatPairLog();
         log.setAtspmSpatPairs(List.of(
                 pair(1, SpatSignalIndication.GREEN, true)));
 

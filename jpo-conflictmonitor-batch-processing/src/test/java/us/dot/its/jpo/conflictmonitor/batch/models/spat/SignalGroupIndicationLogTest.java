@@ -64,9 +64,8 @@ class SignalGroupIndicationLogTest {
 
     @Test
     void doesNotDeduplicateConsecutiveSameColorIndications() {
-        // e.g. "protected clearance" followed by "permissive clearance" both map to YELLOW,
-        // and are deliberately kept as two separate entries (see the inline comment in
-        // fromSignalGroupStateLog) - lock in that behavior.
+        // "protected clearance" followed by "permissive clearance" both map to YELLOW, and
+        // are deliberately kept as two separate entries (see fromSignalGroupStateLog).
         Map<Integer, List<TimestampedState>> states = new HashMap<>();
         states.put(3, List.of(
                 ts(T0, ProcessedMovementPhaseState.PROTECTED_CLEARANCE),

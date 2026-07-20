@@ -26,7 +26,7 @@ class PhaseToEventsMapTest {
 
     @Test
     void findsNearestEventWithinWindowAndReportsPaired() {
-        PhaseToEventsMap map = new PhaseToEventsMap();
+        var map = new PhaseToEventsMap();
         map.putEvent(2, event(BASE, EventCode.GREEN, 2));
         map.putEvent(2, event(BASE.plusSeconds(10), EventCode.GREEN, 2));
         map.putEvent(2, event(BASE.plusSeconds(1), EventCode.GREEN, 2));
@@ -40,7 +40,7 @@ class PhaseToEventsMapTest {
 
     @Test
     void returnsNearestButUnpairedWhenClosestEventIsOutsideWindow() {
-        PhaseToEventsMap map = new PhaseToEventsMap();
+        var map = new PhaseToEventsMap();
         map.putEvent(2, event(BASE, EventCode.RED, 2));
 
         var result = map.findEventInWindow(2, EventCode.RED, BASE.plusSeconds(10), Duration.ofSeconds(3));
@@ -52,7 +52,7 @@ class PhaseToEventsMapTest {
 
     @Test
     void returnsUnpairedWhenPhaseHasNoEvents() {
-        PhaseToEventsMap map = new PhaseToEventsMap();
+        var map = new PhaseToEventsMap();
 
         var result = map.findEventInWindow(2, EventCode.GREEN, BASE, Duration.ofSeconds(3));
 
@@ -62,7 +62,7 @@ class PhaseToEventsMapTest {
 
     @Test
     void returnsUnpairedWhenPhaseHasEventsButNoneMatchEventCode() {
-        PhaseToEventsMap map = new PhaseToEventsMap();
+        var map = new PhaseToEventsMap();
         map.putEvent(2, event(BASE, EventCode.GREEN, 2));
 
         var result = map.findEventInWindow(2, EventCode.RED, BASE, Duration.ofSeconds(3));
@@ -73,7 +73,7 @@ class PhaseToEventsMapTest {
 
     @Test
     void picksNearestEventRegardlessOfListOrdering() {
-        PhaseToEventsMap map = new PhaseToEventsMap();
+        var map = new PhaseToEventsMap();
         // far candidate added first, near candidate added second - list is not time-sorted
         map.putEvent(2, event(BASE.plusSeconds(100), EventCode.YELLOW, 2));
         map.putEvent(2, event(BASE, EventCode.YELLOW, 2));

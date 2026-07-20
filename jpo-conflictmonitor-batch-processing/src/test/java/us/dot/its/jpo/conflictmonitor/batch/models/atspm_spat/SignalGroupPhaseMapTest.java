@@ -25,7 +25,7 @@ class SignalGroupPhaseMapTest {
 
     @Test
     void phasesReturnsBothPrimaryAndSecondaryWhenBothConfigured() {
-        SignalGroupPhaseMap map = new SignalGroupPhaseMap();
+        var map = new SignalGroupPhaseMap();
         map.put(1, phaseConfig(1, 2, 6));
 
         assertThat(map.phases(1), containsInAnyOrder(2, 6));
@@ -33,7 +33,7 @@ class SignalGroupPhaseMapTest {
 
     @Test
     void phasesReturnsOnlyPrimaryWhenNoSecondaryConfigured() {
-        SignalGroupPhaseMap map = new SignalGroupPhaseMap();
+        var map = new SignalGroupPhaseMap();
         map.put(1, phaseConfig(1, 2, null));
 
         assertThat(map.phases(1), contains(2));
@@ -41,14 +41,14 @@ class SignalGroupPhaseMapTest {
 
     @Test
     void phasesReturnsEmptySetForUnconfiguredSignalGroup() {
-        SignalGroupPhaseMap map = new SignalGroupPhaseMap();
+        var map = new SignalGroupPhaseMap();
 
         assertThat(map.phases(99), is(empty()));
     }
 
     @Test
     void primaryPhasesForSecondaryFindsAllPhaseConfigsSharingThatSecondaryPhase() {
-        SignalGroupPhaseMap map = new SignalGroupPhaseMap();
+        var map = new SignalGroupPhaseMap();
         map.put(1, phaseConfig(1, 2, 6));
         map.put(5, phaseConfig(5, 4, 6));
 
@@ -57,7 +57,7 @@ class SignalGroupPhaseMapTest {
 
     @Test
     void primaryPhasesForSecondaryReturnsEmptyWhenPhaseIsNeverASecondary() {
-        SignalGroupPhaseMap map = new SignalGroupPhaseMap();
+        var map = new SignalGroupPhaseMap();
         map.put(1, phaseConfig(1, 2, 6));
 
         assertThat(map.primaryPhasesForSecondary(99), is(empty()));
