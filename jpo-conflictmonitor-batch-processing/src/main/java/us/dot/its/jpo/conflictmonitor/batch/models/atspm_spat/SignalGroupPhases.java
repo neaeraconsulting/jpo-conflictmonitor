@@ -13,7 +13,9 @@ public class SignalGroupPhases extends TreeMap<Integer, Set<Integer>> {
         super(map);
     }
     public Set<Integer> phases(int signalGroup) {
-        if (!containsKey(signalGroup)) return Set.of();
+        // Per spec: a signal group with no explicit phase configuration defaults to being
+        // paired with the ATSPM phase of the same number, mirroring SignalGroupPhaseMap#getPhaseConfig.
+        if (!containsKey(signalGroup)) return Set.of(signalGroup);
         return get(signalGroup);
     }
     public Set<Integer> phases(Set<Integer> signalGroups) {

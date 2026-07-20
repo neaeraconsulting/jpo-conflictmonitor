@@ -47,6 +47,24 @@ class SignalGroupPhaseMapTest {
     }
 
     @Test
+    void getPhaseConfigDefaultsPrimaryPhaseToTheSignalGroupsOwnNumberWhenUnconfigured() {
+        var map = new SignalGroupPhaseMap();
+
+        PhaseConfig defaultConfig = map.getPhaseConfig(7);
+
+        assertThat(defaultConfig.getPrimaryPhase(), is(7));
+        assertThat(defaultConfig.getSecondaryPhase(), is(nullValue()));
+    }
+
+    @Test
+    void getPhaseConfigReturnsTheConfiguredEntryWhenPresent() {
+        var map = new SignalGroupPhaseMap();
+        map.put(1, phaseConfig(1, 2, 6));
+
+        assertThat(map.getPhaseConfig(1).getPrimaryPhase(), is(2));
+    }
+
+    @Test
     void primaryPhasesForSecondaryFindsAllPhaseConfigsSharingThatSecondaryPhase() {
         var map = new SignalGroupPhaseMap();
         map.put(1, phaseConfig(1, 2, 6));

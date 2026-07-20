@@ -203,6 +203,30 @@ class AtspmSpatValidationServiceImplTest {
     }
 
     @Test
+    void atpsmSpatLogsDefaultsToMatchingSignalGroupAndPhaseNumbersWhenUnconfigured() {
+        // No PhaseConfig entries at all for SIG1: per spec, default pairing (signal group
+        // number == ATSPM phase number) should apply automatically, with no override needed.
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
+        when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
+        when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
+                .thenReturn(processedEventLog(routeConfig, rawEvent(1)));
+        when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:01Z")));
+
+        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+
+        assertThat(result, hasSize(1));
+        AtspmSpatPairLog pairLog = result.getFirst();
+        assertThat(pairLog.getError(), is(nullValue()));
+        assertThat(pairLog.getAtspmSpatPairs(), hasSize(1));
+
+        AtspmSpatPair pair = pairLog.getAtspmSpatPairs().getFirst();
+        assertThat(pair.isPaired(), is(true));
+        assertThat(pair.getAtspmPrimaryPhase(), is(1));
+    }
+
+    @Test
     void atspmSpatSignalGroupAlignmentEventsFlagsMismatchedSignalGroupAndPhaseSets() {
         RouteConfig routeConfig = routeConfig(
                 signalConfig("SIG1", 100, true, phaseConfig(2)));
@@ -233,6 +257,23 @@ class AtspmSpatValidationServiceImplTest {
         // ATSPM phase (2) matches the mapped phase from SPaT (2)
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
                 .thenReturn(processedEventLog(routeConfig, rawEvent(2)));
+        when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
+
+        List<AtspmSpatSignalGroupAlignmentEvent> events = service.atspmSpatSignalGroupAlignmentEvents(1, START, END);
+
+        assertThat(events, is(empty()));
+    }
+
+    @Test
+    void atspmSpatSignalGroupAlignmentEventsDefaultsToMatchingSignalGroupAndPhaseNumbersWhenUnconfigured() {
+        // No PhaseConfig entries at all for SIG1: default pairing (signal group 1 == phase 1)
+        // should apply automatically, so the sets align and no event is generated.
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
+        when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
+        when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
+                .thenReturn(processedEventLog(routeConfig, rawEvent(1)));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
                 .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
 

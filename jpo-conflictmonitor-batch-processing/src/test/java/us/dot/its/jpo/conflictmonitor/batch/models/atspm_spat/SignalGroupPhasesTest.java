@@ -5,9 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.is;
 
 /**
  * Covers SignalGroupPhases: the signal-group -> phase-set lookup and aggregation helpers.
@@ -23,10 +22,10 @@ class SignalGroupPhasesTest {
     }
 
     @Test
-    void phasesReturnsEmptySetForAnUnconfiguredSignalGroup() {
+    void phasesDefaultsToTheSignalGroupsOwnNumberForAnUnconfiguredSignalGroup() {
         var map = new SignalGroupPhases();
 
-        assertThat(map.phases(99), is(empty()));
+        assertThat(map.phases(99), contains(99));
     }
 
     @Test
@@ -36,6 +35,14 @@ class SignalGroupPhasesTest {
         map.put(2, Set.of(4));
 
         assertThat(map.phases(Set.of(1, 2)), containsInAnyOrder(2, 4));
+    }
+
+    @Test
+    void phasesForASetOfSignalGroupsAppliesDefaultPairingToUnconfiguredMembers() {
+        var map = new SignalGroupPhases();
+        map.put(1, Set.of(2));
+
+        assertThat(map.phases(Set.of(1, 99)), containsInAnyOrder(2, 99));
     }
 
     @Test

@@ -20,7 +20,17 @@ public class SignalGroupPhaseMap extends TreeMap<Integer, PhaseConfig> {
     }
 
     public PhaseConfig getPhaseConfig(int signalGroup) {
-        return get(signalGroup);
+        PhaseConfig configured = get(signalGroup);
+        if (configured != null) {
+            return configured;
+        }
+        // Per spec: absent an explicit override, a SPaT signal group is paired by default with
+        // the ATSPM phase of the same number - an override entry is only needed when that
+        // assumption doesn't hold (mismatched numbering, or a secondary/overlap phase).
+        PhaseConfig defaultConfig = new PhaseConfig();
+        defaultConfig.setSignalGroupId(signalGroup);
+        defaultConfig.setPrimaryPhase(signalGroup);
+        return defaultConfig;
     }
 
     /**
