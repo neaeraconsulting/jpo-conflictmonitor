@@ -150,18 +150,7 @@ public class DynamicLaneActivationMetricsTopology
                 )
                 .toStream()
 
-                // Filter out empty events that may happen due to ticks?
-                // Don't necessarily filter those out so we can be alerted if changes stop
-//                .filter((key, metrics) -> {
-//                    // Check if there are any entries for any lanes
-//                    var table = metrics.getRevocableEnabledLaneStatusTable();
-//                    for (var item : table) {
-//                        if (!item.getStatusChanges().isEmpty()) {
-//                            return true;
-//                        }
-//                    }
-//                    return false;
-//                })
+                // Note we don't filter out empty tick events so we can be alerted if changes stop
 
                 // Get the time period from the window bounds and rekey normal key, not windowed
                 .map((windowedKey, value) -> {
