@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.Generated;
 import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation.DynamicLaneActivationMetrics;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
 /**
@@ -23,7 +24,7 @@ import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
         @Type(value = PriorityRequestMetrics.class,
                 name = "PriorityRequest"),
         @Type(value = DynamicLaneActivationMetrics.class,
-            name = "DynamicLaneActivationMetric")
+            name = "DynamicLaneActivation")
 })
 @Data
 @Generated

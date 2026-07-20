@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.Intersection;
 
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
@@ -9,6 +10,7 @@ import org.locationtech.jts.geom.impl.PackedCoordinateSequence;
  * LaneConnection represents a connection between an ingress and egress lane within an intersection.
  * It provides methods to compute the geometric connection and check for crossing with other connections.
  */
+@Slf4j
 public class LaneConnection {
     
     /**
@@ -63,6 +65,11 @@ public class LaneConnection {
      * @return a LineString representing the connection
      */
     public LineString calculateConnectingLineString(int numIntermediatePoints){
+        // Null check to prevent NPE if ingress or egress lane is missing
+        if (ingressLane == null || egressLane == null) {
+            log.warn("Ingress or egress lane is missing in {}", this);
+            return null;
+        }
         int egressPointCount = egressLane.getPoints().getNumPoints();
         Point startPoint = ingressLane.getPoints().getPointN(0);
         Point leadInPoint = ingressLane.getPoints().getPointN(1);
@@ -85,6 +92,9 @@ public class LaneConnection {
      * @return true if the connections cross, false otherwise
      */
     public boolean crosses(LaneConnection otherConnection){
+        if (this.connectingLineString == null || otherConnection.getConnectingLineString() == null) {
+            return false;
+        }
         return this.connectingLineString.crosses(otherConnection.getConnectingLineString());
     }
 

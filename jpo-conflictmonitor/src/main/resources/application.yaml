@@ -265,7 +265,9 @@ kafka.topics:
     - name: topic.CmPriorityRequestMetrics
       cleanupPolicy: delete
       retentionMs: 300000
-
+    - name: topic.CmDynamicLaneActivationMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
 
 
 # Connection of Travel
@@ -712,4 +714,9 @@ metrics:
     debug: true
     input-event-topic: topic.CmPriorityPreemptionRequestEvent
     output-metric-topic: topic.CmPriorityRequestMetrics
+  dynamic.lane.activation:
+    algorithm: defaultDynamicLaneActivationMetricsAlgorithm
+    debug: true
+    output-metric-topic: topic.CmDynamicLaneActivationMetrics
+
 
