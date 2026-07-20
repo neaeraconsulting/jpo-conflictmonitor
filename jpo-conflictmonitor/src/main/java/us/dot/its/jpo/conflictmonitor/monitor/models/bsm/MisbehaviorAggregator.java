@@ -41,9 +41,9 @@ public class MisbehaviorAggregator {
     private double calculatedSpeed = 0;
     private double calculatedYawRate = 0;
     private double yawRate = 0;
-    private double longitude = 0;
-    private double latitude = 0;
-    private double heading = 0;
+    private Double longitude = null;
+    private Double latitude = null;
+    private Double heading = null;
     private int numEvents = 0;
 
 
@@ -70,7 +70,7 @@ public class MisbehaviorAggregator {
             double newLongitude =  newBsm.getGeometry().getCoordinates()[0];
             double newLatitude = newBsm.getGeometry().getCoordinates()[1];
 
-            if(longitude != 0 && latitude != 0){
+            if(longitude != null && latitude != null){ // Don't Calculate Distance until we have a previous point to compare to.
                 double distance = CoordinateConversion.calculateGeodeticDistance(
                     newLatitude,
                     newLongitude,
@@ -100,7 +100,7 @@ public class MisbehaviorAggregator {
         }
 
         if(updatedHeading != null){
-            if(heading != 0 && updatedHeading != 28800){
+            if(heading != null){ // Required to ensure that the first BSM does not generate a misbehavior event due to a large heading change.
                 calculatedYawRate = (updatedHeading - heading) / timeDelta;
             }
             heading = updatedHeading;
