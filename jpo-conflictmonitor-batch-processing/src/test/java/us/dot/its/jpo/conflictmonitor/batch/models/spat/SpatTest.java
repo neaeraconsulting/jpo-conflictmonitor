@@ -53,9 +53,9 @@ class SpatTest {
         Spat result = Spat.fromProcessedSpat(spat);
 
         assertThat(result.getStates(), hasSize(2));
-        assertThat(result.getStates().get(0).getSignalGroup(), is(1));
+        assertThat(result.getStates().getFirst().getSignalGroup(), is(1));
         assertThat(result.getStates().get(1).getSignalGroup(), is(3));
-        assertThat(result.getStates().get(0).getTimestamp(), is(timestamp));
+        assertThat(result.getStates().getFirst().getTimestamp(), is(timestamp));
     }
 
     @Test

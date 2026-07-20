@@ -19,18 +19,19 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @Slf4j
 public class AtspmClientServiceImpl implements AtspmClientService {
 
     private final RestClient restClient;
-    private final AtspmToken token;
+    private final AtomicReference<AtspmToken> token;
     private final Clock clock;
     private final AtspmSpatValidationParameters parameters;
 
     @Autowired
-    public AtspmClientServiceImpl(RestClient restClient, AtspmToken token, Clock clock, AtspmSpatValidationParameters parameters) {
+    public AtspmClientServiceImpl(RestClient restClient, AtomicReference<AtspmToken> token, Clock clock, AtspmSpatValidationParameters parameters) {
         this.restClient = restClient;
         this.token = token;
         this.clock = clock;
@@ -125,7 +126,7 @@ public class AtspmClientServiceImpl implements AtspmClientService {
     private String retrieveString(String path) {
         return restClient.get()
                 .uri(path)
-                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
+                .headers(headers -> headers.setBearerAuth(token.get().getAccessToken()))
                 .retrieve()
                 .body(String.class);
     }
@@ -133,7 +134,7 @@ public class AtspmClientServiceImpl implements AtspmClientService {
     private <T> List<T> retrieveList(ParameterizedTypeReference<List<T>> returnTypeRef, String path, Object ... args) {
         return restClient.get()
                 .uri(path, args)
-                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
+                .headers(headers -> headers.setBearerAuth(token.get().getAccessToken()))
                 .retrieve()
                 .body(returnTypeRef);
     }
@@ -141,7 +142,7 @@ public class AtspmClientServiceImpl implements AtspmClientService {
     private <T> T retrieveObject(Class<T> objectClass, String path, Object... args) {
         return restClient.get()
                 .uri(path, args)
-                .headers(headers -> headers.setBearerAuth(token.getAccessToken()))
+                .headers(headers -> headers.setBearerAuth(token.get().getAccessToken()))
                 .retrieve()
                 .body(objectClass);
     }

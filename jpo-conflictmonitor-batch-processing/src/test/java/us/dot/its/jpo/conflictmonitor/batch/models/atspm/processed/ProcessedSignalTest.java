@@ -20,10 +20,10 @@ import static org.hamcrest.Matchers.*;
  */
 class ProcessedSignalTest {
 
-    private ControllerType controllerType(int id, String description) {
+    private ControllerType controllerType() {
         var ct = new ControllerType();
-        ct.setControllerTypeID(id);
-        ct.setDescription(description);
+        ct.setControllerTypeID(5);
+        ct.setDescription("NEMA TS2");
         return ct;
     }
 
@@ -34,25 +34,18 @@ class ProcessedSignalTest {
         return mt;
     }
 
-    private LaneType laneType(int id, String description) {
+    private LaneType laneType() {
         var lt = new LaneType();
-        lt.setLaneTypeID(id);
-        lt.setDescription(description);
+        lt.setLaneTypeID(30);
+        lt.setDescription("Vehicle");
         return lt;
     }
 
-    private DirectionType directionType(int id, String description) {
-        var dt = new DirectionType();
-        dt.setDirectionTypeID(id);
-        dt.setDescription(description);
-        return dt;
-    }
-
-    private Detector detector(Integer laneNumber, Integer movementTypeId, Integer laneTypeId) {
+    private Detector detector(Integer movementTypeId) {
         var d = new Detector();
-        d.setLaneNumber(laneNumber);
+        d.setLaneNumber(1);
         d.setMovementTypeID(movementTypeId);
-        d.setLaneTypeID(laneTypeId);
+        d.setLaneTypeID(30);
         return d;
     }
 
@@ -82,7 +75,7 @@ class ProcessedSignalTest {
         signal.setControllerTypeID(5);
 
         ProcessedSignal ps = ProcessedSignal.fromSignal(signal,
-                List.of(controllerType(5, "NEMA TS2")), List.of(), List.of(), List.of());
+                List.of(controllerType()), List.of(), List.of(), List.of());
 
         assertThat(ps.getControllerType(), is("NEMA TS2"));
     }
@@ -93,7 +86,7 @@ class ProcessedSignalTest {
         signal.setControllerTypeID(99);
 
         ProcessedSignal ps = ProcessedSignal.fromSignal(signal,
-                List.of(controllerType(5, "NEMA TS2")), List.of(), List.of(), List.of());
+                List.of(controllerType()), List.of(), List.of(), List.of());
 
         assertThat(ps.getControllerType(), is(nullValue()));
     }
@@ -106,17 +99,20 @@ class ProcessedSignalTest {
         approach.setProtectedPhaseNumber(2);
         approach.setPermissivePhaseNumber(6);
         approach.setPedestrianPhaseNumber(4);
-        approach.setDetectors(List.of(detector(1, 20, 30)));
+        approach.setDetectors(List.of(detector(20)));
 
         var signal = new Signal();
         signal.setApproaches(List.of(approach));
 
+        var directionType = new DirectionType();
+        directionType.setDirectionTypeID(10);
+        directionType.setDescription("Northbound");
+
         ProcessedSignal ps = ProcessedSignal.fromSignal(signal, List.of(),
-                List.of(movementType(20, "Thru")), List.of(laneType(30, "Vehicle")),
-                List.of(directionType(10, "Northbound")));
+                List.of(movementType(20, "Thru")), List.of(laneType()), List.of(directionType));
 
         assertThat(ps.getApproaches(), hasSize(1));
-        ProcessedApproach pa = ps.getApproaches().get(0);
+        ProcessedApproach pa = ps.getApproaches().getFirst();
         assertThat(pa.getApproachID(), is(1));
         assertThat(pa.getDirectionType(), is("Northbound"));
         assertThat(pa.getProtectedPhaseNumber(), is(2));
@@ -134,17 +130,17 @@ class ProcessedSignalTest {
         var approach = new Approach();
         approach.setApproachID(1);
         approach.setDetectors(List.of(
-                detector(1, 20, 30),
-                detector(1, 21, 30)));
+                detector(20),
+                detector(21)));
 
         var signal = new Signal();
         signal.setApproaches(List.of(approach));
 
         ProcessedSignal ps = ProcessedSignal.fromSignal(signal, List.of(),
                 List.of(movementType(20, "Thru"), movementType(21, "Left")),
-                List.of(laneType(30, "Vehicle")), List.of());
+                List.of(laneType()), List.of());
 
-        ProcessedApproach pa = ps.getApproaches().get(0);
+        ProcessedApproach pa = ps.getApproaches().getFirst();
         assertThat(pa.getLanes(), hasSize(1));
         Lane lane = pa.getLanes().iterator().next();
         assertThat(lane.getMovements(), containsInAnyOrder("Thru", "Left"));

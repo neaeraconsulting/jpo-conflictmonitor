@@ -31,6 +31,11 @@ spring:
 
 cm:
   batch:
+    # Enables TestController's /test/** debug endpoints, which proxy ATSPM queries and can
+    # expose the live ATSPM access token. Disabled by default - only set to true for local
+    # development/testing, never in a shared or production environment.
+    test-controller:
+      enabled: ${CM_TEST_CONTROLLER_ENABLED:false}
     scheduler:
       thread.pool.size: 10
       # Set to false to disable starting the batch algorithms on application startup,

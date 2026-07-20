@@ -44,7 +44,7 @@ class SignalGroupIndicationLogTest {
         List<TimestampedIndication> indications = result.getIndicationsMap().getIndications(1);
 
         assertThat(indications, hasSize(2));
-        assertThat(indications.get(0).getIndication(), is(SpatSignalIndication.GREEN));
+        assertThat(indications.getFirst().getIndication(), is(SpatSignalIndication.GREEN));
         assertThat(indications.get(1).getIndication(), is(SpatSignalIndication.YELLOW));
     }
 
@@ -59,7 +59,7 @@ class SignalGroupIndicationLogTest {
         List<TimestampedIndication> indications = result.getIndicationsMap().getIndications(2);
 
         assertThat(indications, hasSize(1));
-        assertThat(indications.get(0).getIndication(), is(SpatSignalIndication.GREEN));
+        assertThat(indications.getFirst().getIndication(), is(SpatSignalIndication.GREEN));
     }
 
     @Test
@@ -75,7 +75,7 @@ class SignalGroupIndicationLogTest {
         List<TimestampedIndication> indications = result.getIndicationsMap().getIndications(3);
 
         assertThat(indications, hasSize(2));
-        assertThat(indications.get(0).getIndication(), is(SpatSignalIndication.YELLOW));
+        assertThat(indications.getFirst().getIndication(), is(SpatSignalIndication.YELLOW));
         assertThat(indications.get(1).getIndication(), is(SpatSignalIndication.YELLOW));
     }
 }

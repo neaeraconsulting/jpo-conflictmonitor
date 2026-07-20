@@ -39,10 +39,10 @@ class ProcessedControllerEventLogTest {
         return e;
     }
 
-    private RouteConfig routeConfig(Integer primaryPhase, Integer secondaryPhase) {
+    private RouteConfig routeConfig(Integer secondaryPhase) {
         var phaseConfig = new PhaseConfig();
         phaseConfig.setSignalGroupId(1);
-        phaseConfig.setPrimaryPhase(primaryPhase);
+        phaseConfig.setPrimaryPhase(2);
         phaseConfig.setSecondaryPhase(secondaryPhase);
 
         var signalConfig = new SignalConfig();
@@ -63,7 +63,7 @@ class ProcessedControllerEventLogTest {
 
     @Test
     void mergePrefersPrimaryEventsWhenPrimaryIsNotRed() {
-        RouteConfig routeConfig = routeConfig(2, 6);
+        RouteConfig routeConfig = routeConfig(6);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", GREEN, 2),
                 rawEvent("2026-05-03T10:00:05", GREEN, 6), // secondary event - should be ignored
@@ -72,16 +72,16 @@ class ProcessedControllerEventLogTest {
         List<ProcessedControllerEvent> phase2Events = log.getSignalPhaseMap().getPhaseMap(SIGNAL_ID).getEventList(2);
 
         assertThat(phase2Events, hasSize(2));
-        assertThat(phase2Events.get(0).getEventCode(), is(EventCode.GREEN));
-        assertThat(phase2Events.get(0).getPhase(), is(2));
-        assertThat(phase2Events.get(0).getSecondaryPhase(), is(nullValue()));
+        assertThat(phase2Events.getFirst().getEventCode(), is(EventCode.GREEN));
+        assertThat(phase2Events.getFirst().getPhase(), is(2));
+        assertThat(phase2Events.getFirst().getSecondaryPhase(), is(nullValue()));
         assertThat(phase2Events.get(1).getEventCode(), is(EventCode.YELLOW));
         assertThat(phase2Events.get(1).getPhase(), is(2));
     }
 
     @Test
     void mergeUsesSecondaryEventWhenPrimaryIsRed() {
-        RouteConfig routeConfig = routeConfig(2, 6);
+        RouteConfig routeConfig = routeConfig(6);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", GREEN, 2),
                 rawEvent("2026-05-03T10:00:15", GREEN, 6), // most recent secondary before RED
@@ -90,8 +90,8 @@ class ProcessedControllerEventLogTest {
         List<ProcessedControllerEvent> phase2Events = log.getSignalPhaseMap().getPhaseMap(SIGNAL_ID).getEventList(2);
 
         assertThat(phase2Events, hasSize(2));
-        assertThat(phase2Events.get(0).getEventCode(), is(EventCode.GREEN));
-        assertThat(phase2Events.get(0).getTimestamp(), is(Instant.parse("2026-05-03T10:00:00Z")));
+        assertThat(phase2Events.getFirst().getEventCode(), is(EventCode.GREEN));
+        assertThat(phase2Events.getFirst().getTimestamp(), is(Instant.parse("2026-05-03T10:00:00Z")));
 
         ProcessedControllerEvent merged = phase2Events.get(1);
         assertThat(merged.getEventCode(), is(EventCode.GREEN));
@@ -105,7 +105,7 @@ class ProcessedControllerEventLogTest {
 
     @Test
     void mergeFallsBackToPrimaryRedEventWhenNoSecondaryEventSeenYet() {
-        RouteConfig routeConfig = routeConfig(2, 6);
+        RouteConfig routeConfig = routeConfig(6);
         // No secondary (phase 6) events at all
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", RED, 2));
@@ -113,16 +113,16 @@ class ProcessedControllerEventLogTest {
         List<ProcessedControllerEvent> phase2Events = log.getSignalPhaseMap().getPhaseMap(SIGNAL_ID).getEventList(2);
 
         assertThat(phase2Events, hasSize(1));
-        assertThat(phase2Events.get(0).getEventCode(), is(EventCode.RED));
-        assertThat(phase2Events.get(0).getPhase(), is(2));
-        assertThat(phase2Events.get(0).getSecondaryPhase(), is(nullValue()));
+        assertThat(phase2Events.getFirst().getEventCode(), is(EventCode.RED));
+        assertThat(phase2Events.getFirst().getPhase(), is(2));
+        assertThat(phase2Events.getFirst().getSecondaryPhase(), is(nullValue()));
     }
 
     @Test
     void mergedEventListStaysSortedByTimestamp() {
         // A primary RED event merges with a stale secondary event whose timestamp is
         // earlier than an intervening non-red primary event already added to the list.
-        RouteConfig routeConfig = routeConfig(2, 6);
+        RouteConfig routeConfig = routeConfig(6);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:05", GREEN, 6),  // stale secondary
                 rawEvent("2026-05-03T10:00:10", YELLOW, 2), // non-red primary, added as-is
@@ -132,12 +132,12 @@ class ProcessedControllerEventLogTest {
 
         assertThat(phase2Events, hasSize(2));
         assertThat("merged phase event list should stay non-decreasing by timestamp",
-                phase2Events.get(0).getTimestamp(), lessThanOrEqualTo(phase2Events.get(1).getTimestamp()));
+                phase2Events.getFirst().getTimestamp(), lessThanOrEqualTo(phase2Events.get(1).getTimestamp()));
     }
 
     @Test
     void signalsWithoutASecondaryPhaseConfiguredAreUnaffectedByMerge() {
-        RouteConfig routeConfig = routeConfig(2, null);
+        RouteConfig routeConfig = routeConfig(null);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", GREEN, 2),
                 rawEvent("2026-05-03T10:00:05", GREEN, 6), // unrelated phase - not anyone's configured secondary
@@ -146,7 +146,7 @@ class ProcessedControllerEventLogTest {
         PhaseToEventsMap phaseMap = log.getSignalPhaseMap().getPhaseMap(SIGNAL_ID);
 
         assertThat(phaseMap.getEventList(2), hasSize(2));
-        assertThat(phaseMap.getEventList(2).get(0).getSecondaryPhase(), is(nullValue()));
+        assertThat(phaseMap.getEventList(2).getFirst().getSecondaryPhase(), is(nullValue()));
         assertThat(phaseMap.getEventList(2).get(1).getSecondaryPhase(), is(nullValue()));
         // the unrelated phase 6 event is untouched, still present under its own key
         assertThat(phaseMap.getEventList(6), hasSize(1));
@@ -154,7 +154,7 @@ class ProcessedControllerEventLogTest {
 
     @Test
     void ignoresEventsWithEventCodesNotRelevantToThisAlgorithm() {
-        RouteConfig routeConfig = routeConfig(2, null);
+        RouteConfig routeConfig = routeConfig(null);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", GREEN, 2),
                 rawEvent("2026-05-03T10:00:05", 43, 2), // e.g. a detector actuation code - not GREEN/YELLOW/RED
@@ -163,13 +163,13 @@ class ProcessedControllerEventLogTest {
         List<ProcessedControllerEvent> phase2Events = log.getSignalPhaseMap().getPhaseMap(SIGNAL_ID).getEventList(2);
 
         assertThat(phase2Events, hasSize(2));
-        assertThat(phase2Events.get(0).getEventCode(), is(EventCode.GREEN));
+        assertThat(phase2Events.getFirst().getEventCode(), is(EventCode.GREEN));
         assertThat(phase2Events.get(1).getEventCode(), is(EventCode.RED));
     }
 
     @Test
     void sizeCountsAllEventsAcrossAllSignalsAndPhases() {
-        RouteConfig routeConfig = routeConfig(2, null);
+        RouteConfig routeConfig = routeConfig(null);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", GREEN, 2),
                 rawEvent("2026-05-03T10:00:05", YELLOW, 2),
@@ -180,7 +180,7 @@ class ProcessedControllerEventLogTest {
 
     @Test
     void signalToPhaseMultimapReflectsPhaseKeysAfterMerging() {
-        RouteConfig routeConfig = routeConfig(2, 6);
+        RouteConfig routeConfig = routeConfig(6);
         ProcessedControllerEventLog log = build(routeConfig,
                 rawEvent("2026-05-03T10:00:00", GREEN, 2),
                 rawEvent("2026-05-03T10:00:15", GREEN, 6),

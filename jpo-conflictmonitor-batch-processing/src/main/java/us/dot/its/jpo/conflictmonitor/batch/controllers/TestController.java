@@ -3,6 +3,7 @@ package us.dot.its.jpo.conflictmonitor.batch.controllers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -34,7 +35,12 @@ import java.util.List;
 
 /**
  * Health check method, and methods that pass through to the ATSPM service, for testing the API.
+ * <p>
+ * Disabled by default (see {@code cm.batch.test-controller.enabled}) since these endpoints
+ * are unauthenticated and some (e.g. /test/token) expose live ATSPM credentials/data - only
+ * enable for local development/testing, never in a shared or production environment.
  */
+@ConditionalOnProperty(name = "cm.batch.test-controller.enabled", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping(path = "/test", produces = MediaType.APPLICATION_JSON_VALUE)
 @Slf4j

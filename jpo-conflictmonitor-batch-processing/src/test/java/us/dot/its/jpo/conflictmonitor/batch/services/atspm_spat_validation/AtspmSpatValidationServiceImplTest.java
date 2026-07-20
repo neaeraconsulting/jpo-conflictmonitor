@@ -68,26 +68,26 @@ class AtspmSpatValidationServiceImplTest {
         return sc;
     }
 
-    private PhaseConfig phaseConfig(int signalGroupId, Integer primaryPhase, Integer secondaryPhase) {
+    private PhaseConfig phaseConfig(Integer primaryPhase) {
         var pc = new PhaseConfig();
-        pc.setSignalGroupId(signalGroupId);
+        pc.setSignalGroupId(1);
         pc.setPrimaryPhase(primaryPhase);
-        pc.setSecondaryPhase(secondaryPhase);
+        pc.setSecondaryPhase(null);
         return pc;
     }
 
-    private RouteConfig routeConfig(int routeId, SignalConfig... signals) {
+    private RouteConfig routeConfig(SignalConfig... signals) {
         var rc = new RouteConfig();
-        rc.setRouteId(routeId);
+        rc.setRouteId(1);
         rc.setSignals(List.of(signals));
         return rc;
     }
 
-    private ControllerEventLog rawEvent(String signalId, String time, int eventCode, int phase) {
+    private ControllerEventLog rawEvent(int phase) {
         var e = new ControllerEventLog();
-        e.setSignalId(signalId);
-        e.setTimestamp(time);
-        e.setEventCode(eventCode);
+        e.setSignalId("SIG1");
+        e.setTimestamp("2026-05-03T10:00:00");
+        e.setEventCode(AtspmSpatValidationServiceImplTest.GREEN);
         e.setEventParam(phase);
         return e;
     }
@@ -96,28 +96,28 @@ class AtspmSpatValidationServiceImplTest {
         return new ProcessedControllerEventLog(routeConfig.getRouteId(), START, END, List.of(events), CLOCK, ZoneOffset.UTC, routeConfig);
     }
 
-    private SignalGroupIndicationLog indicationLog(int intersectionId, int signalGroup, Instant timestamp, SpatSignalIndication indication) {
+    private SignalGroupIndicationLog indicationLog(int intersectionId, Instant timestamp) {
         var log = new SignalGroupIndicationLog();
         log.setIntersectionId(intersectionId);
         var map = new SignalGroupIndicationLog.SignalGroupIndicationMap();
         var ti = new TimestampedIndication();
         ti.setTimestamp(timestamp);
-        ti.setIndication(indication);
-        map.putIndication(signalGroup, ti);
+        ti.setIndication(SpatSignalIndication.GREEN);
+        map.putIndication(1, ti);
         log.setIndicationsMap(map);
         return log;
     }
 
-    private SignalGroupIndicationLog emptyIndicationLog(int intersectionId) {
+    private SignalGroupIndicationLog emptyIndicationLog() {
         var log = new SignalGroupIndicationLog();
-        log.setIntersectionId(intersectionId);
+        log.setIntersectionId(100);
         log.setIndicationsMap(new SignalGroupIndicationLog.SignalGroupIndicationMap());
         return log;
     }
 
     @Test
     void atpsmSpatLogsReturnsEmptyWhenRouteHasNoEnabledSignals() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, false));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, false));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
 
         List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
@@ -127,7 +127,7 @@ class AtspmSpatValidationServiceImplTest {
 
     @Test
     void atpsmSpatLogsRecordsErrorWhenSignalIsMissingIntersectionId() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", null, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", null, true));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
@@ -136,43 +136,43 @@ class AtspmSpatValidationServiceImplTest {
         List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
-        assertThat(result.get(0).getError(), containsString("Missing intersection id"));
+        assertThat(result.getFirst().getError(), containsString("Missing intersection id"));
     }
 
     @Test
     void atpsmSpatLogsRecordsErrorWhenAtspmHasNoDataForSignal() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         // no raw events at all - "SIG1" never appears in the processed log's signal/phase map
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
                 .thenReturn(processedEventLog(routeConfig));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
-                .thenReturn(emptyIndicationLog(100));
+                .thenReturn(emptyIndicationLog());
 
         List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
-        assertThat(result.get(0).getError(), containsString("no entries for signalId"));
+        assertThat(result.getFirst().getError(), containsString("no entries for signalId"));
     }
 
     @Test
     void atpsmSpatLogsSkipsSignalGroupsWithNoCommonMappedPhase() {
-        RouteConfig routeConfig = routeConfig(1,
-                signalConfig("SIG1", 100, true, phaseConfig(1, 1, null)));
+        RouteConfig routeConfig = routeConfig(
+                signalConfig("SIG1", 100, true, phaseConfig(1)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         // ATSPM data only has phase 99, which is disjoint from the mapped phase (1)
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
-                .thenReturn(processedEventLog(routeConfig, rawEvent("SIG1", "2026-05-03T10:00:00", GREEN, 99)));
+                .thenReturn(processedEventLog(routeConfig, rawEvent(99)));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
-                .thenReturn(indicationLog(100, 1, Instant.parse("2026-05-03T10:00:00Z"), SpatSignalIndication.GREEN));
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
 
         List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
-        assertThat(result.get(0).getError(), is(nullValue()));
-        assertThat(result.get(0).getAtspmSpatPairs(), is(empty()));
+        assertThat(result.getFirst().getError(), is(nullValue()));
+        assertThat(result.getFirst().getAtspmSpatPairs(), is(empty()));
     }
 
     @Test
@@ -180,23 +180,23 @@ class AtspmSpatValidationServiceImplTest {
         // signalGroupId (1) intentionally differs from primaryPhase (5), to verify pairing
         // goes through the configured mapping rather than relying on the two numbers
         // coinciding.
-        RouteConfig routeConfig = routeConfig(1,
-                signalConfig("SIG1", 100, true, phaseConfig(1, 5, null)));
+        RouteConfig routeConfig = routeConfig(
+                signalConfig("SIG1", 100, true, phaseConfig(5)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
-                .thenReturn(processedEventLog(routeConfig, rawEvent("SIG1", "2026-05-03T10:00:00", GREEN, 5)));
+                .thenReturn(processedEventLog(routeConfig, rawEvent(5)));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
-                .thenReturn(indicationLog(100, 1, Instant.parse("2026-05-03T10:00:01Z"), SpatSignalIndication.GREEN));
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:01Z")));
 
         List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
-        AtspmSpatPairLog pairLog = result.get(0);
+        AtspmSpatPairLog pairLog = result.getFirst();
         assertThat(pairLog.getError(), is(nullValue()));
         assertThat(pairLog.getAtspmSpatPairs(), hasSize(1));
 
-        AtspmSpatPair pair = pairLog.getAtspmSpatPairs().get(0);
+        AtspmSpatPair pair = pairLog.getAtspmSpatPairs().getFirst();
         assertThat(pair.isPaired(), is(true));
         assertThat(pair.getSpatSignalGroupId(), is(1));
         assertThat(pair.getAtspmPrimaryPhase(), is(5));
@@ -204,20 +204,20 @@ class AtspmSpatValidationServiceImplTest {
 
     @Test
     void atspmSpatSignalGroupAlignmentEventsFlagsMismatchedSignalGroupAndPhaseSets() {
-        RouteConfig routeConfig = routeConfig(1,
-                signalConfig("SIG1", 100, true, phaseConfig(1, 2, null)));
+        RouteConfig routeConfig = routeConfig(
+                signalConfig("SIG1", 100, true, phaseConfig(2)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         // ATSPM data has phase 5, but the SPaT signal group maps to phase 2
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
-                .thenReturn(processedEventLog(routeConfig, rawEvent("SIG1", "2026-05-03T10:00:00", GREEN, 5)));
+                .thenReturn(processedEventLog(routeConfig, rawEvent(5)));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
-                .thenReturn(indicationLog(100, 1, Instant.parse("2026-05-03T10:00:00Z"), SpatSignalIndication.GREEN));
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
 
         List<AtspmSpatSignalGroupAlignmentEvent> events = service.atspmSpatSignalGroupAlignmentEvents(1, START, END);
 
         assertThat(events, hasSize(1));
-        AtspmSpatSignalGroupAlignmentEvent event = events.get(0);
+        AtspmSpatSignalGroupAlignmentEvent event = events.getFirst();
         assertThat(event.getSignalId(), is("SIG1"));
         assertThat(event.getSpatSignalGroupIds(), contains(1));
         assertThat(event.getMappedPhasesFromSpats(), contains(2));
@@ -226,15 +226,15 @@ class AtspmSpatValidationServiceImplTest {
 
     @Test
     void atspmSpatSignalGroupAlignmentEventsSkipsSignalsWhereSetsAlign() {
-        RouteConfig routeConfig = routeConfig(1,
-                signalConfig("SIG1", 100, true, phaseConfig(1, 2, null)));
+        RouteConfig routeConfig = routeConfig(
+                signalConfig("SIG1", 100, true, phaseConfig(2)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         // ATSPM phase (2) matches the mapped phase from SPaT (2)
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
-                .thenReturn(processedEventLog(routeConfig, rawEvent("SIG1", "2026-05-03T10:00:00", GREEN, 2)));
+                .thenReturn(processedEventLog(routeConfig, rawEvent(2)));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
-                .thenReturn(indicationLog(100, 1, Instant.parse("2026-05-03T10:00:00Z"), SpatSignalIndication.GREEN));
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
 
         List<AtspmSpatSignalGroupAlignmentEvent> events = service.atspmSpatSignalGroupAlignmentEvents(1, START, END);
 
@@ -243,23 +243,23 @@ class AtspmSpatValidationServiceImplTest {
 
     @Test
     void atspmSpatSignalGroupAlignmentEventsResultsAreSortedBySignalId() {
-        RouteConfig routeConfig = routeConfig(1,
-                signalConfig("SIG2", 200, true, phaseConfig(1, 2, null)),
-                signalConfig("SIG1", 100, true, phaseConfig(1, 2, null)));
+        RouteConfig routeConfig = routeConfig(
+                signalConfig("SIG2", 200, true, phaseConfig(2)),
+                signalConfig("SIG1", 100, true, phaseConfig(2)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         // no ATSPM events at all for either signal -> both signals are misaligned
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
                 .thenReturn(processedEventLog(routeConfig));
         when(spatService.signalGroupIndicationLogs(eq(200), any(), any()))
-                .thenReturn(indicationLog(200, 1, Instant.parse("2026-05-03T10:00:00Z"), SpatSignalIndication.GREEN));
+                .thenReturn(indicationLog(200, Instant.parse("2026-05-03T10:00:00Z")));
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
-                .thenReturn(indicationLog(100, 1, Instant.parse("2026-05-03T10:00:00Z"), SpatSignalIndication.GREEN));
+                .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
 
         List<AtspmSpatSignalGroupAlignmentEvent> events = service.atspmSpatSignalGroupAlignmentEvents(1, START, END);
 
         assertThat(events, hasSize(2));
-        assertThat(events.get(0).getSignalId(), is("SIG1"));
+        assertThat(events.getFirst().getSignalId(), is("SIG1"));
         assertThat(events.get(1).getSignalId(), is("SIG2"));
     }
 }

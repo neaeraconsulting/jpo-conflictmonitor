@@ -16,20 +16,20 @@ class PhaseToEventsMapTest {
 
     private static final Instant BASE = Instant.parse("2026-05-03T10:00:00Z");
 
-    private ProcessedControllerEvent event(Instant timestamp, EventCode code, int phase) {
+    private ProcessedControllerEvent event(Instant timestamp, EventCode code) {
         var e = new ProcessedControllerEvent();
         e.setTimestamp(timestamp);
         e.setEventCode(code);
-        e.setPhase(phase);
+        e.setPhase(2);
         return e;
     }
 
     @Test
     void findsNearestEventWithinWindowAndReportsPaired() {
         var map = new PhaseToEventsMap();
-        map.putEvent(2, event(BASE, EventCode.GREEN, 2));
-        map.putEvent(2, event(BASE.plusSeconds(10), EventCode.GREEN, 2));
-        map.putEvent(2, event(BASE.plusSeconds(1), EventCode.GREEN, 2));
+        map.putEvent(2, event(BASE, EventCode.GREEN));
+        map.putEvent(2, event(BASE.plusSeconds(10), EventCode.GREEN));
+        map.putEvent(2, event(BASE.plusSeconds(1), EventCode.GREEN));
 
         var result = map.findEventInWindow(2, EventCode.GREEN, BASE.plusSeconds(2), Duration.ofSeconds(3));
 
@@ -41,7 +41,7 @@ class PhaseToEventsMapTest {
     @Test
     void returnsNearestButUnpairedWhenClosestEventIsOutsideWindow() {
         var map = new PhaseToEventsMap();
-        map.putEvent(2, event(BASE, EventCode.RED, 2));
+        map.putEvent(2, event(BASE, EventCode.RED));
 
         var result = map.findEventInWindow(2, EventCode.RED, BASE.plusSeconds(10), Duration.ofSeconds(3));
 
@@ -63,7 +63,7 @@ class PhaseToEventsMapTest {
     @Test
     void returnsUnpairedWhenPhaseHasEventsButNoneMatchEventCode() {
         var map = new PhaseToEventsMap();
-        map.putEvent(2, event(BASE, EventCode.GREEN, 2));
+        map.putEvent(2, event(BASE, EventCode.GREEN));
 
         var result = map.findEventInWindow(2, EventCode.RED, BASE, Duration.ofSeconds(3));
 
@@ -75,8 +75,8 @@ class PhaseToEventsMapTest {
     void picksNearestEventRegardlessOfListOrdering() {
         var map = new PhaseToEventsMap();
         // far candidate added first, near candidate added second - list is not time-sorted
-        map.putEvent(2, event(BASE.plusSeconds(100), EventCode.YELLOW, 2));
-        map.putEvent(2, event(BASE, EventCode.YELLOW, 2));
+        map.putEvent(2, event(BASE.plusSeconds(100), EventCode.YELLOW));
+        map.putEvent(2, event(BASE, EventCode.YELLOW));
 
         var result = map.findEventInWindow(2, EventCode.YELLOW, BASE.plusSeconds(1), Duration.ofSeconds(3));
 

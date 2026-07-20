@@ -89,9 +89,9 @@ class AtspmSpatValidationTaskTest {
         return sc;
     }
 
-    private RouteConfig routeConfig(int routeId, SignalConfig... signals) {
+    private RouteConfig routeConfig(SignalConfig... signals) {
         var rc = new RouteConfig();
-        rc.setRouteId(routeId);
+        rc.setRouteId(1);
         rc.setSignals(List.of(signals));
         return rc;
     }
@@ -105,12 +105,12 @@ class AtspmSpatValidationTaskTest {
                 mongoTemplate, atspmSpatService, spatService, spatUpdater);
     }
 
-    private ControllerEventLog rawEvent(String signalId, String time, int code, int phase) {
+    private ControllerEventLog rawEvent() {
         var e = new ControllerEventLog();
-        e.setSignalId(signalId);
-        e.setTimestamp(time);
-        e.setEventCode(code);
-        e.setEventParam(phase);
+        e.setSignalId("SIG1");
+        e.setTimestamp("2026-05-03T09:00:00");
+        e.setEventCode(1);
+        e.setEventParam(2);
         return e;
     }
 
@@ -134,7 +134,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runFetchesTokenAndAuthenticatesBeforeQueryingAtspm() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, false));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, false));
 
         task(routeConfig).run();
 
@@ -145,7 +145,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runUpdatesProcessedSpatTimestampsBeforeQuerying() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, false));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, false));
 
         task(routeConfig).run();
 
@@ -154,7 +154,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runComputesQueryWindowUsingGracePeriodAndInterval() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
 
         task(routeConfig).run();
@@ -172,7 +172,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runDoesNothingWhenRouteHasNoEnabledSignals() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, false));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, false));
 
         task(routeConfig).run();
 
@@ -187,12 +187,12 @@ class AtspmSpatValidationTaskTest {
         phaseConfig.setPrimaryPhase(2);
         var signal = signalConfig("SIG1", 100, true);
         signal.setPhases(List.of(phaseConfig));
-        RouteConfig routeConfig = routeConfig(1, signal);
+        RouteConfig routeConfig = routeConfig(signal);
         stubFindRouteConfig(routeConfig);
 
         // Case 1: raw events produce a non-empty processed log -> should be inserted
         when(clientService.controllerEventLogs(any(), any(), eq(1)))
-                .thenReturn(List.of(rawEvent("SIG1", "2026-05-03T09:00:00", 1, 2)));
+                .thenReturn(List.of(rawEvent()));
 
         task(routeConfig).run();
 
@@ -209,7 +209,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runSavesEachSignalGroupAlignmentEventReturnedByTheService() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
         var event1 = new AtspmSpatSignalGroupAlignmentEvent();
         event1.setSignalId("SIG1");
@@ -226,7 +226,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runSavesEachAtspmSpatPairLogReturnedByTheService() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
         var pairLog = new AtspmSpatPairLog();
         pairLog.setAtspmSpatPairs(new ArrayList<>());
@@ -239,7 +239,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runWritesAPairEventForEachSignalGroupBelowTheNinetyPercentThreshold() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
 
         var pairLog = new AtspmSpatPairLog();
@@ -253,12 +253,12 @@ class AtspmSpatValidationTaskTest {
 
         List<AtspmSpatPairEvent> events = insertedPairEvents();
         assertThat(events, hasSize(1));
-        assertThat(events.get(0).getSignalGroup(), is(1));
+        assertThat(events.getFirst().getSignalGroup(), is(1));
     }
 
     @Test
     void runDoesNotWritePairEventWhenAllSignalGroupsAreAboveThreshold() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
 
         var pairLog = new AtspmSpatPairLog();
@@ -276,7 +276,7 @@ class AtspmSpatValidationTaskTest {
     void runDoesNotTreatAZeroCountIndicationAsAFailingPercentage() {
         // Signal group 1 has only GREEN pairs (100% paired) - no RED or YELLOW pairs at all
         // in this window. A color with zero transitions must not be treated as a failing 0%.
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
 
         var pairLog = new AtspmSpatPairLog();
@@ -291,7 +291,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runSavesSpatStateAndIndicationLogsForEachConfiguredSignalWithAnIntersectionId() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
         var stateLog = new SignalGroupStateLog();
         var indicationLog = new SignalGroupIndicationLog();
@@ -306,7 +306,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runSkipsSpatLogsForSignalsMissingOrWithInvalidIntersectionId() {
-        RouteConfig routeConfig = routeConfig(1,
+        RouteConfig routeConfig = routeConfig(
                 signalConfig("SIG1", null, true),
                 signalConfig("SIG2", 0, true));
         stubFindRouteConfig(routeConfig);
@@ -319,7 +319,7 @@ class AtspmSpatValidationTaskTest {
 
     @Test
     void runSavesProcessedSignalConfigForEachSignalWhenPresent() {
-        RouteConfig routeConfig = routeConfig(1, signalConfig("SIG1", 100, true));
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         stubFindRouteConfig(routeConfig);
         var processedSignal = new ProcessedSignal();
         when(clientService.processedSignalConfig("SIG1")).thenReturn(processedSignal);

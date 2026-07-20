@@ -17,8 +17,13 @@ services:
         MAVEN_GITHUB_ORG: ${MAVEN_GITHUB_ORG:?error}
     image: jpo-conflictmonitor-batch-processing:latest
     restart: unless-stopped
-    ports:
-      - "8055:8055"
+    # Not published to the host by default. TestController's /test/** debug endpoints are
+    # unauthenticated (see CM_TEST_CONTROLLER_ENABLED), so this port shouldn't be reachable
+    # outside the compose network unless you specifically need host access, e.g. for local
+    # development against a service running on the host. Uncomment only for that case, and
+    # never in a shared or production environment.
+    # ports:
+    #   - "8055:8055"
     environment:
       CM_DATABASE_NAME: ${CM_DATABASE_NAME:-CV}
       DB_HOST_IP: ${DB_HOST_IP:-mongo}
@@ -29,6 +34,7 @@ services:
       CM_ATSPM_CLIENT_BASE_URL: ${CM_ATSPM_CLIENT_BASE_URL:?error}
       CM_ATSPM_CLIENT_USERNAME: ${CM_ATSPM_CLIENT_USERNAME:?error}
       CM_ATSPM_CLIENT_PASSWORD: ${CM_ATSPM_CLIENT_PASSWORD:?error}
+      CM_TEST_CONTROLLER_ENABLED: ${CM_TEST_CONTROLLER_ENABLED:-false}
     depends_on:
       mongo:
         condition: service_healthy

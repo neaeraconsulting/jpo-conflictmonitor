@@ -53,8 +53,8 @@ class SignalGroupStateLogTest {
         List<TimestampedState> deltas = result.getSignalGroupStates().get(1);
 
         assertThat(deltas, hasSize(2));
-        assertThat(deltas.get(0).getTimestamp(), is(T0));
-        assertThat(deltas.get(0).getEventState(), is(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED));
+        assertThat(deltas.getFirst().getTimestamp(), is(T0));
+        assertThat(deltas.getFirst().getEventState(), is(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED));
         assertThat(deltas.get(1).getTimestamp(), is(T0.plusSeconds(20)));
         assertThat(deltas.get(1).getEventState(), is(ProcessedMovementPhaseState.PROTECTED_CLEARANCE));
     }

@@ -51,11 +51,11 @@ class ProcessedSpatServiceImplTest {
         return spat;
     }
 
-    private ProcessedMovementState state(int signalGroup, ProcessedMovementPhaseState eventState) {
+    private ProcessedMovementState state() {
         var state = new ProcessedMovementState();
-        state.setSignalGroup(signalGroup);
+        state.setSignalGroup(1);
         var event = new ProcessedMovementEvent();
-        event.setEventState(eventState);
+        event.setEventState(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED);
         state.setStateTimeSpeed(List.of(event));
         return state;
     }
@@ -94,13 +94,13 @@ class ProcessedSpatServiceImplTest {
         assertThat(result.getStartTime(), is(START));
         assertThat(result.getEndTime(), is(END));
         assertThat(result.getSpats(), hasSize(2));
-        assertThat(result.getSpats().get(0).getTimestamp(), is(START.plusSeconds(10)));
+        assertThat(result.getSpats().getFirst().getTimestamp(), is(START.plusSeconds(10)));
         assertThat(result.getSpats().get(1).getTimestamp(), is(START.plusSeconds(30)));
     }
 
     @Test
     void signalGroupLogsDelegatesToSignalGroupStateLogFromSpatLog() {
-        ProcessedSpat spat = spat(START.plusSeconds(10), state(1, ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED));
+        ProcessedSpat spat = spat(START.plusSeconds(10), state());
         when(mongoTemplate.find(any(Query.class), eq(ProcessedSpat.class), eq("ProcessedSpat")))
                 .thenReturn(List.of(spat));
 
@@ -108,19 +108,19 @@ class ProcessedSpatServiceImplTest {
 
         assertThat(result.getIntersectionId(), is(100));
         assertThat(result.getSignalGroupStates().get(1), hasSize(1));
-        assertThat(result.getSignalGroupStates().get(1).get(0).getEventState(),
+        assertThat(result.getSignalGroupStates().get(1).getFirst().getEventState(),
                 is(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED));
     }
 
     @Test
     void signalGroupIndicationLogsDelegatesToSignalGroupIndicationLogFromStateLog() {
-        ProcessedSpat spat = spat(START.plusSeconds(10), state(1, ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED));
+        ProcessedSpat spat = spat(START.plusSeconds(10), state());
         when(mongoTemplate.find(any(Query.class), eq(ProcessedSpat.class), eq("ProcessedSpat")))
                 .thenReturn(List.of(spat));
 
         SignalGroupIndicationLog result = service.signalGroupIndicationLogs(100, START, END);
 
         assertThat(result.getIndicationsMap().getIndications(1), hasSize(1));
-        assertThat(result.getIndicationsMap().getIndications(1).get(0).getIndication(), is(SpatSignalIndication.GREEN));
+        assertThat(result.getIndicationsMap().getIndications(1).getFirst().getIndication(), is(SpatSignalIndication.GREEN));
     }
 }

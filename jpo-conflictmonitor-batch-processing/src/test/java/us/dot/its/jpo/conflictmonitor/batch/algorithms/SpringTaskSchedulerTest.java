@@ -141,7 +141,7 @@ class SpringTaskSchedulerTest {
         ArgumentCaptor<Instant> startTimeCaptor = ArgumentCaptor.forClass(Instant.class);
         verify(taskScheduler, times(2)).scheduleAtFixedRate(any(Runnable.class), startTimeCaptor.capture(), any(Duration.class));
         List<Instant> startTimes = startTimeCaptor.getAllValues();
-        assertThat(startTimes.get(1), is(startTimes.get(0).plus(5, ChronoUnit.MINUTES)));
+        assertThat(startTimes.get(1), is(startTimes.getFirst().plus(5, ChronoUnit.MINUTES)));
     }
 
     @Test

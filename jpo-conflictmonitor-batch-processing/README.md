@@ -148,7 +148,11 @@ dependency or Kafka topic shared between them.
   can be disabled entirely via `cm.batch.scheduler.enabled: false`. `TestController`
   exposes read-only `/test/**` HTTP endpoints that pass through to the ATSPM client and
   internal services, for manual testing/debugging (see `http-tests/`) — it is not part of
-  the production data flow.
+  the production data flow. These endpoints are unauthenticated and `/test/token` returns
+  the live ATSPM access token, so the controller is **disabled by default** and must be
+  explicitly enabled via `cm.batch.test-controller.enabled: true`
+  (`CM_TEST_CONTROLLER_ENABLED=true`) — only do this for local development/testing, never
+  in a shared or production environment.
 - `time` — `ClockConfig` provides the application's `Clock` bean, which can optionally be
   offset to a fixed start time (`cm.batch.clock.offset` / `start-timestamp`) instead of
   system time. This is useful for re-running the comparison over a historical time window
@@ -180,6 +184,10 @@ plus environment variables (see `sample.env`). Key settings:
   disabled) without actively querying it — e.g. if MAP or ATSPM data isn't yet available
   for that intersection.
 - `cm.batch.clock.*` — See `time` package description above.
+- `cm.batch.test-controller.enabled` (`CM_TEST_CONTROLLER_ENABLED`) — Enables
+  `TestController`'s `/test/**` debug endpoints. **Disabled by default** — these endpoints
+  are unauthenticated and `/test/token` returns the live ATSPM access token, so only
+  enable this for local development/testing, never in a shared or production environment.
 - Standard Spring Data MongoDB properties (`CM_DATABASE_NAME`, `DB_HOST_IP`, `MONGO_PORT`,
   `MONGO_READ_WRITE_USER`, `MONGO_READ_WRITE_PASS`, `CM_MONGO_AUTH_DB`) — this app connects
   to the same MongoDB database as the rest of `jpo-conflictmonitor`.

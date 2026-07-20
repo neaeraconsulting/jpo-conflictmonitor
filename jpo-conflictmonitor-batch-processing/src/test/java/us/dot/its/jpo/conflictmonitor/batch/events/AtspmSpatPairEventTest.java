@@ -80,7 +80,7 @@ class AtspmSpatPairEventTest {
         AtspmSpatPairEvent event = AtspmSpatPairEvent.fromLog(log, stats1);
 
         assertThat(event.getAtspmSpatPairs(), hasSize(1));
-        assertThat(event.getAtspmSpatPairs().get(0).getSpatSignalGroupId(), is(1));
+        assertThat(event.getAtspmSpatPairs().getFirst().getSpatSignalGroupId(), is(1));
     }
 
     @Test

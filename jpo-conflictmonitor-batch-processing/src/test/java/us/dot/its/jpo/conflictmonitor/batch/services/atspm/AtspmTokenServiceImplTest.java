@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.sameInstance;
@@ -33,7 +35,7 @@ class AtspmTokenServiceImplTest {
     @Mock
     private RestClient.ResponseSpec responseSpec;
 
-    private final AtspmToken token = new AtspmToken();
+    private final AtomicReference<AtspmToken> tokenRef = new AtomicReference<>(new AtspmToken());
 
     private void stubTokenEndpoint(AtspmToken response) {
         when(restClient.post()).thenReturn(requestBodyUriSpec);
@@ -53,13 +55,11 @@ class AtspmTokenServiceImplTest {
         newToken.setExpiresIn(3600);
         stubTokenEndpoint(newToken);
 
-        var service = new AtspmTokenServiceImpl(properties, restClient, token);
+        var service = new AtspmTokenServiceImpl(properties, restClient, tokenRef);
         AtspmToken result = service.token();
 
-        assertThat(result, is(sameInstance(token)));
-        assertThat(token.getAccessToken(), is("abc123"));
-        assertThat(token.getTokenType(), is("Bearer"));
-        assertThat(token.getExpiresIn(), is(3600L));
+        assertThat(result, is(sameInstance(newToken)));
+        assertThat(tokenRef.get(), is(sameInstance(newToken)));
     }
 
     @Test
@@ -70,7 +70,7 @@ class AtspmTokenServiceImplTest {
         newToken.setAccessToken("abc123");
         stubTokenEndpoint(newToken);
 
-        var service = new AtspmTokenServiceImpl(properties, restClient, token);
+        var service = new AtspmTokenServiceImpl(properties, restClient, tokenRef);
         service.token();
 
         ArgumentCaptor<MultiValueMap<String, String>> bodyCaptor = ArgumentCaptor.forClass(MultiValueMap.class);
@@ -87,7 +87,7 @@ class AtspmTokenServiceImplTest {
         when(properties.getPassword()).thenReturn("secret");
         stubTokenEndpoint(null);
 
-        var service = new AtspmTokenServiceImpl(properties, restClient, token);
+        var service = new AtspmTokenServiceImpl(properties, restClient, tokenRef);
 
         assertThrows(RuntimeException.class, service::token);
     }

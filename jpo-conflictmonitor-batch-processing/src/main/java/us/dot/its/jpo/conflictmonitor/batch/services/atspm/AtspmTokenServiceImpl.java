@@ -8,18 +8,20 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 @Service
 @Slf4j
 public class AtspmTokenServiceImpl implements AtspmTokenService {
 
     private final AtspmClientProperties properties;
     private final RestClient restClient;
-    private final AtspmToken token;
+    private final AtomicReference<AtspmToken> token;
 
     @Autowired
     public AtspmTokenServiceImpl(AtspmClientProperties properties,
                                  @Qualifier("tokenClient") RestClient restClient,
-                                 AtspmToken token) {
+                                 AtomicReference<AtspmToken> token) {
         this.properties = properties;
         this.restClient = restClient;
         this.token = token;
@@ -41,12 +43,12 @@ public class AtspmTokenServiceImpl implements AtspmTokenService {
                 .body(AtspmToken.class);
 
         if (newToken != null && newToken.getAccessToken() != null) {
-            token.setAccessToken(newToken.getAccessToken());
-            token.setTokenType(newToken.getTokenType());
-            token.setExpiresIn(newToken.getExpiresIn());
+            // Atomic swap: other threads reading the token always see either the old or the
+            // new token in full, never a partially-updated one.
+            token.set(newToken);
         } else {
             throw new RuntimeException("Failed to get token");
         }
-        return token;
+        return token.get();
     }
 }
