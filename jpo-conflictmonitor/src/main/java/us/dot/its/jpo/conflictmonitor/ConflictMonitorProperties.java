@@ -958,15 +958,6 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       this.messageIngestParameters = messageIngestParameters;
    }
 
-   @Value("${kafka.linger_ms}")
-   public void setKafkaLingerMs(int lingerMs) {
-      this.lingerMs = lingerMs;
-   }
-
-   public int getKafkaLingerMs() {
-      return lingerMs;
-   }
-
 
    /*
     * General Properties
@@ -1074,8 +1065,20 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       // kafkaTopicsDisabledSet.addAll(asList);
    }
 
+   // Streams configurations
+   private int streamsConfigReplicationFactor;
+   private String streamsConfigAcks;
+   private int streamsConfigNumStreamThreads;
+   private long streamsConfigCacheMaxBytesBuffering;
+   private int streamsConfigCommitIntervalMs;
+   private String streamsConfigCompressionType;
+   private int streamsConfigLingerMs;
+   private int streamsConfigBatchSize;
+   private String streamsConfigTopologyOptimization;
+
    public Properties createStreamProperties(String name) {
       Properties streamProps = new Properties();
+
       streamProps.put(StreamsConfig.APPLICATION_ID_CONFIG, name);
 
       streamProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokers);
@@ -1089,19 +1092,28 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       streamProps.put(StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG,
             AlwaysContinueProductionExceptionHandler.class.getName());
 
-      streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 2);
+      streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
 
-      // streamProps.put(StreamsConfig.producerPrefix("acks"), "all");
-      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
+      streamProps.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, streamsConfigReplicationFactor);
+      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), streamsConfigAcks);
 
       // Reduce cache buffering per topology to 1MB
-      streamProps.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 1 * 1024 * 1024L);
+      streamProps.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, streamsConfigCacheMaxBytesBuffering);
       // Optionally, to disable caching:
       //streamProps.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
 
       // Decrease default commit interval. Default for 'at least once' mode of 30000ms
       // is too slow.
-      streamProps.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+      streamProps.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, streamsConfigCommitIntervalMs);
+
+      streamProps.put(StreamsConfig.TOPOLOGY_OPTIMIZATION_CONFIG, streamsConfigTopologyOptimization);
+
+      // Processing Exception handler!!
+      // New feature in Kafka 3.9
+      // KIP:
+      // https://cwiki.apache.org/confluence/display/KAFKA/KIP-1033%3A+Add+Kafka+Streams+exception+handler+for+exceptions+occurring+during+processing
+      streamProps.put(StreamsConfig.PROCESSING_EXCEPTION_HANDLER_CLASS_CONFIG,
+              LogAndContinueProcessingExceptionHandler.class.getName());
 
       // All the keys are Strings in this app
       streamProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
@@ -1112,19 +1124,15 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       } else if (SystemUtils.IS_OS_WINDOWS) {
          streamProps.put(StreamsConfig.STATE_DIR_CONFIG, "C:/temp/ode");
       }
-      // streamProps.put(StreamsConfig.STATE_DIR_CONFIG, "/var/lib/")\
 
-      // Increase max.block.ms and delivery.timeout.ms for streams
-      final int FIVE_MINUTES_MS = 5 * 60 * 1000;
-      streamProps.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, FIVE_MINUTES_MS);
-      streamProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, FIVE_MINUTES_MS);
 
       // Disable batching
       // streamProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 0);
 
       // Enable Compression
-      streamProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "zstd");
-      streamProps.put(ProducerConfig.LINGER_MS_CONFIG, getKafkaLingerMs());
+      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), streamsConfigCompressionType);
+      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.LINGER_MS_CONFIG), streamsConfigLingerMs);
+      streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.BATCH_SIZE_CONFIG), streamsConfigBatchSize);
 
       if (confluentCloudEnabled) {
          streamProps.put("ssl.endpoint.identification.algorithm", "https");

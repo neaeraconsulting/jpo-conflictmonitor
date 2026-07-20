@@ -245,7 +245,7 @@ public class MapValidationTopology
                 new IntersectionIdPartitioner<RsuIntersectionKey, MapBroadcastRateEvent>())
         );
         
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
 

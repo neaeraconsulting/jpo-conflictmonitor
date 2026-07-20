@@ -102,7 +102,7 @@ public class BsmMessageCountProgressionTopology
                             JsonSerdes.RsuLogKey(),
                             us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.BsmMessageCountProgressionEvent()));
         }
-        return builder.build();
+        return builder.build(streamsProperties);
     }
 
     @Override

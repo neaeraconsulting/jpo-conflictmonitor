@@ -591,7 +591,7 @@ public class IntersectionEventTopology
                     JsonSerdes.StopLineStopEvent(),
                     new IntersectionIdPartitioner<RsuIntersectionKey, StopLineStopEvent>()));
  
-       return builder.build();
+       return builder.build(streamsProperties);
     }
 
 
