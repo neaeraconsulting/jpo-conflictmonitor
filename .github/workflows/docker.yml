@@ -20,7 +20,7 @@ jobs:
     uses: usdot-jpo-ode/actions/.github/workflows/docker.yml@main
     with:
       context: ./jpo-conflictmonitor-batch-processing
-      file: Dockerfile
+      file: jpo-conflictmonitor-batch-processing/Dockerfile
       build-args: |
         MAVEN_GITHUB_TOKEN_NAME=${{ vars.MAVEN_GITHUB_TOKEN_NAME }}
         MAVEN_GITHUB_ORG=${{ github.repository_owner }}
