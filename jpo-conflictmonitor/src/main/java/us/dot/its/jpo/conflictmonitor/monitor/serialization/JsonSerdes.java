@@ -44,12 +44,14 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.BsmMessageCountProgr
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.EventStateProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableLaneStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.SpatTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapBoundingBox;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleRequestStatus;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.IntersectionVehicleTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.PriorityRequestMetrics;
+import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.dynamic_lane_activation.DynamicLaneActivationMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
@@ -652,5 +654,13 @@ public class JsonSerdes {
 
     public static Serde<RtcmMessageCountProgressionEventAggregation> RtcmMessageCountProgressionEventAggregation() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RtcmMessageCountProgressionEventAggregation.class));
+    }
+
+    public static Serde<RevocableLaneStatus> RevocableLaneStatus() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RevocableLaneStatus.class));
+    }
+
+    public static Serde<DynamicLaneActivationMetrics> DynamicLaneActivationMetrics() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(DynamicLaneActivationMetrics.class));
     }
 }

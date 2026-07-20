@@ -66,6 +66,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsPa
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationStreamsAlgorithm;
@@ -301,6 +304,15 @@ public class MonitorServiceControllerTest {
     @Mock
     EventParameters eventParameters;
 
+    @Mock
+    DynamicLaneActivationMetricsAlgorithmFactory dynamicLaneActivationMetricsAlgorithmFactory;
+
+    @Mock
+    DynamicLaneActivationMetricsAlgorithm dynamicLaneActivationMetricsAlgorithm;
+
+    final DynamicLaneActivationMetricsParameters dynamicLaneActivationMetricsParameters =
+            new DynamicLaneActivationMetricsParameters();
+
     MapIndex mapIndex = new MapIndex();
     
     @Test
@@ -517,6 +529,13 @@ public class MonitorServiceControllerTest {
         when(conflictMonitorProperties.getVehicleMisbehaviorAlgorithm()).thenReturn(defaultAlgo);
         when(vehicleMisbehaviorAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(vehicleMisbehaviorAlgorithm);
         when(conflictMonitorProperties.getVehicleMisbehaviorParameters()).thenReturn(vehicleMisbehaviorParameters);
+        when(conflictMonitorProperties.getDynamicLaneActivationMetricsAlgorithmFactory())
+                .thenReturn(dynamicLaneActivationMetricsAlgorithmFactory);
+        when(conflictMonitorProperties.getDynamicLaneActivationMetricsAlgorithm()).thenReturn(defaultAlgo);
+        when(conflictMonitorProperties.getDynamicLaneActivationMetricsParameters())
+                .thenReturn(dynamicLaneActivationMetricsParameters);
+        when(dynamicLaneActivationMetricsAlgorithmFactory.getAlgorithm(defaultAlgo))
+                .thenReturn(dynamicLaneActivationMetricsAlgorithm);
 
         var monitorServiceController = new MonitorServiceController(
                 conflictMonitorProperties,

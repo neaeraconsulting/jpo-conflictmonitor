@@ -61,7 +61,6 @@ public class VehicleMisbehaviorTopology
             .aggregate(
                 MisbehaviorAggregator::new,
                 (key, value, aggregate) -> aggregate.add(value),
-                // Materialized.with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey(), JsonSerdes.MisbehaviorAggregator()));
                 Materialized.<RsuLogKey, MisbehaviorAggregator, org.apache.kafka.streams.state.WindowStore<org.apache.kafka.common.utils.Bytes, byte[]>>as(parameters.getProcessedBsmStateStoreName())
                      .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey())
                      .withValueSerde(JsonSerdes.MisbehaviorAggregator()));

@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
 
@@ -75,6 +76,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
@@ -130,6 +133,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_la
 public class ConflictMonitorProperties implements EnvironmentAware  {
 
    private static final Logger logger = LoggerFactory.getLogger(ConflictMonitorProperties.class);
+
 
    @Autowired
    @Setter(AccessLevel.NONE)
@@ -258,6 +262,9 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private PriorityRequestMetricsAlgorithmFactory priorityRequestMetricsAlgorithmFactory;
    private String priorityRequestMetricsAlgorithm;
    private PriorityRequestMetricsParameters priorityRequestMetricsParameters;
+   private DynamicLaneActivationMetricsAlgorithmFactory dynamicLaneActivationMetricsAlgorithmFactory;
+   private String dynamicLaneActivationMetricsAlgorithm;
+   private DynamicLaneActivationMetricsParameters dynamicLaneActivationMetricsParameters;
 
    private NotificationAlgorithmFactory notificationAlgorithmFactory;
    private String notificationAlgorithm;
@@ -547,6 +554,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    }
 
    @Autowired
+   public void setDynamicLaneActivationMetricsParameters(DynamicLaneActivationMetricsParameters dynamicLaneActivationMetricsParameters) {
+      this.dynamicLaneActivationMetricsParameters = dynamicLaneActivationMetricsParameters;
+      this.dynamicLaneActivationMetricsAlgorithm = dynamicLaneActivationMetricsParameters.getAlgorithm();
+   }
+
+   @Autowired
    public void setCommonMetricsParameters(CommonMetricsParameters commonMetricsParameters) {
       this.commonMetricsParameters = commonMetricsParameters;
    }
@@ -561,6 +574,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    @Autowired
    public void setPriorityRequestMetricsAlgorithmFactory(PriorityRequestMetricsAlgorithmFactory factory) {
       this.priorityRequestMetricsAlgorithmFactory = factory;
+   }
+
+   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+   @Autowired
+   public void setDynamicLaneActivationMetricsAlgorithmFactory(DynamicLaneActivationMetricsAlgorithmFactory factory) {
+      this.dynamicLaneActivationMetricsAlgorithmFactory = factory;
    }
 
 
@@ -1075,6 +1094,12 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
    private int streamsConfigLingerMs;
    private int streamsConfigBatchSize;
    private String streamsConfigTopologyOptimization;
+   private TopologyStreamsConfig topologyStreamsConfig;
+
+   @Autowired
+   public void setTopologyStreamsConfig(TopologyStreamsConfig topologyStreamsConfig) {
+      this.topologyStreamsConfig = topologyStreamsConfig;
+   }
 
    public Properties createStreamProperties(String name) {
       Properties streamProps = new Properties();
@@ -1093,6 +1118,27 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
             AlwaysContinueProductionExceptionHandler.class.getName());
 
       streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
+
+      var topologies = topologyStreamsConfig != null ? topologyStreamsConfig.getTopologies() : null;
+      if (topologies != null && !topologies.isEmpty()) {
+         var threadConfig = topologyStreamsConfig.getTopologies()
+                 .stream()
+                 .collect(Collectors.toMap(
+                         TopologyStreamsConfig.TopologyConfig::topology,
+                         TopologyStreamsConfig.TopologyConfig::threads,
+                         // Merge function, so won't throw exception on duplicate keys
+                         (existing, replacement) -> existing));
+         Integer numThreads = threadConfig.get(name);
+         if (numThreads != null && numThreads > 0) {
+            logger.info("Using {} threads for {} topology", numThreads, name);
+            streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, numThreads);
+         } else {
+            logger.warn("Number of threads for {} topology is not configured or the configured value is not a positive integer," +
+                    " using default: {}", name, streamsConfigNumStreamThreads);
+         }
+      } else {
+         logger.warn("Thread configuration is missing for {}, using default: {}", name, streamsConfigNumStreamThreads);
+      }
 
       streamProps.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, streamsConfigReplicationFactor);
       streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), streamsConfigAcks);

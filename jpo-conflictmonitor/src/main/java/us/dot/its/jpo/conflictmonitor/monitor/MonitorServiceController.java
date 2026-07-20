@@ -853,6 +853,15 @@ public class MonitorServiceController {
         return algorithm;
     }
 
+    private RevocableEnabledLaneAlignmentAggregationAlgorithm getRevocableEnabledLaneAlignmentAggregationAlgorithm() {
+        final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAggregationAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getAggregationParameters();
+        algorithm.setParameters(parameters);
+        return algorithm;
+    }
+
     private RevocableEnabledLaneAlignmentAlgorithm getRevocableEnabledLaneAlignmentAlgorithm() {
         final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithmFactory();
         final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithm();
@@ -862,15 +871,24 @@ public class MonitorServiceController {
         // Plug in aggregation algorithm
         final var aggAlgorithm = getRevocableEnabledLaneAlignmentAggregationAlgorithm();
         algorithm.setAggregationAlgorithm(aggAlgorithm);
+        // Plug in dynamic lane activation metrics algorithm
+        final var metricsAlgorithm = getDynamicLaneActivationMetricsAlgorithm();
+        algorithm.setDynamicLaneActivationMetricsAlgorithm(metricsAlgorithm);
         return algorithm;
     }
 
-    private RevocableEnabledLaneAlignmentAggregationAlgorithm getRevocableEnabledLaneAlignmentAggregationAlgorithm() {
-        final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAggregationAlgorithmFactory();
-        final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAggregationAlgorithm();
+    private us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm
+    getDynamicLaneActivationMetricsAlgorithm() {
+        final var factory = conflictMonitorProps.getDynamicLaneActivationMetricsAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getDynamicLaneActivationMetricsAlgorithm();
         final var algorithm = factory.getAlgorithm(algorithmName);
-        final var parameters = conflictMonitorProps.getAggregationParameters();
+        final var parameters = conflictMonitorProps.getDynamicLaneActivationMetricsParameters();
         algorithm.setParameters(parameters);
+        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
+        algorithm.setCommonParameters(commonParameters);
         return algorithm;
     }
 }
+
+
+

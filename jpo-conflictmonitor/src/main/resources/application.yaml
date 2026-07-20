@@ -33,7 +33,47 @@ streams-config-linger-ms: ${CM_STREAMS_CONFIG_LINGER_MS:50}
 streams-config-batch-size: ${CM_STREAMS_CONFIG_BATCH_SIZE:16384}
 streams-config-topology-optimization: ${CM_STREAMS_CONFIG_TOPOLOGY_OPTIMIZATION:all}
 
-# ----------------------------------------------------------------------------------------------------------------------
+# Topology-specific streams configs
+streams.config:
+  topologies:
+    - topology: config
+      threads: 2
+    - topology: notification
+      threads: 8
+    - topology: mapValidation
+      threads: 10
+    - topology: spatValidation
+      threads: 10
+    - topology: rtcmValidation
+      threads: 10
+    - topology: spatTimeChangeDetails
+      threads: 20
+    - topology: mapSpatAlignment
+      threads: 80
+    - topology: bsmEvent
+      threads: 10
+    - topology: intersectionEvent
+      threads: 40
+    - topology: stopLinePassageAssessment
+      threads: 20
+    - topology: stopLineStopAssessment
+      threads: 20
+    - topology: laneDirectionOfTravelAssessment
+      threads: 20
+    - topology: connectionOfTravelAssessment
+      threads: 20
+    - topology: mapMessageCountProgression
+      threads: 10
+    - topology: spatMessageCountProgression
+      threads: 10
+    - topology: bsmMessageCountProgression
+      threads: 10
+    - topology: rtcmMessageCountProgression
+      threads: 10
+    - topology: priorityPreemptionRequest
+      threads: 70
+    - topology: event
+      threads: 10
 
 
 kafkaStateChangeEventTopic: topic.CmKafkaStateChangeEvents
@@ -268,7 +308,9 @@ kafka.topics:
     - name: topic.CmPriorityRequestMetrics
       cleanupPolicy: delete
       retentionMs: 300000
-
+    - name: topic.CmDynamicLaneActivationMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
 
 
 # Connection of Travel
@@ -730,4 +772,9 @@ metrics:
     debug: true
     input-event-topic: topic.CmPriorityPreemptionRequestEvent
     output-metric-topic: topic.CmPriorityRequestMetrics
+  dynamic.lane.activation:
+    algorithm: defaultDynamicLaneActivationMetricsAlgorithm
+    debug: true
+    output-metric-topic: topic.CmDynamicLaneActivationMetrics
+
 

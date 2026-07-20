@@ -6,10 +6,10 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.Event;
 import us.dot.its.jpo.conflictmonitor.monitor.models.metrics.Metrics;
 
 /**
- * Streams implementation of a metrics algorithm that plugs into a topology, reads a stream of events,
+ * Streams implementation of a metrics algorithm that plugs into a topology, reads a stream of events or other messages,
  * and produces a stream of metrics.
  */
-public interface MetricsStreamsAlgorithmInterface<TEventKey, TMetricKey, TEvent extends Event, TMetric extends Metrics<TMetricKey>> {
+public interface MetricsStreamsAlgorithmInterface<TEventKey, TMetricKey, TEvent, TMetric extends Metrics<TMetricKey>> {
 
     KStream<TMetricKey, TMetric> buildTopology(StreamsBuilder builder, KStream<TEventKey, TEvent> inputStream);
 

@@ -310,6 +310,9 @@ public class MapSpatMessageAssessmentTopology
                     Set<Integer> enabledLanes = new HashSet<>(spat.getEnabledLanes());
                     var connections = new ArrayList<LaneConnection>();
                     for (LaneConnection connection : unfilteredConnections) {
+                        if (connection.getIngressLane() == null || connection.getEgressLane() == null) {
+                            continue;
+                        }
                         int ingressId = connection.getIngressLane().getId();
                         int egressId = connection.getEgressLane().getId();
                         boolean ingressIsRevocable = revocableLaneIds != null && revocableLaneIds.contains(ingressId);
