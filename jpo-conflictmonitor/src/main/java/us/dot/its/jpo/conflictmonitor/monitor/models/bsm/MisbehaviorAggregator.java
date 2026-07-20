@@ -84,7 +84,7 @@ public class MisbehaviorAggregator {
                         // Prevent divide by zero error and avoid setting float to a non standard or NaN value. Setting to Double.MAX_VALUE will ensure a misbehavior event is generated for this case.
                         calculatedSpeed = Double.MAX_VALUE;
                     }else{
-                        calculatedSpeed = (distance / timeDelta) * 2.236936;
+                        calculatedSpeed = (distance / timeDelta) * MPS_TO_MPH; // Calculated speed converted to miles per hour
                     }
                 }else{
                     calculatedSpeed = 0;
