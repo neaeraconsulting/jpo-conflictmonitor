@@ -61,6 +61,8 @@ public class RevocableLaneStatus {
 
     /**
      * Flag to indicate it this is a "tick" in the processing topology, not an actual status.
+     * A tick is an artificial event created by the topology to ensure the time window for the metrics
+     * closes in the absence of real events, because real events may be sparse.
      */
     private boolean tick = false;
 
