@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.AtspmSpatValidationParameters;
+import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.PhaseConfig;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.RouteConfig;
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.SignalConfig;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
@@ -105,19 +106,22 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
             SignalGroupPhases signalGroupPhases = signalGroupPhaseMap.phases();
 
             SignalGroupIndicationLog.SignalGroupIndicationMap signalGroupMap = spatLog.getIndicationsMap();
-            Set<Integer> signalGroupSet = spatLog.getIndicationsMap().keySet();
-            Set<Integer> mappedPhaseSetFromSpats = signalGroupPhases.phases(signalGroupSet);
             Set<Integer> phaseSetFromAtspm = new HashSet<>(phaseMultimap.get(signalId));
-            Set<Integer> commonSignalGroupPhaseNumbers = Sets.intersection(mappedPhaseSetFromSpats, phaseSetFromAtspm);
-
 
             for (final Integer signalGroup : signalGroupMap.keySet()) {
 
-                if (!commonSignalGroupPhaseNumbers.contains(signalGroup)) {
+                // The ATSPM phase this signal group is paired against, per the configured
+                // mapping - not the raw SPaT signal group number, which is not guaranteed to
+                // match ATSPM's phase numbering.
+                PhaseConfig phaseConfig = signalGroupPhaseMap.getPhaseConfig(signalGroup);
+                Integer primaryPhase = phaseConfig != null ? phaseConfig.getPrimaryPhase() : null;
+                Set<Integer> mappedPhasesForGroup = signalGroupPhases.phases(signalGroup);
+
+                if (primaryPhase == null || Sets.intersection(mappedPhasesForGroup, phaseSetFromAtspm).isEmpty()) {
                     log.info("Mapped phases {} for signal group {} (of intersectionId {}, signalId {}) from the SPATs" +
                                     " don't have any matching phases in the ATSPM data," +
                                     " ignoring this signal group, see AtspmSpatSignalGroupAlignmentEvent",
-                            mappedPhaseSetFromSpats, signalGroup, intersectionId, signalId);
+                            mappedPhasesForGroup, signalGroup, intersectionId, signalId);
                     continue;
                 }
 
@@ -133,7 +137,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
                     pair.setSpatMovementPhaseState(indication.getMovementPhaseState());
                     pair.setSpatSignalGroupId(signalGroup);
                     var eventResult
-                            = phaseMap.findEventInWindow(signalGroup, eventCode, spatTimestamp, Duration.ofSeconds(3));
+                            = phaseMap.findEventInWindow(primaryPhase, eventCode, spatTimestamp, Duration.ofSeconds(3));
                     if (eventResult.event() != null) {
                         ProcessedControllerEvent event = eventResult.event();
                         pair.setAtspmTimestamp(event.getTimestamp());
