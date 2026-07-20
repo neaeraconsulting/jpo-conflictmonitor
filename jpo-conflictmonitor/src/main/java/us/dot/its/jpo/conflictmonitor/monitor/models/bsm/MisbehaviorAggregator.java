@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.CoordinateConversion;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.Point;
@@ -16,6 +17,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
 
 @Getter
 @Setter
+@Slf4j
 public class MisbehaviorAggregator {
 
 
@@ -154,7 +156,7 @@ public class MisbehaviorAggregator {
         try {
             testReturn = (mapper.writeValueAsString(this));
         } catch (JsonProcessingException e) {
-            System.out.println(e);
+            log.error("Error converting MisbehaviorAggregator to String", e);
         }
         return testReturn;
     }
