@@ -66,9 +66,9 @@ public class AtspmSpatValidationTask
         log.info("Got authentication response: {}", authentication);
         int routeId = taskMetadata.getRouteId();
 
-        // Update the ProcessedSpat_MV Materialized View in Mongo
+        // Update the ProcessedSpat Collection in Mongo
         spatUpdater.updateTimestamp();
-        log.info("Updated ProcessedSpat_MV");
+        log.info("Updated ProcessedSpat");
 
         // Offset time to query by the grace period
         Duration gracePeriod = Duration.of(parameters.getGracePeriodOffset(), parameters.getGracePeriodOffsetUnits());
