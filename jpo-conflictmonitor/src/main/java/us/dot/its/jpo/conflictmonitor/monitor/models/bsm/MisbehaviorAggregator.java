@@ -20,6 +20,13 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
 @Slf4j
 public class MisbehaviorAggregator {
 
+    private static final double MPS_TO_MPH = 2.236936;
+    private static final double MPSS_TO_FTSS = 3.2808399;
+
+    private static final int UNDEFINED_ACCELERATION = 2001;
+    private static final int UNDEFINED_VERTICAL_ACCELERATION = -127;
+
+
 
     private double lateralAcceleration = 0;
     private double longitudinalAcceleration = 0;
@@ -99,26 +106,21 @@ public class MisbehaviorAggregator {
             heading = updatedHeading;
         }
 
-
-
-
-
-
-        if(speed != null && speed != 8191){
+        if(speed != null){
             vehicleSpeed = getVehicleSpeed(speed);
         }
 
-        if(lat != null && lat != 2001){
+        if(lat != null && lat != UNDEFINED_ACCELERATION){
             lateralAcceleration += getVehicleAcceleration(lat);
             numLateral +=1;
         }
 
-        if(lng != null && lng != 2001){
+        if(lng != null && lng != UNDEFINED_ACCELERATION){
             longitudinalAcceleration += getVehicleAcceleration(lng);
             numLongitudinal +=1;
         }
 
-        if(vert != null && vert != -127){
+        if(vert != null && vert != UNDEFINED_VERTICAL_ACCELERATION){
             verticalAcceleration += getVehicleAcceleration(vert);
             numVertical +=1;
         }
@@ -167,7 +169,7 @@ public class MisbehaviorAggregator {
      * @return The Vehicle Acceleration converted to Ft / S^2
      */
     public double getVehicleAcceleration(double acceleration){
-        return acceleration * 3.2808399; // Already converted to Meters / second
+        return acceleration * MPSS_TO_FTSS; // Already converted to Meters / second
     }
 
     /**
@@ -176,7 +178,7 @@ public class MisbehaviorAggregator {
      * @return The Vehicle Acceleration converted to mph
      */
     public double getVehicleSpeed(double speed){
-        return speed * 2.236936; // Speed is already partially converted to M/S in processed BSM
+        return speed * MPS_TO_MPH; // Speed is already converted to M/S in processed BSM
     }
 
     public double getDecimalTime(long time){
