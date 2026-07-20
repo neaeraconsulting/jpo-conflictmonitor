@@ -15,6 +15,7 @@ COPY ./settings.xml .
 COPY ./src          ./src/
 COPY ./mvnw         .
 COPY ./.mvn         ./.mvn/
+RUN chmod +x ./mvnw
 
 # Cache dependencies
 RUN ./mvnw -s settings.xml dependency:go-offline -B
