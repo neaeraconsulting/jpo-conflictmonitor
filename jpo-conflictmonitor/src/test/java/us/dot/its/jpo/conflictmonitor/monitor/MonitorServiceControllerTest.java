@@ -542,7 +542,6 @@ public class MonitorServiceControllerTest {
         verify(stopLineStopAssessmentAlgorithm, times(1)).start();
         verify(mapMessageCountProgressionAlgorithm, times(1)).start();
         verify(spatMessageCountProgressionAlgorithm, times(1)).start();
-        verify(spatMessageCountProgressionAlgorithm, times(1)).start();
         verify(vehicleMisbehaviorAlgorithm, times(1)).start();
         verify(rtcmMessageCountProgressionAlgorithm, times(1)).start();
         verify(priorityPreemptionRequestAlgorithm, times(1)).start();
