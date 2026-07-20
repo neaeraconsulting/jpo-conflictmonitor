@@ -46,8 +46,8 @@ cm:
     # Or for testing or historical queries, set to true with start-timestamp set to the
     # time in the past to start querying from.
     clock:
-      offset: true
-      start-timestamp: "2026-04-26T02:30:00Z"
+      offset: false
+      start-timestamp: "2026-04-26T02:30:00Z" # ignored if offset is false
     atspm.spat.validation:
       algorithm: defaultAtspmSpatValidationAlgorithm
       client:
