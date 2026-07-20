@@ -7,7 +7,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.processors.metrics.TickProcessor;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 
 public class DynamicLaneActivationMetricsTickProcessor
-    extends TickProcessor<RsuIntersectionKey, RevocableLaneStatus> {    // TODO: Maybe change tick type
+    extends TickProcessor<RsuIntersectionKey, RevocableLaneStatus> {
 
     public DynamicLaneActivationMetricsTickProcessor(CommonMetricsParameters params, boolean isDebug, String timestampStoreName) {
         super(params, isDebug, new DynamicLaneActivationMetrics().getName(), timestampStoreName);
