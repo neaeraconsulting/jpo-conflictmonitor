@@ -554,9 +554,9 @@ spat.timestamp.delta:
 vehicle.misbehavior:
   algorithm: defaultVehicleMisbehaviorAlgorithm
   debug: false
-  acceleration_range_lateral: 13.1
-  acceleration_range_longitudinal: 39.4
-  acceleration_range_vertical: 13.1
+  lateral_acceleration_range: 13.1
+  longitudinal_acceleration_range: 39.4
+  vertical_acceleration_range: 13.1
   speed_range: 10
   yaw_rate_range: 10 
   allowable_max_speed: 156.5 # miles per hour

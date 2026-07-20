@@ -31,23 +31,23 @@ public class VehicleMisbehaviorParameters {
         updateType = DEFAULT)
     boolean debug;
 
-    @ConfigData(key = "vehicle.misbehavior.acceleration_lateral_range", 
+    @ConfigData(key = "vehicle.misbehavior.lateral_acceleration_range", 
         units = UnitsEnum.FEET_PER_SECOND_SQUARED,
         description = "Threshold for generating an event due to an unrealistic acceleration. Measured in Feet per second squared.", 
         updateType = DEFAULT)
-    double accelerationRangeLateral;
+    double lateralAccelerationRange;
 
-    @ConfigData(key = "vehicle.misbehavior.acceleration_longitudinal_range", 
+    @ConfigData(key = "vehicle.misbehavior.longitudinal_acceleration_range", 
         units = UnitsEnum.FEET_PER_SECOND_SQUARED,
         description = "Threshold for generating an event due to an unrealistic acceleration. Measured in Feet per second squared.", 
         updateType = DEFAULT)
-    double accelerationRangeLongitudinal;
+    double longitudinalAccelerationRange;
 
-    @ConfigData(key = "vehicle.misbehavior.acceleration_vertical_range",
+    @ConfigData(key = "vehicle.misbehavior.vertical_acceleration_range",
         units = UnitsEnum.FEET_PER_SECOND_SQUARED,
         description = "Threshold for generating an event due to an unrealistic acceleration. Measured in Feet per second squared.", 
         updateType = DEFAULT)
-    double accelerationRangeVertical;
+    double verticalAccelerationRange;
 
     @ConfigData(key = "vehicle.misbehavior.speed_range", 
         units = UnitsEnum.MILES_PER_HOUR,

@@ -66,9 +66,9 @@ public class VehicleMisbehaviorTopologyTest {
 
         parameters.setAlgorithm("defaultVehicleMisbehaviorAlgorithm");
         parameters.setDebug(true);
-        parameters.setAccelerationRangeLateral(13.1);
-        parameters.setAccelerationRangeLongitudinal(39.4);
-        parameters.setAccelerationRangeVertical(13.1);
+        parameters.setLateralAccelerationRange(13.1);
+        parameters.setLongitudinalAccelerationRange(39.4);
+        parameters.setVerticalAccelerationRange(13.1);
         parameters.setSpeedRange(2);
         parameters.setYawRateRange(10);
         parameters.setAllowableMaxHeadingDelta(85.9);

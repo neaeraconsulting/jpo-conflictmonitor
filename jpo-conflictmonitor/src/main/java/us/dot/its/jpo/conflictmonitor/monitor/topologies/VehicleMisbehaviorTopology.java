@@ -90,15 +90,15 @@ public class VehicleMisbehaviorTopology
                     misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_ROTATION);
                 }
 
-                if(Math.abs(value.getAverageLateralAcceleration()) > parameters.getAccelerationRangeLateral()){
+                if(Math.abs(value.getAverageLateralAcceleration()) > parameters.getLateralAccelerationRange()){
                     misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_LATERAL_ACCELERATION);
                 }
 
-                if(Math.abs(value.getAverageLongitudinalAcceleration()) > parameters.getAccelerationRangeLongitudinal()){
+                if(Math.abs(value.getAverageLongitudinalAcceleration()) > parameters.getLongitudinalAccelerationRange()){
                     misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_LONGITUDINAL_ACCELERATION);
                 }
 
-                if(Math.abs(value.getAverageVerticalAcceleration()) > parameters.getAccelerationRangeVertical()){
+                if(Math.abs(value.getAverageVerticalAcceleration()) > parameters.getVerticalAccelerationRange()){
                     misbehaviorReasons.add(VehicleMisbehaviorReason.EXCESSIVE_VERTICAL_ACCELERATION);
                 }
 
@@ -115,9 +115,9 @@ public class VehicleMisbehaviorTopology
                     event.setReportedAccelerationVert(value.getAverageVerticalAcceleration());
 
                     event.setSpeedRange(parameters.getSpeedRange());
-                    event.setAccelerationRangeLat(parameters.getAccelerationRangeLateral());
-                    event.setAccelerationRangeLon(parameters.getAccelerationRangeLongitudinal());
-                    event.setAccelerationRangeVert(parameters.getAccelerationRangeVertical());
+                    event.setAccelerationRangeLat(parameters.getLateralAccelerationRange());
+                    event.setAccelerationRangeLon(parameters.getLongitudinalAccelerationRange());
+                    event.setAccelerationRangeVert(parameters.getVerticalAccelerationRange());
 
                     event.setCalculatedYawRate(value.getCalculatedYawRate());
                     event.setCalculatedSpeed(value.getCalculatedSpeed());
