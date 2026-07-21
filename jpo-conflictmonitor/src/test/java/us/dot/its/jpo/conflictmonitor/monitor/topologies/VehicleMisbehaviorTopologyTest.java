@@ -25,6 +25,9 @@ public class VehicleMisbehaviorTopologyTest {
     String bsmInputTopicName = "topic.ProcessedBsm";
     String outputEventTopicName = "topic.CmVehicleMisbehaviorEvents";
 
+    // The termination BSM is sent at the end of each group to make sure an event is triggered.
+    String terminationBsm = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T18:27:07.723Z\",\"timeStamp\":\"2025-04-14T18:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
+
     // Group 1, No event should be generated. Mostly identical BSMs
     String noEventBsm1 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.723Z\",\"timeStamp\":\"2025-04-14T17:27:01.000Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
     String noEventBsm2 = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-111.6919827,40.2972862]},\"properties\":{\"schemaVersion\":6,\"messageType\":\"BSM\",\"odeReceivedAt\":\"2025-04-14T17:27:07.823Z\",\"timeStamp\":\"2025-04-14T17:27:01.100Z\",\"originIp\":\"10.164.6.18\",\"validationMessages\":[{\"message\":\"$.metadata.schemaVersion: must be a constant value 8\",\"jsonPath\":\"$.metadata.schemaVersion\",\"schemaPath\":\"#/properties/metadata/properties/schemaVersion/const\"},{\"message\":\"$.metadata.asn1: is missing but it is required\",\"jsonPath\":\"$.metadata\",\"schemaPath\":\"#/properties/metadata/required\"}],\"accelSet\":{\"accelLat\":2001,\"accelLong\":2001,\"accelVert\":-127,\"accelYaw\":0},\"accuracy\":{\"semiMajor\":2,\"semiMinor\":2,\"orientation\":44.49530799},\"angle\":10.5,\"brakes\":{\"wheelBrakes\":{\"leftFront\":false,\"rightFront\":false,\"unavailable\":true,\"leftRear\":false,\"rightRear\":false},\"traction\":\"ON\",\"abs\":\"ON\",\"scs\":\"ON\",\"brakeBoost\":\"OFF\",\"auxBrakes\":\"UNAVAILABLE\"},\"heading\":21.2,\"id\":\"6F2875C1\",\"msgCnt\":115,\"secMark\":7723,\"size\":{\"width\":230,\"length\":500},\"speed\":0,\"transmission\":\"FORWARDGEARS\"}}";
@@ -142,6 +145,7 @@ public class VehicleMisbehaviorTopologyTest {
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedSpeedEventBsm1));
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedSpeedEventBsm2));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -172,6 +176,7 @@ public class VehicleMisbehaviorTopologyTest {
             );
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(speedEventBsm1));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -203,6 +208,7 @@ public class VehicleMisbehaviorTopologyTest {
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedHeadingEventBsm1));
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(mismatchedHeadingEventBsm2));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -233,6 +239,7 @@ public class VehicleMisbehaviorTopologyTest {
             );
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(headingEventBsm1));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
             assertEquals(1, eventResults.size());
@@ -262,6 +269,7 @@ public class VehicleMisbehaviorTopologyTest {
             );
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(accelerationEventBsm1));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
@@ -291,6 +299,7 @@ public class VehicleMisbehaviorTopologyTest {
             );
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(accelerationEventBsm2));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();
@@ -320,6 +329,7 @@ public class VehicleMisbehaviorTopologyTest {
             );
 
             inputProcessedBsmTopic.pipeInput(key, deserializeBsm(accelerationEventBsm3));
+            inputProcessedBsmTopic.pipeInput(key, deserializeBsm(terminationBsm));
 
 
             final var eventResults = outputEventTopic.readKeyValuesToList();

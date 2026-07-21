@@ -11,6 +11,7 @@ import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.SlidingWindows;
+import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -63,7 +64,8 @@ public class VehicleMisbehaviorTopology
                 (key, value, aggregate) -> aggregate.add(value),
                 Materialized.<RsuLogKey, MisbehaviorAggregator, org.apache.kafka.streams.state.WindowStore<org.apache.kafka.common.utils.Bytes, byte[]>>as(parameters.getProcessedBsmStateStoreName())
                      .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuLogKey())
-                     .withValueSerde(JsonSerdes.MisbehaviorAggregator()));
+                     .withValueSerde(JsonSerdes.MisbehaviorAggregator()))
+                     .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()));
 
         KStream<RsuLogKey, VehicleMisbehaviorEvent> vehicleMisbehaviorEventsStream = accelerations
             .toStream()
