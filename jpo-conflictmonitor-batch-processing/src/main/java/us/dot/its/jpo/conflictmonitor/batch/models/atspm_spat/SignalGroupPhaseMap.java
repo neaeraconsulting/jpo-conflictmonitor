@@ -6,8 +6,6 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.Sig
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static us.dot.its.jpo.ode.plugin.j2735.DdsAdvisoryDetails.AdvisoryBroadcastType.map;
-
 /***
  * Maps SPAT Signal Group ID to ATSPM primary and secondary phase number for one intersection/signal
  */
