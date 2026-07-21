@@ -54,7 +54,7 @@ public class ProcessedSpatCollectionUpdater {
         log.info("Updating ProcessedSpat indexes");
         // Create indexes
         var indexOps = mongoTemplate.indexOps(PROCESSED_SPAT);
-        indexOps.createIndex(new Index().on("intersectionID", Sort.Direction.ASC));
+        indexOps.createIndex(new Index().on("intersectionId", Sort.Direction.ASC));
         indexOps.createIndex(new Index().on("utcTimeStampTS", Sort.Direction.ASC));
         log.info("Finished updating ProcessedSpat indexes");
 
