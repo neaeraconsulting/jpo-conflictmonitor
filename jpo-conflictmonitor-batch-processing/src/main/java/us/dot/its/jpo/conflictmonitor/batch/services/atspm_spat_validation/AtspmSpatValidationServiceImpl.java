@@ -43,7 +43,7 @@ public class AtspmSpatValidationServiceImpl implements AtspmSpatValidationServic
     }
 
     @Override
-    public List<AtspmSpatPairLog> atpsmSpatLogs(int routeId, Instant startTime, Instant endTime) {
+    public List<AtspmSpatPairLog> atspmSpatLogs(int routeId, Instant startTime, Instant endTime) {
         List<AtspmSpatPairLog> logs = new ArrayList<>();
 
         // Get Route Config

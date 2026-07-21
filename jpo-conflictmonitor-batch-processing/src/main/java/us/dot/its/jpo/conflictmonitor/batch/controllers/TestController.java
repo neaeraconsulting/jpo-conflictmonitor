@@ -180,7 +180,7 @@ public class TestController {
             @RequestParam Instant startTime,
             @RequestParam Instant endTime) {
         log.info("routeId: {}, startTime: {}, endTime: {}", routeId, startTime, endTime);
-        return validationService.atpsmSpatLogs(routeId, startTime, endTime);
+        return validationService.atspmSpatLogs(routeId, startTime, endTime);
     }
 
     @GetMapping(path = "/atspmSpatSignalGroupAlignment/{routeId}")

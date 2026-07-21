@@ -109,7 +109,7 @@ public class AtspmSpatValidationTask
         }
 
         // Get atspm-spat validation logs
-        var atspmSpatLogs = atspmSpatService.atpsmSpatLogs(routeId, startInstant, endInstant);
+        var atspmSpatLogs = atspmSpatService.atspmSpatLogs(routeId, startInstant, endInstant);
         for (AtspmSpatPairLog log : atspmSpatLogs) {
             mongoTemplate.insert(log);
 

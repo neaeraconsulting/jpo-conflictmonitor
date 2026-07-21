@@ -243,7 +243,7 @@ class AtspmSpatValidationTaskTest {
         stubFindRouteConfig(routeConfig);
         var pairLog = new AtspmSpatPairLog();
         pairLog.setAtspmSpatPairs(new ArrayList<>());
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -260,7 +260,7 @@ class AtspmSpatValidationTaskTest {
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.GREEN, false), // group 1: 50% green paired -> below threshold
                 pair(2, SpatSignalIndication.GREEN, true)))); // group 2: 100% green paired -> above threshold
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -278,7 +278,7 @@ class AtspmSpatValidationTaskTest {
         pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.RED, true))));
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -295,7 +295,7 @@ class AtspmSpatValidationTaskTest {
         var pairLog = new AtspmSpatPairLog();
         pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true))));
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -312,7 +312,7 @@ class AtspmSpatValidationTaskTest {
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.GREEN, false),
                 pair(2, SpatSignalIndication.GREEN, true)))); // blended green: 2/3 = 66.7% -> below threshold
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -330,7 +330,7 @@ class AtspmSpatValidationTaskTest {
         pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(2, SpatSignalIndication.GREEN, true))));
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -344,7 +344,7 @@ class AtspmSpatValidationTaskTest {
 
         var pairLog = new AtspmSpatPairLog();
         pairLog.setAtspmSpatPairs(new ArrayList<>());
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -361,7 +361,7 @@ class AtspmSpatValidationTaskTest {
         var pairLog = new AtspmSpatPairLog();
         pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true))));
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
@@ -377,13 +377,13 @@ class AtspmSpatValidationTaskTest {
         pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(1, SpatSignalIndication.GREEN, false)))); // group 1 and blended both 50% green -> both below threshold
-        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+        when(atspmSpatService.atspmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
 
         task(routeConfig).run();
 
         assertThat(insertedIntersectionPairEvents(), hasSize(1));
         assertThat(insertedSignalGroupPairEvents(), hasSize(1));
-        verify(atspmSpatService, times(1)).atpsmSpatLogs(eq(1), any(), any());
+        verify(atspmSpatService, times(1)).atspmSpatLogs(eq(1), any(), any());
     }
 
     @Test

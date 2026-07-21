@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 public interface AtspmSpatValidationService {
-    List<AtspmSpatPairLog> atpsmSpatLogs(int routeId, Instant startTime, Instant endTime);
+    List<AtspmSpatPairLog> atspmSpatLogs(int routeId, Instant startTime, Instant endTime);
     List<AtspmSpatSignalGroupAlignmentEvent> atspmSpatSignalGroupAlignmentEvents(int routeId, Instant startTime, Instant endTime);
 
 }

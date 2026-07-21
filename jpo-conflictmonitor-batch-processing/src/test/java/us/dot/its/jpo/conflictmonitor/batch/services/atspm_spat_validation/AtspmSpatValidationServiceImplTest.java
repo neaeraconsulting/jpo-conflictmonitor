@@ -116,31 +116,31 @@ class AtspmSpatValidationServiceImplTest {
     }
 
     @Test
-    void atpsmSpatLogsReturnsEmptyWhenRouteHasNoEnabledSignals() {
+    void atspmSpatLogsReturnsEmptyWhenRouteHasNoEnabledSignals() {
         RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, false));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
 
-        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+        List<AtspmSpatPairLog> result = service.atspmSpatLogs(1, START, END);
 
         assertThat(result, is(empty()));
     }
 
     @Test
-    void atpsmSpatLogsRecordsErrorWhenSignalIsMissingIntersectionId() {
+    void atspmSpatLogsRecordsErrorWhenSignalIsMissingIntersectionId() {
         RouteConfig routeConfig = routeConfig(signalConfig("SIG1", null, true));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
         when(atspmClientService.processedEventLogs(any(), any(), eq(1)))
                 .thenReturn(processedEventLog(routeConfig));
 
-        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+        List<AtspmSpatPairLog> result = service.atspmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
         assertThat(result.getFirst().getError(), containsString("Missing intersection id"));
     }
 
     @Test
-    void atpsmSpatLogsRecordsErrorWhenAtspmHasNoDataForSignal() {
+    void atspmSpatLogsRecordsErrorWhenAtspmHasNoDataForSignal() {
         RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
         when(parameters.getLocalTimeZone()).thenReturn(ZoneOffset.UTC);
@@ -150,14 +150,14 @@ class AtspmSpatValidationServiceImplTest {
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
                 .thenReturn(emptyIndicationLog());
 
-        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+        List<AtspmSpatPairLog> result = service.atspmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
         assertThat(result.getFirst().getError(), containsString("no entries for signalId"));
     }
 
     @Test
-    void atpsmSpatLogsSkipsSignalGroupsWithNoCommonMappedPhase() {
+    void atspmSpatLogsSkipsSignalGroupsWithNoCommonMappedPhase() {
         RouteConfig routeConfig = routeConfig(
                 signalConfig("SIG1", 100, true, phaseConfig(1)));
         when(parameters.findRouteConfig(1)).thenReturn(routeConfig);
@@ -168,7 +168,7 @@ class AtspmSpatValidationServiceImplTest {
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
                 .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:00Z")));
 
-        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+        List<AtspmSpatPairLog> result = service.atspmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
         assertThat(result.getFirst().getError(), is(nullValue()));
@@ -176,7 +176,7 @@ class AtspmSpatValidationServiceImplTest {
     }
 
     @Test
-    void atpsmSpatLogsPairsEachSpatIndicationWithNearestMatchingAtspmEvent() {
+    void atspmSpatLogsPairsEachSpatIndicationWithNearestMatchingAtspmEvent() {
         // signalGroupId (1) intentionally differs from primaryPhase (5), to verify pairing
         // goes through the configured mapping rather than relying on the two numbers
         // coinciding.
@@ -189,7 +189,7 @@ class AtspmSpatValidationServiceImplTest {
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
                 .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:01Z")));
 
-        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+        List<AtspmSpatPairLog> result = service.atspmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
         AtspmSpatPairLog pairLog = result.getFirst();
@@ -203,7 +203,7 @@ class AtspmSpatValidationServiceImplTest {
     }
 
     @Test
-    void atpsmSpatLogsDefaultsToMatchingSignalGroupAndPhaseNumbersWhenUnconfigured() {
+    void atspmSpatLogsDefaultsToMatchingSignalGroupAndPhaseNumbersWhenUnconfigured() {
         // No PhaseConfig entries at all for SIG1: per spec, default pairing (signal group
         // number == ATSPM phase number) should apply automatically, with no override needed.
         RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
@@ -214,7 +214,7 @@ class AtspmSpatValidationServiceImplTest {
         when(spatService.signalGroupIndicationLogs(eq(100), any(), any()))
                 .thenReturn(indicationLog(100, Instant.parse("2026-05-03T10:00:01Z")));
 
-        List<AtspmSpatPairLog> result = service.atpsmSpatLogs(1, START, END);
+        List<AtspmSpatPairLog> result = service.atspmSpatLogs(1, START, END);
 
         assertThat(result, hasSize(1));
         AtspmSpatPairLog pairLog = result.getFirst();
