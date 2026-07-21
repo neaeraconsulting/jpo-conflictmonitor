@@ -49,14 +49,20 @@ was actually doing at a given point in time. This project's core feature,
    SPaT indications (broken out by RED/YELLOW/GREEN) that could be matched to a
    corresponding ATSPM event.
 5. Persists the raw comparison ("pair") results to MongoDB, and raises an event
-   (`AtspmSpatPairEvent`) for any signal group where an indication color's paired
-   percentage drops below 90%, which is used as a signal that the broadcast SPaT data may
-   be diverging from what the controller is actually doing (e.g. misconfigured phase
-   mapping, RSU/controller connectivity issues, or bugs in map/SPaT generation). An
+   (`AtspmSpatSignalGroupPairEvent`) for any signal group where an indication color's
+   paired percentage drops below 90%, which is used as a signal that the broadcast SPaT
+   data may be diverging from what the controller is actually doing (e.g. misconfigured
+   phase mapping, RSU/controller connectivity issues, or bugs in map/SPaT generation). An
    indication color with zero occurrences for a signal group in the window (e.g. a phase
    that never went red) is skipped rather than counted as a failing 0%. There's nothing to
    evaluate, so it isn't evidence of a problem.
-6. Also raises an `AtspmSpatSignalGroupAlignmentEvent` when the set of `signalGroupId`s
+6. Also raises a second, intersection-level event (`AtspmSpatPairEvent`) using the same
+   90%-threshold/zero-count logic, but blended across all signal groups for the signal
+   rather than broken out per group. This is a summary view derived from the same
+   underlying pairs as the per-signal-group events above (so it's always consistent with
+   them), kept so that downstream consumers reading results per intersection don't need to
+   aggregate the per-signal-group events themselves.
+7. Also raises an `AtspmSpatSignalGroupAlignmentEvent` when the set of `signalGroupId`s
    seen in the SPaT data doesn't map onto the set of phases seen in the ATSPM data at all,
    which usually indicates a configuration mismatch (e.g. missing/incorrect signal group to
    phase mapping in the `application.yaml`) rather than a runtime signal problem.
@@ -96,8 +102,9 @@ populated by the core `jpo-conflictmonitor` Kafka Streams application (via a Kaf
 Mongo sink connector, run as part of the shared `jpo-utils` infrastructure) from broadcast
 CV SPaT messages. This service then writes its own comparison results and events back into
 that same MongoDB instance, into its own set of collections (all prefixed `Cm`, e.g.
-`CmAtspmSpatPairLog`, `CmAtspmSpatPairEvent`, `CmAtspmSpatSignalGroupAlignmentEvent`) so as
-not to collide with the core application's collections. MongoDB is the only integration
+`CmAtspmSpatPairLog`, `CmAtspmSpatPairEvent`, `CmAtspmSpatSignalGroupPairEvent`,
+`CmAtspmSpatSignalGroupAlignmentEvent`) so as not to collide with the core application's
+collections. MongoDB is the only integration
 point between this service and the core streams application. There is no direct
 dependency or Kafka topic shared between them.
 
@@ -136,8 +143,10 @@ dependency or Kafka topic shared between them.
   `AtspmSpatPairLog`, per-signal-group statistics) persisted to Mongo.
 - `models/spat`: Simplified SPaT/signal-group-indication models derived from
   `ProcessedSpat`, used only within this project's comparison logic.
-- `events`: Mongo-persisted event documents (`AtspmSpatPairEvent`,
-  `AtspmSpatSignalGroupAlignmentEvent`) raised when the comparison finds a problem.
+- `events`: Mongo-persisted event documents raised when the comparison finds a problem:
+  `AtspmSpatSignalGroupPairEvent` (per signal group), `AtspmSpatPairEvent` (the same
+  90%-threshold logic blended across all signal groups for the signal, for consumers that
+  want a per-intersection summary), and `AtspmSpatSignalGroupAlignmentEvent`.
 - `mongo`: `ProcessedSpatCollectionUpdater`, which the scheduled task runs before each
   comparison to ensure the `ProcessedSpat` collection (written by the core application,
   whose `utcTimeStamp` field is stored as a string) has a proper indexed BSON `Date` field

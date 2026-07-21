@@ -9,6 +9,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.Rou
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.SignalConfig;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatPairEvent;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
+import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupPairEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupStatistics;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
@@ -112,21 +113,41 @@ public class AtspmSpatValidationTask
         for (AtspmSpatPairLog log : atspmSpatLogs) {
             mongoTemplate.insert(log);
 
-            // Write an event to mongo for each signal group where any indication has less
-            // than 90% paired. Checked per signal group (not blended across the whole
-            // signal) so that one badly-diverging signal group isn't masked by other,
-            // well-paired signal groups at the same intersection.
-            // An indication with zero transitions for a signal group in this window (e.g. a
-            // phase that didn't go red at all) is skipped rather than treated as a failing
-            // 0% - there's nothing to evaluate, so it isn't evidence of a problem.
             if (log.getAtspmSpatPairs() != null && !log.getAtspmSpatPairs().isEmpty()) {
-                for (SignalGroupStatistics signalGroupStats : log.getSignalGroupStatistics().values()) {
+                var groupStatsMap = log.getSignalGroupStatistics();
+
+                // Write one blended, intersection-level event when the overall (all signal
+                // groups combined) percentage of paired ATSPM/SPAT events is below 90% for
+                // any indication. Kept for compatibility with existing consumers of the
+                // per-intersection CmAtspmSpatPairEvent collection. An indication with zero
+                // transitions across every signal group in this window is skipped, same as
+                // below, since there's nothing to evaluate - a blended count can only be
+                // zero if every signal group's count for that indication is also zero.
+                long totalGreenCount = groupStatsMap.values().stream().mapToLong(SignalGroupStatistics::greenCount).sum();
+                long totalRedCount = groupStatsMap.values().stream().mapToLong(SignalGroupStatistics::redCount).sum();
+                long totalYellowCount = groupStatsMap.values().stream().mapToLong(SignalGroupStatistics::yellowCount).sum();
+                boolean logGreenBelowThreshold = totalGreenCount > 0 && log.getPercentGreenPaired() < 90.0;
+                boolean logRedBelowThreshold = totalRedCount > 0 && log.getPercentRedPaired() < 90.0;
+                boolean logYellowBelowThreshold = totalYellowCount > 0 && log.getPercentYellowPaired() < 90.0;
+                if (logGreenBelowThreshold || logRedBelowThreshold || logYellowBelowThreshold) {
+                    var pairEvent = AtspmSpatPairEvent.fromLog(log);
+                    mongoTemplate.insert(pairEvent);
+                }
+
+                // Write an event to mongo for each signal group where any indication has less
+                // than 90% paired. Checked per signal group (not blended across the whole
+                // signal) so that one badly-diverging signal group isn't masked by other,
+                // well-paired signal groups at the same intersection.
+                // An indication with zero transitions for a signal group in this window (e.g. a
+                // phase that didn't go red at all) is skipped rather than treated as a failing
+                // 0% - there's nothing to evaluate, so it isn't evidence of a problem.
+                for (SignalGroupStatistics signalGroupStats : groupStatsMap.values()) {
                     boolean greenBelowThreshold = signalGroupStats.greenCount() > 0 && signalGroupStats.percentGreenPaired() < 90.0;
                     boolean redBelowThreshold = signalGroupStats.redCount() > 0 && signalGroupStats.percentRedPaired() < 90.0;
                     boolean yellowBelowThreshold = signalGroupStats.yellowCount() > 0 && signalGroupStats.percentYellowPaired() < 90.0;
                     if (greenBelowThreshold || redBelowThreshold || yellowBelowThreshold) {
-                        var pairEvent = AtspmSpatPairEvent.fromLog(log, signalGroupStats);
-                        mongoTemplate.insert(pairEvent);
+                        var groupPairEvent = AtspmSpatSignalGroupPairEvent.fromLog(log, signalGroupStats);
+                        mongoTemplate.insert(groupPairEvent);
                     }
                 }
             }

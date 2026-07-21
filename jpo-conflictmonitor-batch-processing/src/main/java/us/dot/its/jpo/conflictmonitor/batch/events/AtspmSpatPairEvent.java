@@ -6,15 +6,15 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatStatistics;
-import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupStatistics;
 
 import java.time.Instant;
 import java.util.List;
 
 /**
- * Events are produced per intersection, per signal group, and per time period if the
- * percentage of paired ATSPM and SPAT events for that signal group is less than 90% for
- * any indication (RED, YELLOW, or GREEN).
+ * Events are produced per intersection and per time period if the blended percentage of
+ * paired ATSPM and SPAT events across all signal groups is less than 90% for any
+ * indication (RED, YELLOW, or GREEN). See also AtspmSpatSignalGroupPairEvent, which covers
+ * the same underlying data broken out per signal group.
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -36,11 +36,6 @@ public class AtspmSpatPairEvent extends Event {
     private String signalId;
 
     /**
-     * SPAT Signal Group ID that this event's percentages are scoped to
-     */
-    private int signalGroup;
-
-    /**
      * Start time of batch period
      */
     private Instant startTime;
@@ -51,7 +46,7 @@ public class AtspmSpatPairEvent extends Event {
     private Instant endTime;
 
     /**
-     * ATSMP-SPAT event pairs for this signal group
+     * ATSMP-SPAT event pairs, across all signal groups for this signal
      */
     private List<AtspmSpatPair> atspmSpatPairs;
 
@@ -61,29 +56,24 @@ public class AtspmSpatPairEvent extends Event {
     private double percentGreenPaired;
 
     /**
-     * Per-signal-group breakdown for the whole signal, included for context alongside the
-     * single signal group (above) that triggered this event.
+     * Per-signal-group breakdown, included for context alongside the blended percentages
+     * above.
      */
     private AtspmSpatStatistics signalGroupStatistics;
 
-    public static AtspmSpatPairEvent fromLog(AtspmSpatPairLog log, SignalGroupStatistics signalGroupStats) {
+    public static AtspmSpatPairEvent fromLog(AtspmSpatPairLog log) {
         AtspmSpatPairEvent event = new AtspmSpatPairEvent();
         event.setIntersectionID(log.getIntersectionId());
+        event.setAtspmSpatPairs(log.getAtspmSpatPairs());
         event.setRouteId(log.getRouteId());
         event.setSignalId(log.getSignalId());
-        event.setSignalGroup(signalGroupStats.signalGroup());
         event.setStartTime(log.getStartTime());
         event.setEndTime(log.getEndTime());
-        event.setPercentPaired(signalGroupStats.percentAllPaired());
-        event.setPercentRedPaired(signalGroupStats.percentRedPaired());
-        event.setPercentYellowPaired(signalGroupStats.percentYellowPaired());
-        event.setPercentGreenPaired(signalGroupStats.percentGreenPaired());
+        event.setPercentPaired(log.getPercentPaired());
+        event.setPercentRedPaired(log.getPercentRedPaired());
+        event.setPercentYellowPaired(log.getPercentYellowPaired());
+        event.setPercentGreenPaired(log.getPercentGreenPaired());
         event.setSignalGroupStatistics(log.getSignalGroupStatistics());
-        List<AtspmSpatPair> groupPairs = log.getAtspmSpatPairs().stream()
-                .filter(pair -> pair.getSpatSignalGroupId() != null
-                        && pair.getSpatSignalGroupId() == signalGroupStats.signalGroup())
-                .toList();
-        event.setAtspmSpatPairs(groupPairs);
         return event;
     }
 

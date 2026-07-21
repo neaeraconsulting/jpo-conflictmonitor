@@ -3,6 +3,7 @@ package us.dot.its.jpo.conflictmonitor.batch.events;
 import org.junit.jupiter.api.Test;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPair;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.AtspmSpatPairLog;
+import us.dot.its.jpo.conflictmonitor.batch.models.atspm_spat.SignalGroupStatistics;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
 
 import java.time.Instant;
@@ -13,11 +14,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 /**
- * Covers AtspmSpatPairEvent#fromLog(AtspmSpatPairLog), the factory that builds the blended,
- * intersection-level event from a whole AtspmSpatPairLog (all signal groups combined), kept
- * for compatibility with existing consumers of the CmAtspmSpatPairEvent collection.
+ * Covers AtspmSpatSignalGroupPairEvent#fromLog(AtspmSpatPairLog, SignalGroupStatistics), the
+ * factory that scopes an event's pairs and percentages to a single signal group.
  */
-class AtspmSpatPairEventTest {
+class AtspmSpatSignalGroupPairEventTest {
 
     private static final Instant START = Instant.parse("2026-05-03T10:00:00Z");
     private static final Instant END = Instant.parse("2026-05-03T11:00:00Z");
@@ -44,8 +44,9 @@ class AtspmSpatPairEventTest {
     @Test
     void fromLogCopiesRouteSignalAndTimeFieldsFromTheLog() {
         AtspmSpatPairLog log = log(new ArrayList<>(List.of(pair(1, SpatSignalIndication.GREEN, true))));
+        SignalGroupStatistics stats = log.getSignalGroupStatistics().get(1);
 
-        AtspmSpatPairEvent event = AtspmSpatPairEvent.fromLog(log);
+        AtspmSpatSignalGroupPairEvent event = AtspmSpatSignalGroupPairEvent.fromLog(log, stats);
 
         assertThat(event.getRouteId(), is(1));
         assertThat(event.getSignalId(), is("SIG1"));
@@ -55,37 +56,41 @@ class AtspmSpatPairEventTest {
     }
 
     @Test
-    void fromLogBlendsPercentagesAcrossAllSignalGroups() {
+    void fromLogSetsSignalGroupAndPercentagesFromTheGivenStatistics() {
         AtspmSpatPairLog log = log(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
-                pair(1, SpatSignalIndication.GREEN, false), // group 1: 1/2 green paired
-                pair(2, SpatSignalIndication.GREEN, true)))); // group 2: 2/2 green paired
+                pair(1, SpatSignalIndication.GREEN, false),
+                pair(2, SpatSignalIndication.GREEN, true))));
+        SignalGroupStatistics stats1 = log.getSignalGroupStatistics().get(1);
 
-        AtspmSpatPairEvent event = AtspmSpatPairEvent.fromLog(log);
+        AtspmSpatSignalGroupPairEvent event = AtspmSpatSignalGroupPairEvent.fromLog(log, stats1);
 
-        // blended: 2 of 3 green pairs paired = 66.67%, matching log.getPercentGreenPaired()
-        assertThat(event.getPercentGreenPaired(), is(closeTo(log.getPercentGreenPaired(), 0.001)));
-        assertThat(event.getPercentGreenPaired(), is(closeTo(66.667, 0.01)));
+        assertThat(event.getSignalGroup(), is(1));
+        assertThat(event.getPercentGreenPaired(), is(closeTo(50.0, 0.001)));
+        assertThat(event.getPercentPaired(), is(closeTo(stats1.percentAllPaired(), 0.001)));
     }
 
     @Test
-    void fromLogIncludesAllSignalGroupsPairsUnfiltered() {
+    void fromLogFiltersAtspmSpatPairsToJustTheGivenSignalGroup() {
         AtspmSpatPairLog log = log(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(2, SpatSignalIndication.RED, true))));
+        SignalGroupStatistics stats1 = log.getSignalGroupStatistics().get(1);
 
-        AtspmSpatPairEvent event = AtspmSpatPairEvent.fromLog(log);
+        AtspmSpatSignalGroupPairEvent event = AtspmSpatSignalGroupPairEvent.fromLog(log, stats1);
 
-        assertThat(event.getAtspmSpatPairs(), hasSize(2));
+        assertThat(event.getAtspmSpatPairs(), hasSize(1));
+        assertThat(event.getAtspmSpatPairs().getFirst().getSpatSignalGroupId(), is(1));
     }
 
     @Test
-    void fromLogIncludesPerSignalGroupStatisticsAsContext() {
+    void fromLogRetainsTheFullSignalGroupStatisticsMapAsContext() {
         AtspmSpatPairLog log = log(new ArrayList<>(List.of(
                 pair(1, SpatSignalIndication.GREEN, true),
                 pair(2, SpatSignalIndication.RED, true))));
+        SignalGroupStatistics stats1 = log.getSignalGroupStatistics().get(1);
 
-        AtspmSpatPairEvent event = AtspmSpatPairEvent.fromLog(log);
+        AtspmSpatSignalGroupPairEvent event = AtspmSpatSignalGroupPairEvent.fromLog(log, stats1);
 
         assertThat(event.getSignalGroupStatistics().keySet(), containsInAnyOrder(1, 2));
     }

@@ -14,6 +14,7 @@ import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.Rou
 import us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation.SignalConfig;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatPairEvent;
 import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupAlignmentEvent;
+import us.dot.its.jpo.conflictmonitor.batch.events.AtspmSpatSignalGroupPairEvent;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedControllerEventLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.processed.ProcessedSignal;
 import us.dot.its.jpo.conflictmonitor.batch.models.atspm.raw.ControllerEventLog;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.*;
@@ -43,9 +45,10 @@ import static org.mockito.Mockito.*;
 
 /**
  * Covers AtspmSpatValidationTask#run(): the orchestration of a single scheduled route
- * comparison, including the per-signal-group 90%-threshold event trigger - checked
- * independently for each signal group, and skipped for any indication with zero
- * transitions in the window rather than treated as a failing 0%.
+ * comparison, including both the intersection-level (blended across all signal groups)
+ * and per-signal-group 90%-threshold event triggers - checked independently from the same
+ * AtspmSpatPairLog, and each skipping any indication with zero transitions in the window
+ * (summed across groups for the blended trigger) rather than treating it as a failing 0%.
  */
 @ExtendWith(MockitoExtension.class)
 class AtspmSpatValidationTaskTest {
@@ -122,8 +125,18 @@ class AtspmSpatValidationTaskTest {
         return p;
     }
 
-    /** All AtspmSpatPairEvents inserted into mongoTemplate during the test so far. */
-    private List<AtspmSpatPairEvent> insertedPairEvents() {
+    /** All AtspmSpatSignalGroupPairEvents inserted into mongoTemplate during the test so far. */
+    private List<AtspmSpatSignalGroupPairEvent> insertedSignalGroupPairEvents() {
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(mongoTemplate, atLeastOnce()).insert(captor.capture());
+        return captor.getAllValues().stream()
+                .filter(AtspmSpatSignalGroupPairEvent.class::isInstance)
+                .map(AtspmSpatSignalGroupPairEvent.class::cast)
+                .toList();
+    }
+
+    /** All (intersection-level) AtspmSpatPairEvents inserted into mongoTemplate during the test so far. */
+    private List<AtspmSpatPairEvent> insertedIntersectionPairEvents() {
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         verify(mongoTemplate, atLeastOnce()).insert(captor.capture());
         return captor.getAllValues().stream()
@@ -251,7 +264,7 @@ class AtspmSpatValidationTaskTest {
 
         task(routeConfig).run();
 
-        List<AtspmSpatPairEvent> events = insertedPairEvents();
+        List<AtspmSpatSignalGroupPairEvent> events = insertedSignalGroupPairEvents();
         assertThat(events, hasSize(1));
         assertThat(events.getFirst().getSignalGroup(), is(1));
     }
@@ -269,7 +282,7 @@ class AtspmSpatValidationTaskTest {
 
         task(routeConfig).run();
 
-        verify(mongoTemplate, never()).insert(any(AtspmSpatPairEvent.class));
+        verify(mongoTemplate, never()).insert(any(AtspmSpatSignalGroupPairEvent.class));
     }
 
     @Test
@@ -286,7 +299,91 @@ class AtspmSpatValidationTaskTest {
 
         task(routeConfig).run();
 
+        verify(mongoTemplate, never()).insert(any(AtspmSpatSignalGroupPairEvent.class));
+    }
+
+    @Test
+    void runWritesAnIntersectionLevelPairEventWhenAnyBlendedPercentageIsBelowTheNinetyPercentThreshold() {
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        stubFindRouteConfig(routeConfig);
+
+        var pairLog = new AtspmSpatPairLog();
+        pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
+                pair(1, SpatSignalIndication.GREEN, true),
+                pair(1, SpatSignalIndication.GREEN, false),
+                pair(2, SpatSignalIndication.GREEN, true)))); // blended green: 2/3 = 66.7% -> below threshold
+        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+
+        task(routeConfig).run();
+
+        List<AtspmSpatPairEvent> events = insertedIntersectionPairEvents();
+        assertThat(events, hasSize(1));
+        assertThat(events.getFirst().getPercentGreenPaired(), is(closeTo(66.667, 0.01)));
+    }
+
+    @Test
+    void runDoesNotWriteIntersectionLevelPairEventWhenAllBlendedPercentagesAreAboveThreshold() {
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        stubFindRouteConfig(routeConfig);
+
+        var pairLog = new AtspmSpatPairLog();
+        pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
+                pair(1, SpatSignalIndication.GREEN, true),
+                pair(2, SpatSignalIndication.GREEN, true))));
+        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+
+        task(routeConfig).run();
+
         verify(mongoTemplate, never()).insert(any(AtspmSpatPairEvent.class));
+    }
+
+    @Test
+    void runDoesNotWriteIntersectionLevelPairEventWhenLogHasNoPairs() {
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        stubFindRouteConfig(routeConfig);
+
+        var pairLog = new AtspmSpatPairLog();
+        pairLog.setAtspmSpatPairs(new ArrayList<>());
+        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+
+        task(routeConfig).run();
+
+        verify(mongoTemplate, never()).insert(any(AtspmSpatPairEvent.class));
+    }
+
+    @Test
+    void runDoesNotWriteIntersectionLevelPairEventWhenTheOnlyBelowThresholdIndicationHasZeroTransitions() {
+        // Only GREEN pairs occur in this window (100% paired) - RED and YELLOW never occur
+        // for any signal group, so their blended 0-of-0 must not be treated as a failing 0%.
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        stubFindRouteConfig(routeConfig);
+
+        var pairLog = new AtspmSpatPairLog();
+        pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
+                pair(1, SpatSignalIndication.GREEN, true))));
+        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+
+        task(routeConfig).run();
+
+        verify(mongoTemplate, never()).insert(any(AtspmSpatPairEvent.class));
+    }
+
+    @Test
+    void runWritesBothAnIntersectionLevelAndSignalGroupLevelEventForTheSameLogFromOneQuery() {
+        RouteConfig routeConfig = routeConfig(signalConfig("SIG1", 100, true));
+        stubFindRouteConfig(routeConfig);
+
+        var pairLog = new AtspmSpatPairLog();
+        pairLog.setAtspmSpatPairs(new ArrayList<>(List.of(
+                pair(1, SpatSignalIndication.GREEN, true),
+                pair(1, SpatSignalIndication.GREEN, false)))); // group 1 and blended both 50% green -> both below threshold
+        when(atspmSpatService.atpsmSpatLogs(eq(1), any(), any())).thenReturn(List.of(pairLog));
+
+        task(routeConfig).run();
+
+        assertThat(insertedIntersectionPairEvents(), hasSize(1));
+        assertThat(insertedSignalGroupPairEvents(), hasSize(1));
+        verify(atspmSpatService, times(1)).atpsmSpatLogs(eq(1), any(), any());
     }
 
     @Test
