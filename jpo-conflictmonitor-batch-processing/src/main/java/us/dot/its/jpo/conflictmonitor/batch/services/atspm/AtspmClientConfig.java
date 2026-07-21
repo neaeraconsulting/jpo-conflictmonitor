@@ -39,7 +39,6 @@ public class AtspmClientConfig {
                 .requestFactory(new HttpComponentsClientHttpRequestFactory())
                 .requestInterceptor((request, body, execution) -> {
                     log.debug("Resolved URI: {}", request.getURI());
-                    log.debug("Headers: {}", request.getHeaders());
                     return execution.execute(request, body);
                 })
                 .baseUrl(apiDataUrl)
