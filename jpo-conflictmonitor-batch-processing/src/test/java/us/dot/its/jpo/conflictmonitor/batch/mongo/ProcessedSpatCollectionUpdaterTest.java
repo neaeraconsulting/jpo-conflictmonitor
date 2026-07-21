@@ -57,7 +57,7 @@ class ProcessedSpatCollectionUpdaterTest {
         ArgumentCaptor<Index> indexCaptor = ArgumentCaptor.forClass(Index.class);
         verify(indexOperations, times(2)).createIndex(indexCaptor.capture());
         List<Document> indexKeys = indexCaptor.getAllValues().stream().map(Index::getIndexKeys).toList();
-        assertThat(indexKeys, hasItem(hasKey("intersectionID")));
+        assertThat(indexKeys, hasItem(hasKey("intersectionId")));
         assertThat(indexKeys, hasItem(hasKey("utcTimeStampTS")));
     }
 }
