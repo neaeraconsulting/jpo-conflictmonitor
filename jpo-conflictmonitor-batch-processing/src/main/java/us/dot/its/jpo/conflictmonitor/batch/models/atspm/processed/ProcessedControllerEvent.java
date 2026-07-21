@@ -21,7 +21,7 @@ public class ProcessedControllerEvent {
     // Formatter to parse timestamps with or without a tenth of second
     // eg. "2026-05-03T18:21:04.6"
     // or "2026-05-03T18:21:04"
-    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+    public static final DateTimeFormatter DATE_TIME_FORMATTER =
             new DateTimeFormatterBuilder()
                     .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
                     .optionalStart()

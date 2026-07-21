@@ -10,7 +10,7 @@
     </parent>
     <groupId>usdot.jpo.ode</groupId>
     <artifactId>jpo-conflictmonitor-batch-processing</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>jpo-atspm-spat-validation-service</name>
     <description>jpo-atspm-spat-validation-service</description>
     <properties>
