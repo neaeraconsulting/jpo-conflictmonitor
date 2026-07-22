@@ -103,7 +103,6 @@ public class MessageIngestTopology
         var bsmWindowed = bsmKeyGroup.windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofMillis(1), Duration.ofMillis(60000)))
         .reduce(
             (oldValue, newValue)->{
-                System.out.println("Overwriting BSM");
                 return newValue;
             },
             Materialized.<BsmIntersectionIdKey, ProcessedBsm<Point>, WindowStore<Bytes, byte[]>>as(parameters.getBsmStoreName())

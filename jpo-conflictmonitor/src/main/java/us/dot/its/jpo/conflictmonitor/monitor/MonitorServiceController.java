@@ -102,6 +102,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmVal
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapIndex;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.config.ConfigInitializer;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.config.ConfigTopology;
@@ -374,6 +377,8 @@ public class MonitorServiceController {
             //Bsm Message Count Progression Topology
             startBsmMessageCountProgressionAlgorithm();
 
+            //Vehicle Misbehavior Topology
+            startVehicleMisbehaviorAlgorithm();
             // RTCM Message Count Progression Topology
             startRtcmMessageCountProgressionAlgorithm();
 
@@ -630,6 +635,26 @@ public class MonitorServiceController {
 
         Runtime.getRuntime().addShutdownHook(new Thread(bsmMessageCountProgressionAlgo::stop));
         bsmMessageCountProgressionAlgo.start();
+    }
+
+    private void startVehicleMisbehaviorAlgorithm() {
+        final String vehicleMisbehavior = "vehicleMisbehavior";
+        final VehicleMisbehaviorAlgorithmFactory vehicleMisbehaviorAlgoFactory = conflictMonitorProps.getVehicleMisbehaviorAlgorithmFactory();
+        final String vehicleMisbehaviorAlgorithm = conflictMonitorProps.getVehicleMisbehaviorAlgorithm();
+        final VehicleMisbehaviorAlgorithm vehicleMisbehaviorAlgo = vehicleMisbehaviorAlgoFactory.getAlgorithm(vehicleMisbehaviorAlgorithm);
+        final VehicleMisbehaviorParameters vehicleMisbehaviorParams = conflictMonitorProps.getVehicleMisbehaviorParameters();
+        configTopology.registerConfigListeners(vehicleMisbehaviorParams);
+        if (vehicleMisbehaviorAlgo instanceof StreamsTopology) {
+            final var streamsAlgo = (StreamsTopology)vehicleMisbehaviorAlgo;
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(vehicleMisbehavior));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, vehicleMisbehavior, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, vehicleMisbehavior, healthTopic));
+            algoMap.put(vehicleMisbehavior, streamsAlgo);
+        }
+        vehicleMisbehaviorAlgo.setParameters(vehicleMisbehaviorParams);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(vehicleMisbehaviorAlgo::stop));
+        vehicleMisbehaviorAlgo.start();
     }
 
     private void startRtcmMessageCountProgressionAlgorithm() {

@@ -74,6 +74,7 @@ import lombok.Setter;
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEvent.class, name = "RevocableEnabledLaneAlignment"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentEventAggregation.class,
                 name = "RevocableEnabledLaneAlignmentAggregation"),
+        @JsonSubTypes.Type(value = VehicleMisbehaviorEvent.class, name = "VehicleMisbehavior"),
         @JsonSubTypes.Type(value = PriorityPreemptionRequestEvent.class, name = "PriorityPreemptionRequest")
 })
 @Getter

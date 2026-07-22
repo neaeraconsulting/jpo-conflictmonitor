@@ -115,6 +115,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmVal
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
@@ -289,6 +292,10 @@ public class MonitorServiceControllerTest {
     @Mock RevocableEnabledLaneAlignmentAlgorithmFactory revocableEnabledLaneAlignmentAlgorithmFactory;
     @Mock RevocableEnabledLaneAlignmentAlgorithm revocableEnabledLaneAlignmentAlgorithm;
     RevocableEnabledLaneAlignmentParameters revocableEnabledLaneParameters = new RevocableEnabledLaneAlignmentParameters();
+
+    @Mock VehicleMisbehaviorAlgorithmFactory vehicleMisbehaviorAlgorithmFactory;
+    @Mock VehicleMisbehaviorAlgorithm vehicleMisbehaviorAlgorithm;
+    VehicleMisbehaviorParameters vehicleMisbehaviorParameters = new VehicleMisbehaviorParameters();
 
     @Mock
     EventAlgorithmFactory eventAlgorithmFactory;
@@ -518,6 +525,10 @@ public class MonitorServiceControllerTest {
         when(eventAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(eventAlgorithm);
         when(conflictMonitorProperties.getEventParameters()).thenReturn(eventParameters);
 
+        when(conflictMonitorProperties.getVehicleMisbehaviorAlgorithmFactory()).thenReturn(vehicleMisbehaviorAlgorithmFactory);
+        when(conflictMonitorProperties.getVehicleMisbehaviorAlgorithm()).thenReturn(defaultAlgo);
+        when(vehicleMisbehaviorAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(vehicleMisbehaviorAlgorithm);
+        when(conflictMonitorProperties.getVehicleMisbehaviorParameters()).thenReturn(vehicleMisbehaviorParameters);
         when(conflictMonitorProperties.getDynamicLaneActivationMetricsAlgorithmFactory())
                 .thenReturn(dynamicLaneActivationMetricsAlgorithmFactory);
         when(conflictMonitorProperties.getDynamicLaneActivationMetricsAlgorithm()).thenReturn(defaultAlgo);
@@ -539,11 +550,10 @@ public class MonitorServiceControllerTest {
         // Check algorithms were started
         verify(mapValidationAlgorithm, times(1)).start();
         verify(spatValidationAlgorithm, times(1)).start();
+        verify(spatTimeChangeDetailsAlgorithm, times(1)).start();
         verify(rtcmValidationAlgorithm, times(1)).start();
-//        verify(spatTimeChangeDetailsAlgorithm, times(1)).start();
         verify(mapSpatMessageAssessmentAlgorithm, times(1)).start();
-        //verify(bsmEventAlgorithm, times(1)).start();
-        //verify(messageIngestAlgorithm, times(1)).start();
+        verify(bsmEventAlgorithm, times(1)).start();
         verify(intersectionEventAlgorithm, times(1)).start();
         verify(stopLinePassageAssessmentAlgorithm, times(1)).start();
         verify(laneDirectionOfTravelAssessmentAlgorithm, times(1)).start();
@@ -551,6 +561,7 @@ public class MonitorServiceControllerTest {
         verify(stopLineStopAssessmentAlgorithm, times(1)).start();
         verify(mapMessageCountProgressionAlgorithm, times(1)).start();
         verify(spatMessageCountProgressionAlgorithm, times(1)).start();
+        verify(vehicleMisbehaviorAlgorithm, times(1)).start();
         verify(rtcmMessageCountProgressionAlgorithm, times(1)).start();
         verify(priorityPreemptionRequestAlgorithm, times(1)).start();
     }

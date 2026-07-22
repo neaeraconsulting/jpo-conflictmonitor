@@ -17,7 +17,6 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.ConnectionOfTra
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.ConnectionOfTravelAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.LaneDirectionOfTravelAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.LaneDirectionOfTravelAssessment;
-import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.SignalStateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassageAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassageAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAssessment;
@@ -25,6 +24,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAgg
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.MisbehaviorAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.DefaultConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfig;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfigKey;
@@ -32,7 +32,12 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.MapBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.RtcmBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.*;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEventAggregation;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.RtcmMinimumDataEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.RtcmMinimumDataEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.MapMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.BsmMessageCountProgressionEvent;
@@ -175,12 +180,6 @@ public class JsonSerdes {
             new JsonDeserializer<>(SpatMap.class));
     }
 
-    public static Serde<SignalStateAssessment> SignalStateAssessment() {
-        return Serdes.serdeFrom(
-            new JsonSerializer<SignalStateAssessment>(),
-            new JsonDeserializer<>(SignalStateAssessment.class));
-    }
-
     public static Serde<StopLinePassageAssessment> StopLinePassageAssessment() {
         return Serdes.serdeFrom(
             new JsonSerializer<StopLinePassageAssessment>(),
@@ -313,6 +312,20 @@ public class JsonSerdes {
         return Serdes.serdeFrom(
             new JsonSerializer<TimeChangeDetailsNotification>(),
             new JsonDeserializer<>(TimeChangeDetailsNotification.class)
+        );
+    }
+
+    public static Serde<VehicleMisbehaviorEvent> VehicleMisbehaviorEvent() {
+        return Serdes.serdeFrom(
+            new JsonSerializer<VehicleMisbehaviorEvent>(),
+            new JsonDeserializer<>(VehicleMisbehaviorEvent.class)
+        );
+    }
+
+    public static Serde<MisbehaviorAggregator> MisbehaviorAggregator() {
+        return Serdes.serdeFrom(
+            new JsonSerializer<MisbehaviorAggregator>(),
+            new JsonDeserializer<>(MisbehaviorAggregator.class)
         );
     }
 
