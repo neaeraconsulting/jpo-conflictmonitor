@@ -6,7 +6,7 @@ import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
 import java.util.Optional;
 
 /**
- * Includes a subset of logger Event Codes used by this algorithm to indication the beginning of green, yellow and red
+ * Includes a subset of logger Event Codes used by this algorithm to represent the beginning of green, yellow, and red
  * indications.
  * <p>Note: There is no enumeration in the C# code for the logger Event Codes enumeration. For the full set of those,
  *  see:
