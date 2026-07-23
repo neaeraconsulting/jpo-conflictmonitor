@@ -89,7 +89,6 @@ public class ProcessedControllerEventLog {
 
     }
 
-    // Assumes both lists are sorted
     private List<ProcessedControllerEvent> merge(
             List<ProcessedControllerEvent> primaryEventList,
             List<ProcessedControllerEvent> secondaryEventList) {
