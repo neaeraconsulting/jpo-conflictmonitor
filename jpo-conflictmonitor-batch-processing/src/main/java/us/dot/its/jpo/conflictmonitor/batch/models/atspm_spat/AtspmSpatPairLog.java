@@ -154,7 +154,7 @@ public class AtspmSpatPairLog {
         }
         return stats;
     }
-    //public void setSignalGroupStatistics(AtspmSpatStatistics stats) {}
+
 
 
 }
