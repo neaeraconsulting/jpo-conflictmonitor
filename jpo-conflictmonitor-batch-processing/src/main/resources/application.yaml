@@ -54,7 +54,7 @@ cm:
         base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
         username: ${CM_ATSPM_CLIENT_USERNAME:username}
         password: ${CM_ATSPM_CLIENT_PASSWORD:password}
-      local-time-zone: "America/Phoenix"
+      local-time-zone: "America/Denver"
       interval: 1
       interval-units: HOURS
       task-start-time-stagger: 2
@@ -65,13 +65,14 @@ cm:
       # It's not recommended to set this to 0, as current data in transit might be missed.
       grace-period-offset: 1
       grace-period-offset-units: HOURS
+      ## Sample Route Configuration
       routes:
-        - routeId: 6
-          description: "Daisy Mountain Dr"
+        - routeId: 12
+          description: "Willow Creek Pkwy"
           signals:
-            - signal-id: "1106121"
-              intersection-id: 44383
-              description: "Daisy Mountain Dr & Gavilan Peak Pkwy"
+            - signal-id: "2207201"
+              intersection-id: 51284
+              description: "Willow Creek Pkwy & Falcon Ridge Rd"
               enabled: true
               phases:
                 - signal-group-id: 1
@@ -94,13 +95,13 @@ cm:
                   secondary-phase: 4
                 - signal-group-id: 8
                   primary-phase: 8
-            - signal-id: "1106118"
+            - signal-id: "2207198"
               intersection-id: 0  # Missing MAP
-              description: "Daisy Mountain Dr & Dedication Trail"
+              description: "Willow Creek Pkwy & Heritage Trail"
               enabled: false  # Missing SPATs
-            - signal-id: "1106116"
-              intersection-id: 54749
-              description: "Daisy Mountain Dr & Meridian Dr"
+            - signal-id: "2207196"
+              intersection-id: 62859
+              description: "Willow Creek Pkwy & Cascade Dr"
               enabled: true
               phases:
                 - signal-group-id: 1
@@ -112,9 +113,9 @@ cm:
                   primary-phase: 6
                 - signal-group-id: 8
                   primary-phase: 8
-            - signal-id: "1106114"
-              intersection-id: 63397
-              description: "Daisy Mountain Dr & Hastings Way"
+            - signal-id: "2207194"
+              intersection-id: 71407
+              description: "Willow Creek Pkwy & Brighton Way"
               enabled: true
               phases:
                 - signal-group-id: 1
@@ -126,13 +127,13 @@ cm:
                   primary-phase: 6
                 - signal-group-id: 8
                   primary-phase: 8
-            - signal-id: "1106112"
-              intersection-id: 13710
-              description: "Daisy Mountain Dr & Memorial Dr"
+            - signal-id: "2207192"
+              intersection-id: 24810
+              description: "Willow Creek Pkwy & Founders Dr"
               enabled: false  # Missing ATSPM data
-            - signal-id: "1106101"
-              intersection-id: 22391
-              description: "Anthem Way & Daisy Mountain Dr"
+            - signal-id: "2207181"
+              intersection-id: 33291
+              description: "Sequoia Pass & Willow Creek Pkwy"
               enabled: true
               phases:
                 - signal-group-id: 1
