@@ -6,7 +6,6 @@ import lombok.Data;
 
 import org.springframework.data.annotation.AccessType;
 import org.springframework.data.mongodb.core.mapping.Document;
-import us.dot.its.jpo.conflictmonitor.batch.models.spat.SignalGroupIndicationLog;
 import us.dot.its.jpo.conflictmonitor.batch.models.spat.SpatSignalIndication;
 
 import java.time.Instant;
@@ -154,7 +153,5 @@ public class AtspmSpatPairLog {
         }
         return stats;
     }
-
-
 
 }
