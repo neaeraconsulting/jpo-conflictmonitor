@@ -1,13 +1,19 @@
 package us.dot.its.jpo.conflictmonitor.batch.algorithms.atspm_spat_validation;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.thymeleaf.util.ListUtils;
 
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Data
@@ -38,11 +44,38 @@ public class AtspmSpatValidationParameters {
 
     private List<RouteConfig> routes;
 
-    public RouteConfig findRouteConfig(final int routeId) {
-        for (RouteConfig routeConfig : routes) {
-            if (routeConfig.getRouteId() == routeId) return routeConfig;
+    /**
+     * Map for quick lookup of routes.
+     */
+    @JsonIgnore
+    private ImmutableMap<Integer, RouteConfig> routeIdMap = ImmutableMap.of();
+
+    /**
+     * Initialize the hashmap.
+     * Assumes the list is only initialized once when the configuration is loaded.
+     * No routes can be added at runtime without re-initializing the entire list.
+     * @param routes List of routes loaded from configuration
+     */
+    public void setRoutes(List<RouteConfig> routes) {
+        if (routes != null) {
+            this.routes = ImmutableList.copyOf(routes);
+            var mapBuilder = new ImmutableMap.Builder<Integer, RouteConfig>();
+            for (RouteConfig routeConfig : routes) {
+                mapBuilder.put(routeConfig.getRouteId(), routeConfig);
+            }
+            routeIdMap = mapBuilder.build();
+        } else {
+            this.routes = ImmutableList.of();
+            this.routeIdMap = ImmutableMap.of();
         }
-        throw new IllegalArgumentException(String.format("Route ID %s not found", routeId));
+    }
+
+    public RouteConfig findRouteConfig(final int routeId) {
+        RouteConfig routeConfig = routeIdMap.get(routeId);
+        if (routeConfig == null) {
+            throw new IllegalArgumentException(String.format("Route ID %s not found", routeId));
+        }
+        return routeConfig;
     }
 
     @JsonIgnore
