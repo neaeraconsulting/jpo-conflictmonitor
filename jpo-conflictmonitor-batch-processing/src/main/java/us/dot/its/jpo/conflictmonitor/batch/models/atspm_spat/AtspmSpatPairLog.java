@@ -63,28 +63,28 @@ public class AtspmSpatPairLog {
         if (total == 0) return 0;
         return (numPaired  / total) * 100.0;
     }
-    //public void setPercentPaired(double percentPaired) {}
+
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
     public double getPercentGreenPaired() {
         return percentPaired(SpatSignalIndication.GREEN);
     }
-    //public void setPercentGreenPaired(double percentGreenPaired) {}
+
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
     public double getPercentRedPaired() {
         return percentPaired(SpatSignalIndication.RED);
     }
-    //public void setPercentRedPaired(double percentRedPaired) {}
+
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
     public double getPercentYellowPaired() {
         return percentPaired(SpatSignalIndication.YELLOW);
     }
-    //public void setPercentYellowPaired(double percentYellowPaired) {}
+
 
     private double percentPaired(final SpatSignalIndication indication) {
         if (atspmSpatPairs == null) return 0;
