@@ -24,13 +24,13 @@ class AtspmSpatPairLogTest {
     }
 
     @Test
-    void getPercentPairedReturnsZeroWhenPairListIsNullOrEmpty() {
+    void getPercentPairedReturnsNullWhenPairListIsNullOrEmpty() {
         var nullList = new AtspmSpatPairLog();
-        assertThat(nullList.getPercentPaired(), is(0.0));
+        assertThat(nullList.getPercentPaired(), is(nullValue()));
 
         var emptyList = new AtspmSpatPairLog();
         emptyList.setAtspmSpatPairs(new ArrayList<>());
-        assertThat(emptyList.getPercentPaired(), is(0.0));
+        assertThat(emptyList.getPercentPaired(), is(nullValue()));
     }
 
     @Test
@@ -83,8 +83,8 @@ class AtspmSpatPairLogTest {
 
         AtspmSpatStatistics stats = log.getSignalGroupStatistics();
 
-        assertThat(stats.get(1).percentYellowPaired(), is(0.0));
-        assertThat(stats.get(1).percentRedPaired(), is(0.0));
+        assertThat(stats.get(1).percentYellowPaired(), is(nullValue()));
+        assertThat(stats.get(1).percentRedPaired(), is(nullValue()));
         assertThat(stats.get(1).percentGreenPaired(), is(closeTo(100.0, 0.001)));
     }
 }

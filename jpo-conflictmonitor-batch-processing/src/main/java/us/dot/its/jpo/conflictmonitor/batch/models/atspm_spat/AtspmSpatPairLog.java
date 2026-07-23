@@ -55,46 +55,46 @@ public class AtspmSpatPairLog {
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
-    public double getPercentPaired() {
-        if (atspmSpatPairs == null) return 0;
+    public Double getPercentPaired() {
+        if (atspmSpatPairs == null) return null;
         double numPaired = atspmSpatPairs.stream().filter(AtspmSpatPair::isPaired).count();
         double total = atspmSpatPairs.size();
-        if (total == 0) return 0;
+        if (total == 0) return null;
         return (numPaired  / total) * 100.0;
     }
 
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
-    public double getPercentGreenPaired() {
+    public Double getPercentGreenPaired() {
         return percentPaired(SpatSignalIndication.GREEN);
     }
 
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
-    public double getPercentRedPaired() {
+    public Double getPercentRedPaired() {
         return percentPaired(SpatSignalIndication.RED);
     }
 
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @AccessType(AccessType.Type.PROPERTY)
-    public double getPercentYellowPaired() {
+    public Double getPercentYellowPaired() {
         return percentPaired(SpatSignalIndication.YELLOW);
     }
 
 
-    private double percentPaired(final SpatSignalIndication indication) {
-        if (atspmSpatPairs == null) return 0;
+    private Double percentPaired(final SpatSignalIndication indication) {
+        if (atspmSpatPairs == null) return null;
         double numPaired = atspmSpatPairs.stream().filter(AtspmSpatPair::isPaired).filter(pair -> pair.getSpatIndication() == indication).count();
         double total = atspmSpatPairs.stream().filter(pair -> pair.getSpatIndication() == indication).count();
-        if (total == 0) return 0;
+        if (total == 0) return null;
         return (numPaired / total) * 100.0;
     }
 
-    private double percentPaired(final SpatSignalIndication indication, final int signalGroup) {
-        if (atspmSpatPairs == null) return 0;
+    private Double percentPaired(final SpatSignalIndication indication, final int signalGroup) {
+        if (atspmSpatPairs == null) return null;
         double numPaired = atspmSpatPairs.stream()
                 .filter(pair -> pair.getSpatSignalGroupId() == signalGroup)
                 .filter(AtspmSpatPair::isPaired)
@@ -104,7 +104,7 @@ public class AtspmSpatPairLog {
                 .filter(pair -> pair.getSpatSignalGroupId() == signalGroup)
                 .filter(pair -> pair.getSpatIndication() == indication)
                 .count();
-        if (total == 0) return 0;
+        if (total == 0) return null;
         return (numPaired / total) * 100.0;
     }
 
@@ -116,8 +116,8 @@ public class AtspmSpatPairLog {
                 .count();
     }
 
-    private double percentPaired(final int signalGroup) {
-        if (atspmSpatPairs == null) return 0;
+    private Double percentPaired(final int signalGroup) {
+        if (atspmSpatPairs == null) return null;
         double numPaired = atspmSpatPairs.stream()
                 .filter(pair -> pair.getSpatSignalGroupId() == signalGroup)
                 .filter(AtspmSpatPair::isPaired)
@@ -125,7 +125,7 @@ public class AtspmSpatPairLog {
         double total = atspmSpatPairs.stream()
                 .filter(pair -> pair.getSpatSignalGroupId() == signalGroup)
                 .count();
-        if (total == 0) return 0;
+        if (total == 0) return null;
         return (numPaired / total) * 100.0;
     }
 
@@ -140,10 +140,10 @@ public class AtspmSpatPairLog {
         Set<Integer> uniqueSignalGroups = uniqueSignalGroups();
         AtspmSpatStatistics stats = new AtspmSpatStatistics();
         for (Integer signalGroupId : uniqueSignalGroups) {
-            double green = percentPaired(SpatSignalIndication.GREEN, signalGroupId);
-            double yellow = percentPaired(SpatSignalIndication.YELLOW, signalGroupId);
-            double red = percentPaired(SpatSignalIndication.RED, signalGroupId);
-            double all = percentPaired(signalGroupId);
+            Double green = percentPaired(SpatSignalIndication.GREEN, signalGroupId);
+            Double yellow = percentPaired(SpatSignalIndication.YELLOW, signalGroupId);
+            Double red = percentPaired(SpatSignalIndication.RED, signalGroupId);
+            Double all = percentPaired(signalGroupId);
             long greenCount = count(SpatSignalIndication.GREEN, signalGroupId);
             long yellowCount = count(SpatSignalIndication.YELLOW, signalGroupId);
             long redCount = count(SpatSignalIndication.RED, signalGroupId);

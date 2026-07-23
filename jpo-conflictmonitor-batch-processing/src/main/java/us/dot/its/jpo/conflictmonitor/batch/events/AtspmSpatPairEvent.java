@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.batch.events;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -17,6 +18,7 @@ import java.util.List;
  * the same underlying data broken out per signal group.
  */
 @EqualsAndHashCode(callSuper = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 @Document("CmAtspmSpatPairEvent")
 public class AtspmSpatPairEvent extends Event {
@@ -50,10 +52,10 @@ public class AtspmSpatPairEvent extends Event {
      */
     private List<AtspmSpatPair> atspmSpatPairs;
 
-    private double percentPaired;
-    private double percentRedPaired;
-    private double percentYellowPaired;
-    private double percentGreenPaired;
+    private Double percentPaired;
+    private Double percentRedPaired;
+    private Double percentYellowPaired;
+    private Double percentGreenPaired;
 
     /**
      * Per-signal-group breakdown, included for context alongside the blended percentages

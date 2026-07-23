@@ -126,9 +126,9 @@ public class AtspmSpatValidationTask
                 long totalGreenCount = groupStatsMap.values().stream().mapToLong(SignalGroupStatistics::greenCount).sum();
                 long totalRedCount = groupStatsMap.values().stream().mapToLong(SignalGroupStatistics::redCount).sum();
                 long totalYellowCount = groupStatsMap.values().stream().mapToLong(SignalGroupStatistics::yellowCount).sum();
-                boolean logGreenBelowThreshold = totalGreenCount > 0 && log.getPercentGreenPaired() < 90.0;
-                boolean logRedBelowThreshold = totalRedCount > 0 && log.getPercentRedPaired() < 90.0;
-                boolean logYellowBelowThreshold = totalYellowCount > 0 && log.getPercentYellowPaired() < 90.0;
+                boolean logGreenBelowThreshold = totalGreenCount > 0 && log.getPercentGreenPaired() != null && log.getPercentGreenPaired() < 90.0;
+                boolean logRedBelowThreshold = totalRedCount > 0 && log.getPercentRedPaired() != null && log.getPercentRedPaired() < 90.0;
+                boolean logYellowBelowThreshold = totalYellowCount > 0 && log.getPercentYellowPaired() != null && log.getPercentYellowPaired() < 90.0;
                 if (logGreenBelowThreshold || logRedBelowThreshold || logYellowBelowThreshold) {
                     var pairEvent = AtspmSpatPairEvent.fromLog(log);
                     mongoTemplate.insert(pairEvent);
@@ -142,9 +142,9 @@ public class AtspmSpatValidationTask
                 // phase that didn't go red at all) is skipped rather than treated as a failing
                 // 0% - there's nothing to evaluate, so it isn't evidence of a problem.
                 for (SignalGroupStatistics signalGroupStats : groupStatsMap.values()) {
-                    boolean greenBelowThreshold = signalGroupStats.greenCount() > 0 && signalGroupStats.percentGreenPaired() < 90.0;
-                    boolean redBelowThreshold = signalGroupStats.redCount() > 0 && signalGroupStats.percentRedPaired() < 90.0;
-                    boolean yellowBelowThreshold = signalGroupStats.yellowCount() > 0 && signalGroupStats.percentYellowPaired() < 90.0;
+                    boolean greenBelowThreshold = signalGroupStats.greenCount() > 0 && signalGroupStats.percentGreenPaired() != null && signalGroupStats.percentGreenPaired() < 90.0;
+                    boolean redBelowThreshold = signalGroupStats.redCount() > 0 && signalGroupStats.percentRedPaired() != null && signalGroupStats.percentRedPaired() < 90.0;
+                    boolean yellowBelowThreshold = signalGroupStats.yellowCount() > 0 && signalGroupStats.percentYellowPaired() != null && signalGroupStats.percentYellowPaired() < 90.0;
                     if (greenBelowThreshold || redBelowThreshold || yellowBelowThreshold) {
                         var groupPairEvent = AtspmSpatSignalGroupPairEvent.fromLog(log, signalGroupStats);
                         mongoTemplate.insert(groupPairEvent);

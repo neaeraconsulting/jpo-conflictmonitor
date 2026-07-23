@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.batch.events;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -18,6 +19,7 @@ import java.util.List;
  * blended across all signal groups for the whole intersection.
  */
 @EqualsAndHashCode(callSuper = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 @Document("CmAtspmSpatSignalGroupPairEvent")
 public class AtspmSpatSignalGroupPairEvent extends Event {
@@ -56,10 +58,10 @@ public class AtspmSpatSignalGroupPairEvent extends Event {
      */
     private List<AtspmSpatPair> atspmSpatPairs;
 
-    private double percentPaired;
-    private double percentRedPaired;
-    private double percentYellowPaired;
-    private double percentGreenPaired;
+    private Double percentPaired;
+    private Double percentRedPaired;
+    private Double percentYellowPaired;
+    private Double percentGreenPaired;
 
     /**
      * Per-signal-group breakdown for the whole signal, included for context alongside the
