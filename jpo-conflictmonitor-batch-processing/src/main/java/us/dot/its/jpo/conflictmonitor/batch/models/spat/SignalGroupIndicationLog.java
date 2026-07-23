@@ -40,18 +40,7 @@ public class SignalGroupIndicationLog {
         // Don't deduplicate indications at this point
         // eg. if "protected clearance" follows "permissive clearance", etc, leave both YELLOWs
 
-//        for (int signalGroup : log.indicationsMap.keySet()) {
-//            List<TimestampedIndication> indications = log.indicationsMap.get(signalGroup);
-//            List<TimestampedIndication> indicationDeltas = new ArrayList<>();
-//            TimestampedIndication previousIndication = null;
-//            for (TimestampedIndication indication : indications) {
-//                if (previousIndication == null || indication.getIndication() != previousIndication.getIndication()) {
-//                    indicationDeltas.add(indication);
-//                }
-//                previousIndication = indication;
-//            }
-//            log.indicationsMap.replace(signalGroup, indicationDeltas);
-//        }
+
         return log;
     }
 
