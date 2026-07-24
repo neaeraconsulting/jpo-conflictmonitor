@@ -29,12 +29,12 @@ jobs:
         run: |
           cd jpo-conflictmonitor/
           mvn -s ../settings.xml -e clean org.jacoco:jacoco-maven-plugin:prepare-agent package sonar:sonar \
-            -Dsonar.projectKey=usdot-jpo-ode_jpo-conflictmonitor \
+            -Dsonar.projectKey=${{ github.repository_owner }}_jpo-conflictmonitor \
             -Dsonar.projectName=jpo-conflictmonitor \
-            -Dsonar.organization=usdot-jpo-ode \
+            -Dsonar.organization=${{ github.repository_owner }} \
             -Dsonar.host.url=https://sonarcloud.io 
 
-  # Run unit tests if Sonar doesn't run
+  # Run unit tests if not USDOT
   unit-tests:
     if: github.event.pull_request.base.repo.owner.login != 'usdot-jpo-ode'
     runs-on: ubuntu-latest
