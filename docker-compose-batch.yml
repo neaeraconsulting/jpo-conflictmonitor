@@ -1,0 +1,40 @@
+include:
+  - jpo-utils/docker-compose.yml
+
+services:
+  conflictmonitor-batch:
+    profiles:
+      - all
+      - cm_full
+      - cm_release
+      - cm_batch
+    build:
+      context: ./jpo-conflictmonitor-batch-processing
+      dockerfile: Dockerfile
+      args:
+        MAVEN_GITHUB_TOKEN_NAME: ${MAVEN_GITHUB_TOKEN_NAME:?error}
+        MAVEN_GITHUB_TOKEN: ${MAVEN_GITHUB_TOKEN:?error}
+        MAVEN_GITHUB_ORG: ${MAVEN_GITHUB_ORG:?error}
+    image: jpo-conflictmonitor-batch-processing:latest
+    restart: unless-stopped
+    # Not published to the host by default. TestController's /test/** debug endpoints are
+    # unauthenticated (see CM_TEST_CONTROLLER_ENABLED), so this port shouldn't be reachable
+    # outside the compose network unless you specifically need host access, e.g. for local
+    # development against a service running on the host. Uncomment only for that case, and
+    # never in a shared or production environment.
+    # ports:
+    #   - "8055:8055"
+    environment:
+      CM_DATABASE_NAME: ${CM_DATABASE_NAME:-CV}
+      DB_HOST_IP: ${DB_HOST_IP:-mongo}
+      MONGO_PORT: ${MONGO_PORT:-27017}
+      MONGO_READ_WRITE_USER: ${MONGO_READ_WRITE_USER:-ode}
+      MONGO_READ_WRITE_PASS: ${MONGO_READ_WRITE_PASS:-replace_me}
+      CM_MONGO_AUTH_DB: ${CM_MONGO_AUTH_DB:-admin}
+      CM_ATSPM_CLIENT_BASE_URL: ${CM_ATSPM_CLIENT_BASE_URL:?error}
+      CM_ATSPM_CLIENT_USERNAME: ${CM_ATSPM_CLIENT_USERNAME:?error}
+      CM_ATSPM_CLIENT_PASSWORD: ${CM_ATSPM_CLIENT_PASSWORD:?error}
+      CM_TEST_CONTROLLER_ENABLED: ${CM_TEST_CONTROLLER_ENABLED:-false}
+    depends_on:
+      mongo:
+        condition: service_healthy
