@@ -1,6 +1,29 @@
 ## JPO Conflict Monitor Release Notes
 
-## Version 3.3.2
+## 2026 Q2 Release
+
+The 2026 Q2 Release of the Conflict Monitor Platform
+
+### Conflict Monitor Version 3.2.0
+
+New features, performance improvements, and bug fixes, including support for SSM/SRM and RTCM events, vehicle 
+misbehavior detection,  and revocable lane metrics.
+
+- [Rebuilding connect-url removal PR](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/7)
+- [SSM/SRM Events and Metrics](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/5)
+- [RTCM Events](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/9)
+- [Vertical Scaling, Memory Leak Fix](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/14)
+- [Dynamic Lane Activation Metrics](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/13)
+- [Configurable streams threads per topology](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/17)
+- [Vehicle misbehavior detection](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/8)
+
+### * NEW *: Conflict Monitor Batch Proccessing Version 1.0.0
+
+First release of the conflict monitor batch processing application to implement SPAT-ATSM comparison.
+
+- [SPAT-ATSPM Comparison](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/16)
+
+## Version 3.1.0
 The 2025 Q3 Release of the Conflict Monitor Platform
 - Updated conflict monitor for compatibility with new Processed Msg Formats
 - Added Javadocs for Event and Assessment Definitions
