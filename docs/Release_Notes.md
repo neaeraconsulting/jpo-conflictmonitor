@@ -6,8 +6,7 @@ The 2026 Q2 Release of the Conflict Monitor Platform
 
 ### Conflict Monitor Version 3.2.0
 
-New features, performance improvements, and bug fixes, including support for SSM/SRM and RTCM events, vehicle 
-misbehavior detection,  and revocable lane metrics.
+New features, performance improvements, and bug fixes, including support for SSM/SRM and RTCM events, vehicle misbehavior detection, and revocable lane metrics.
 
 - [Rebuilding connect-url removal PR](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/7)
 - [SSM/SRM Events and Metrics](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/5)
@@ -16,6 +15,7 @@ misbehavior detection,  and revocable lane metrics.
 - [Dynamic Lane Activation Metrics](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/13)
 - [Configurable streams threads per topology](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/17)
 - [Vehicle misbehavior detection](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/8)
+- [Update CI workflow and README badges](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/pull/177)
 
 ### * NEW *: Conflict Monitor Batch Proccessing Version 1.0.0
 
