@@ -17,7 +17,7 @@ New features, performance improvements, and bug fixes, including support for SSM
 - [Vehicle misbehavior detection](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/8)
 - [Update CI workflow and README badges](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/pull/177)
 
-### * NEW *: Conflict Monitor Batch Proccessing Version 1.0.0
+### * NEW *: Conflict Monitor Batch Processing Version 1.0.0
 
 First release of the conflict monitor batch processing application to implement SPAT-ATSPM comparison.
 
