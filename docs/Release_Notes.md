@@ -19,7 +19,7 @@ New features, performance improvements, and bug fixes, including support for SSM
 
 ### * NEW *: Conflict Monitor Batch Proccessing Version 1.0.0
 
-First release of the conflict monitor batch processing application to implement SPAT-ATSM comparison.
+First release of the conflict monitor batch processing application to implement SPAT-ATSPM comparison.
 
 - [SPAT-ATSPM Comparison](https://github.com/neaeraconsulting/jpo-conflictmonitor/pull/16)
 
