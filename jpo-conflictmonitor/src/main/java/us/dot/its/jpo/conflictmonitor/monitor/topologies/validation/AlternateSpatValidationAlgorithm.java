@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.time_change_details.spat.SpatTimeChangeDetailsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
@@ -88,6 +91,21 @@ public class AlternateSpatValidationAlgorithm
 
     @Override
     public void setMinimumDataAggregationAlgorithm(SpatMinimumDataAggregationAlgorithm spatMinimumDataAggregationAlgorithm) {
+        // Not used
+    }
+
+    @Override
+    public void setSpatTimeChangeDetailsAlgorithm(SpatTimeChangeDetailsAlgorithm spatTimeChangeDetailsAlgorithm) {
+        // Not used
+    }
+
+    @Override
+    public void setSpatMessageCountProgressionAlgorithm(SpatMessageCountProgressionAlgorithm spatMessageCountProgressionAlgorithm) {
+        // Not used
+    }
+
+    @Override
+    public void setEventStateProgressionAlgorithm(EventStateProgressionAlgorithm eventStateProgressionAlgorithm) {
         // Not used
     }
 }

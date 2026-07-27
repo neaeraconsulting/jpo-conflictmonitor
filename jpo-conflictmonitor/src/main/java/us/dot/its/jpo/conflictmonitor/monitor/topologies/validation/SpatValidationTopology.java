@@ -14,6 +14,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.time_change_details.spat.SpatTimeChangeDetailsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.time_change_details.spat.SpatTimeChangeDetailsStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
@@ -21,6 +27,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatVal
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.processors.ReassignSpatEventTimestampProcessor;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
@@ -51,6 +58,9 @@ public class SpatValidationTopology
 
     SpatTimestampDeltaStreamsAlgorithm timestampDeltaAlgorithm;
     SpatMinimumDataAggregationStreamsAlgorithm minimumDataAggregationAlgorithm;
+    SpatTimeChangeDetailsStreamsAlgorithm spatTimeChangeDetailsAlgorithm;
+    SpatMessageCountProgressionStreamsAlgorithm spatMessageCountProgressionAlgorithm;
+    EventStateProgressionStreamsAlgorithm eventStateProgressionAlgorithm;
 
     @Override
     public SpatTimestampDeltaAlgorithm getTimestampDeltaAlgorithm() {
@@ -78,11 +88,48 @@ public class SpatValidationTopology
     }
 
     @Override
+    public void setSpatTimeChangeDetailsAlgorithm(SpatTimeChangeDetailsAlgorithm spatTimeChangeDetailsAlgorithm) {
+        if (spatTimeChangeDetailsAlgorithm instanceof SpatTimeChangeDetailsStreamsAlgorithm streamsAlgorithm) {
+            this.spatTimeChangeDetailsAlgorithm = streamsAlgorithm;
+        } else {
+            throw new IllegalArgumentException("Algorithm is not an instance of SpatTimeChangeDetailsStreamsAlgorithm");
+        }
+    }
+
+    @Override
+    public void setSpatMessageCountProgressionAlgorithm(SpatMessageCountProgressionAlgorithm spatMessageCountProgressionAlgorithm) {
+        if (spatMessageCountProgressionAlgorithm instanceof SpatMessageCountProgressionStreamsAlgorithm streamsAlgorithm) {
+            this.spatMessageCountProgressionAlgorithm = streamsAlgorithm;
+        } else {
+            throw new IllegalArgumentException("Algorithm is not an instance of SpatMessageCountProgressionStreamsAlgorithm");
+        }
+    }
+
+    @Override
+    public void setEventStateProgressionAlgorithm(EventStateProgressionAlgorithm eventStateProgressionAlgorithm) {
+        if (eventStateProgressionAlgorithm == null) {
+            this.eventStateProgressionAlgorithm = null;
+            return;
+        }
+        if (eventStateProgressionAlgorithm instanceof EventStateProgressionStreamsAlgorithm streamsAlgorithm) {
+            this.eventStateProgressionAlgorithm = streamsAlgorithm;
+        } else {
+            throw new IllegalArgumentException("Algorithm is not an instance of EventStateProgressionStreamsAlgorithm");
+        }
+    }
+
+    @Override
     protected void validate() {
         super.validate();
 
         if (timestampDeltaAlgorithm == null) {
             throw new IllegalStateException("SpatTimestampDeltaAlgorithm is not set");
+        }
+        if (spatTimeChangeDetailsAlgorithm == null) {
+            throw new IllegalStateException("SpatTimeChangeDetailsAlgorithm is not set");
+        }
+        if (spatMessageCountProgressionAlgorithm == null) {
+            throw new IllegalStateException("SpatMessageCountProgressionAlgorithm is not set");
         }
     }
 
@@ -109,6 +156,14 @@ public class SpatValidationTopology
         // timestamp delta plugin after reading processed SPATs
         timestampDeltaAlgorithm.buildTopology(builder, processedSpatStream);
 
+        // Event-time branch for TCD + message-count + ESP plugins (host uses odeReceivedAt for broadcast rate)
+        KStream<RsuIntersectionKey, ProcessedSpat> eventTimeSpatStream =
+                processedSpatStream.process(ReassignSpatEventTimestampProcessor::new);
+        spatTimeChangeDetailsAlgorithm.buildTopology(builder, eventTimeSpatStream);
+        spatMessageCountProgressionAlgorithm.buildTopology(builder, eventTimeSpatStream);
+        if (eventStateProgressionAlgorithm != null) {
+            eventStateProgressionAlgorithm.buildTopology(builder, eventTimeSpatStream);
+        }
 
         // Extract validation info for Minimum Data events
         var minimumDataEventStream = processedSpatStream

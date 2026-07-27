@@ -51,13 +51,14 @@ public class EventStateProgressionTopology
 
         final String movementStateStore = parameters.getMovementStateStoreName();
         final String latestTransitionStore = parameters.getLatestTransitionStoreName();
+        final String latestPhaseStore = parameters.getLatestPhaseStoreName();
         final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
 
         builder.addStateStore(
                 Stores.versionedKeyValueStoreBuilder(
                         Stores.persistentVersionedKeyValueStore(movementStateStore, retentionTime),
                         JsonSerdes.RsuIntersectionSignalGroupKey(),
-                        JsonSerdes.SpatMovementState()
+                        JsonSerdes.EventStateProgressionState()
                 )
         );
 
@@ -66,6 +67,14 @@ public class EventStateProgressionTopology
                         Stores.persistentKeyValueStore(latestTransitionStore),
                         JsonSerdes.RsuIntersectionSignalGroupKey(),
                         Serdes.Long()
+                )
+        );
+
+        builder.addStateStore(
+                Stores.keyValueStoreBuilder(
+                        Stores.persistentKeyValueStore(latestPhaseStore),
+                        JsonSerdes.RsuIntersectionSignalGroupKey(),
+                        JsonSerdes.EventStateProgressionState()
                 )
         );
 
@@ -84,7 +93,8 @@ public class EventStateProgressionTopology
                                     state)).toList();
             })
             // Find phase state transitions
-            .process(() -> new EventStateProgressionProcessor(parameters), movementStateStore, latestTransitionStore)
+            .process(() -> new EventStateProgressionProcessor(parameters),
+                    movementStateStore, latestTransitionStore, latestPhaseStore)
             // Pass only illegal transitions
             .filter(((rsuIntersectionSignalGroupKey, spatMovementStateTransition) -> {
                 final PhaseStateTransition stateTransition = spatMovementStateTransition.getStateTransition();

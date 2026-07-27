@@ -1,7 +1,11 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.Intersection;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import us.dot.its.jpo.conflictmonitor.monitor.models.RegulatorIntersectionId;
 import us.dot.its.jpo.conflictmonitor.monitor.models.concurrent_permissive.ConnectedLanesPair;
+import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.LaneTypeAttributesMap;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.ProcessedMapUtils;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.connectinglanes.ConnectingLanesFeature;
@@ -14,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Cached MAP-derived data for Map/SPaT assessment: signal groups, revocable lanes,
@@ -22,32 +27,43 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MapDerivedAssessmentCache {
 
     private final long contentKey;
+    /** Cheap fingerprint from MAP revision fields; used to skip full content-key walks on hits. */
+    private final long revisionFingerprint;
     private final int intersectionId;
     private final int roadRegulatorId;
     private final Set<Integer> mapSignalGroups;
     private final Set<Integer> revocableLaneIds;
+    private final LaneTypeAttributesMap laneTypeAttributes;
     private final List<ConflictingConnectionPair> conflictPairs;
     private final RegulatorIntersectionId mapRegulatorIntersectionId;
 
     public MapDerivedAssessmentCache(
             long contentKey,
+            long revisionFingerprint,
             int intersectionId,
             int roadRegulatorId,
             Set<Integer> mapSignalGroups,
             Set<Integer> revocableLaneIds,
+            LaneTypeAttributesMap laneTypeAttributes,
             List<ConflictingConnectionPair> conflictPairs,
             RegulatorIntersectionId mapRegulatorIntersectionId) {
         this.contentKey = contentKey;
+        this.revisionFingerprint = revisionFingerprint;
         this.intersectionId = intersectionId;
         this.roadRegulatorId = roadRegulatorId;
         this.mapSignalGroups = Collections.unmodifiableSet(mapSignalGroups);
         this.revocableLaneIds = Collections.unmodifiableSet(revocableLaneIds);
+        this.laneTypeAttributes = laneTypeAttributes != null ? laneTypeAttributes : new LaneTypeAttributesMap();
         this.conflictPairs = Collections.unmodifiableList(conflictPairs);
         this.mapRegulatorIntersectionId = mapRegulatorIntersectionId;
     }
 
     public long getContentKey() {
         return contentKey;
+    }
+
+    public long getRevisionFingerprint() {
+        return revisionFingerprint;
     }
 
     public int getIntersectionId() {
@@ -66,6 +82,10 @@ public class MapDerivedAssessmentCache {
         return revocableLaneIds;
     }
 
+    public LaneTypeAttributesMap getLaneTypeAttributes() {
+        return laneTypeAttributes;
+    }
+
     public List<ConflictingConnectionPair> getConflictPairs() {
         return conflictPairs;
     }
@@ -79,15 +99,58 @@ public class MapDerivedAssessmentCache {
      */
     public static final class Manager {
         private final ConcurrentHashMap<String, MapDerivedAssessmentCache> caches = new ConcurrentHashMap<>();
+        private final AtomicLong hits = new AtomicLong();
+        private final AtomicLong misses = new AtomicLong();
+        private Counter hitCounter;
+        private Counter missCounter;
+
+        public void bindMetrics(MeterRegistry meterRegistry) {
+            if (meterRegistry == null) {
+                return;
+            }
+            // register() is idempotent for the same name+tags; safe if topology rebuilds
+            hitCounter = Counter.builder("cm.map_spat.cache")
+                    .description("MAP-derived assessment cache lookups")
+                    .tag("result", "hit")
+                    .register(meterRegistry);
+            missCounter = Counter.builder("cm.map_spat.cache")
+                    .description("MAP-derived assessment cache lookups")
+                    .tag("result", "miss")
+                    .register(meterRegistry);
+            Gauge.builder("cm.map_spat.cache.size", caches, ConcurrentHashMap::size)
+                    .description("Number of intersections with cached MAP-derived assessment data")
+                    .register(meterRegistry);
+        }
 
         public MapDerivedAssessmentCache getOrBuild(
                 String cacheKey,
                 ProcessedMap<LineString> map,
                 Set<ConnectedLanesPair> allowConcurrentPermissiveSet) {
-            long contentKey = computeContentKey(map);
             MapDerivedAssessmentCache existing = caches.get(cacheKey);
+            if (existing != null) {
+                // Fast path: revision fingerprint match → skip connecting-lane content walk
+                long fingerprint = computeRevisionFingerprint(map);
+                if (existing.revisionFingerprint == fingerprint) {
+                    hits.incrementAndGet();
+                    if (hitCounter != null) {
+                        hitCounter.increment();
+                    }
+                    return existing;
+                }
+            }
+
+            long contentKey = computeContentKey(map);
             if (existing != null && existing.contentKey == contentKey) {
+                hits.incrementAndGet();
+                if (hitCounter != null) {
+                    hitCounter.increment();
+                }
                 return existing;
+            }
+
+            misses.incrementAndGet();
+            if (missCounter != null) {
+                missCounter.increment();
             }
             MapDerivedAssessmentCache built = build(contentKey, map, allowConcurrentPermissiveSet);
             caches.put(cacheKey, built);
@@ -96,18 +159,35 @@ public class MapDerivedAssessmentCache {
 
         public void clear() {
             caches.clear();
+            hits.set(0);
+            misses.set(0);
         }
+
+        public long getHits() {
+            return hits.get();
+        }
+
+        public long getMisses() {
+            return misses.get();
+        }
+    }
+
+    public static long computeRevisionFingerprint(ProcessedMap<LineString> map) {
+        if (map == null || map.getProperties() == null) {
+            return 0L;
+        }
+        return Objects.hash(
+                map.getProperties().getRevision(),
+                map.getProperties().getMsgIssueRevision(),
+                map.getProperties().getIntersectionId(),
+                map.getProperties().getRegion());
     }
 
     public static long computeContentKey(ProcessedMap<LineString> map) {
         if (map == null || map.getProperties() == null) {
             return 0L;
         }
-        Integer revision = map.getProperties().getRevision();
-        Integer msgIssueRevision = map.getProperties().getMsgIssueRevision();
-        Integer intersectionId = map.getProperties().getIntersectionId();
-        Integer region = map.getProperties().getRegion();
-        long key = Objects.hash(revision, msgIssueRevision, intersectionId, region);
+        long key = computeRevisionFingerprint(map);
 
         if (map.getConnectingLanesFeatureCollection() != null
                 && map.getConnectingLanesFeatureCollection().getFeatures() != null) {
@@ -132,6 +212,8 @@ public class MapDerivedAssessmentCache {
             long contentKey,
             ProcessedMap<LineString> map,
             Set<ConnectedLanesPair> allowConcurrentPermissiveSet) {
+
+        long revisionFingerprint = computeRevisionFingerprint(map);
 
         Set<Integer> mapSignalGroups = new HashSet<>();
         if (map != null
@@ -164,6 +246,10 @@ public class MapDerivedAssessmentCache {
         Set<Integer> revocableLaneIds = intersection.getRevocableLaneIds() != null
                 ? new HashSet<>(intersection.getRevocableLaneIds())
                 : Set.of();
+
+        LaneTypeAttributesMap laneTypeAttributes = map != null
+                ? ProcessedMapUtils.getLaneTypeAttributesMap(map)
+                : new LaneTypeAttributesMap();
 
         List<ConflictingConnectionPair> conflictPairs = new ArrayList<>();
         ArrayList<LaneConnection> connections = intersection.getLaneConnections();
@@ -208,10 +294,12 @@ public class MapDerivedAssessmentCache {
 
         return new MapDerivedAssessmentCache(
                 contentKey,
+                revisionFingerprint,
                 intersectionId,
                 roadRegulatorId,
                 mapSignalGroups,
                 revocableLaneIds,
+                laneTypeAttributes,
                 conflictPairs,
                 mapId);
     }

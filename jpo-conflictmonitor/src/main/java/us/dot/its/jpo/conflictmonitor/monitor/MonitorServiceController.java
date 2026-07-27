@@ -102,6 +102,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmVal
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.metrics.StreamsPropertiesFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapIndex;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.config.ConfigInitializer;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.config.ConfigTopology;
@@ -129,6 +130,7 @@ public class MonitorServiceController {
     final ConfigParameters configParameters;
     final ConfigInitializer configInitializer;
     final MapIndex mapIndex;
+    final StreamsPropertiesFactory streamsPropertiesFactory;
     final String stateChangeTopic;
     final String healthTopic;
 
@@ -139,7 +141,8 @@ public class MonitorServiceController {
                                     final ConfigTopology configTopology,
                                     final ConfigParameters configParameters,
                                     final ConfigInitializer configInitializer,
-                                    final MapIndex mapIndex) {
+                                    final MapIndex mapIndex,
+                                    final StreamsPropertiesFactory streamsPropertiesFactory) {
 
         this.conflictMonitorProps = conflictMonitorProps;
         this.kafkaTemplate = kafkaTemplate;
@@ -147,6 +150,7 @@ public class MonitorServiceController {
         this.configParameters = configParameters;
         this.configInitializer = configInitializer;
         this.mapIndex = mapIndex;
+        this.streamsPropertiesFactory = streamsPropertiesFactory;
         stateChangeTopic = conflictMonitorProps.getKafkaStateChangeEventTopic();
         healthTopic = conflictMonitorProps.getAppHealthNotificationTopic();
 
@@ -156,7 +160,10 @@ public class MonitorServiceController {
             // Configuration Topology
             // Start this first 
             final String config = "config";
-            configTopology.setStreamsProperties(conflictMonitorProps.createStreamProperties(config));
+            configTopology.setStreamsProperties(streamsPropertiesFactory.create(config,
+                    configParameters.getDefaultTopicName(),
+                    configParameters.getCustomTopicName(),
+                    configParameters.getIntersectionTableName()));
             configTopology.setParameters(configParameters);
             configTopology.registerStateListener(new StateChangeHandler(kafkaTemplate, config, stateChangeTopic, healthTopic));
             configTopology.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, config, healthTopic));
@@ -174,7 +181,13 @@ public class MonitorServiceController {
             configTopology.registerConfigListeners(notificationParams);
             if (notificationAlgo instanceof StreamsTopology) {     
                 final var streamsAlgo = (StreamsTopology)notificationAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(notification));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(notification,
+                        notificationParams.getConnectionOfTravelNotificationTopicName(),
+                        notificationParams.getLaneDirectionOfTravelNotificationTopicName(),
+                        notificationParams.getIntersectionReferenceAlignmentNotificationTopicName(),
+                        notificationParams.getSignalGroupAlignmentNotificationTopicName(),
+                        notificationParams.getSignalStateConflictNotificationTopicName(),
+                        notificationParams.getSpatTimeChangeDetailsNotificationTopicName()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, notification, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, notification, healthTopic));
                 algoMap.put(notification, streamsAlgo);
@@ -186,15 +199,11 @@ public class MonitorServiceController {
             // Map Validation Topology
             startMapValidationAlgorithm();
             
-            // Spat Validation Topology
+            // Spat Validation Topology (hosts TCD + SpatMessageCount plugins; single ProcessedSpat consume)
             startSpatValidationAlgorithm();
 
             // RTCM Validation Topology
             startRtcmValidationAlgorithm();
-
-            // Spat Time Change Details Assessment
-            //Sends Time Change Details Events when the time deltas in spat messages are incorrect
-            startSpatTimeChangeDetailsAlgorithm();
 
             //Map Spat Alignment Topology
             startMapSpatAlignmentAlgorithm();
@@ -209,7 +218,8 @@ public class MonitorServiceController {
             bsmEventAlgorithm.setMapIndex(mapIndex);
             if (bsmEventAlgorithm instanceof StreamsTopology) {
                 final var streamsAlgo = (StreamsTopology)bsmEventAlgorithm;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(bsmEvent));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(bsmEvent,
+                        bsmEventParams.getInputTopic()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, bsmEvent, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, bsmEvent, healthTopic));
                 algoMap.put(bsmEvent, streamsAlgo);
@@ -228,9 +238,7 @@ public class MonitorServiceController {
             final MessageIngestAlgorithm messageIngestAlgorithm = messageIngestAlgorithmFactory.getAlgorithm(messageIngestAlgorithmName);
             messageIngestAlgorithm.setMapIndex(mapIndex);
             messageIngestAlgorithm.setParameters(messageIngestParams);
-            // Plugin Spat Transition algorithm
-            final EventStateProgressionAlgorithm spatTransitionAlgorithm = getEventStateProgressionAlgorithm();
-            messageIngestAlgorithm.setEventStateProgressionAlgorithm(spatTransitionAlgorithm);
+            // EventStateProgression is hosted by SpatValidationTopology (single ProcessedSpat consume)
 
 
             // Get Algorithms used by intersection event topology
@@ -280,7 +288,11 @@ public class MonitorServiceController {
             intersectionAlgo.setStopLineStopParameters(ssvsParams);
             if (intersectionAlgo instanceof IntersectionEventStreamsAlgorithm) {
                 final var streamsAlgo = (IntersectionEventStreamsAlgorithm)intersectionAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(intersectionEvent));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(intersectionEvent,
+                        messageIngestParams.getSpatTopic(),
+                        messageIngestParams.getMapTopic(),
+                        messageIngestParams.getBsmTopic(),
+                        conflictMonitorProps.getKafkaTopicCmBsmEvent()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, intersectionEvent, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, intersectionEvent, healthTopic));
                 algoMap.put(intersectionEvent, streamsAlgo);
@@ -300,7 +312,8 @@ public class MonitorServiceController {
             configTopology.registerConfigListeners(stopLinePassageAssessmenAlgoParams);
             if (stopLinePassageAssesmentAlgo instanceof StreamsTopology) {
                 final var streamsAlgo = (StreamsTopology)stopLinePassageAssesmentAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(stopLinePassageAssessment));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(stopLinePassageAssessment,
+                        stopLinePassageAssessmenAlgoParams.getStopLinePassageEventTopicName()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, stopLinePassageAssessment, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, stopLinePassageAssessment, healthTopic));
                 algoMap.put(stopLinePassageAssessment, streamsAlgo);
@@ -309,7 +322,7 @@ public class MonitorServiceController {
             Runtime.getRuntime().addShutdownHook(new Thread(stopLinePassageAssesmentAlgo::stop));
             stopLinePassageAssesmentAlgo.start();
 
-            // // Stop Line Stop Assessment Topology
+            // Stop Line Stop Assessment Topology
             final String stopLineStopAssessment = "stopLineStopAssessment";
             final StopLineStopAssessmentAlgorithmFactory slsaAlgoFactory = conflictMonitorProps.getStopLineStopAssessmentAlgorithmFactory();
             final String stopLineStopAssessmentAlgorithm = conflictMonitorProps.getStopLineStopAssessmentAlgorithm();
@@ -317,7 +330,8 @@ public class MonitorServiceController {
             final StopLineStopAssessmentParameters stopLineStopAssessmenAlgoParams = conflictMonitorProps.getStopLineStopAssessmentAlgorithmParameters();
             if (stopLineStopAssesmentAlgo instanceof StreamsTopology) {
                 final var streamsAlgo = (StreamsTopology)stopLineStopAssesmentAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(stopLineStopAssessment));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(stopLineStopAssessment,
+                        stopLineStopAssessmenAlgoParams.getStopLineStopEventTopicName()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, stopLineStopAssessment, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, stopLineStopAssessment, healthTopic));
                 algoMap.put(stopLineStopAssessment, streamsAlgo);
@@ -325,7 +339,6 @@ public class MonitorServiceController {
             stopLineStopAssesmentAlgo.setParameters(stopLineStopAssessmenAlgoParams);
             Runtime.getRuntime().addShutdownHook(new Thread(stopLineStopAssesmentAlgo::stop));
             stopLineStopAssesmentAlgo.start();
-            
 
             // Lane Direction Of Travel Assessment Topology
             final String laneDirectionOfTravelAssessment = "laneDirectionOfTravelAssessment";
@@ -336,7 +349,8 @@ public class MonitorServiceController {
             configTopology.registerConfigListeners(laneDirectionOfTravelAssessmenAlgoParams);
             if (laneDirectionOfTravelAssesmentAlgo instanceof StreamsTopology) {
                 final var streamsAlgo = (StreamsTopology)laneDirectionOfTravelAssesmentAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(laneDirectionOfTravelAssessment));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(laneDirectionOfTravelAssessment,
+                        laneDirectionOfTravelAssessmenAlgoParams.getLaneDirectionOfTravelEventTopicName()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, laneDirectionOfTravelAssessment, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, laneDirectionOfTravelAssessment, healthTopic));
                 algoMap.put(laneDirectionOfTravelAssessment, streamsAlgo);
@@ -344,8 +358,6 @@ public class MonitorServiceController {
             laneDirectionOfTravelAssesmentAlgo.setParameters(laneDirectionOfTravelAssessmenAlgoParams);
             Runtime.getRuntime().addShutdownHook(new Thread(laneDirectionOfTravelAssesmentAlgo::stop));
             laneDirectionOfTravelAssesmentAlgo.start();
-            
-
 
             // Connection Of Travel Assessment Topology
             final String connectionOfTravelAssessment = "connectionOfTravelAssessment";
@@ -356,7 +368,8 @@ public class MonitorServiceController {
             configTopology.registerConfigListeners(connectionOfTravelAssessmentAlgoParams);
             if (connectionofTravelAssessmentAlgo instanceof StreamsTopology) {
                 final var streamsAlgo = (StreamsTopology)connectionofTravelAssessmentAlgo;
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(connectionOfTravelAssessment));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(connectionOfTravelAssessment,
+                        connectionOfTravelAssessmentAlgoParams.getConnectionOfTravelEventTopicName()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, connectionOfTravelAssessment, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, connectionOfTravelAssessment, healthTopic));
                 algoMap.put(connectionOfTravelAssessment, streamsAlgo);
@@ -368,8 +381,7 @@ public class MonitorServiceController {
             //Map Message Count Progression Topology
             startMapMessageCountProgressionAlgorithm();
 
-            //Spat Message Count Progression Topology
-            startSpatMessageCountProgressionAlgorithm();
+            // Spat Message Count Progression is a plugin on SpatValidationTopology
 
             //Bsm Message Count Progression Topology
             startBsmMessageCountProgressionAlgorithm();
@@ -388,7 +400,11 @@ public class MonitorServiceController {
             final EventParameters eventParams = conflictMonitorProps.getEventParameters();
             configTopology.registerConfigListeners(eventParams);
             if (eventAlgorithm instanceof StreamsTopology streamsAlgo) {
-                streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(event));
+                streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(event,
+                        eventParams.getSpatTimeChangeDetailsTopicName(),
+                        eventParams.getSignalStateConflictEventTopicName(),
+                        eventParams.getConnectionOfTravelEventTopicName(),
+                        eventParams.getLaneDirectionOfTravelEventTopicName()));
                 streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, event, stateChangeTopic, healthTopic));
                 streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, event, healthTopic));
                 algoMap.put(event, streamsAlgo);
@@ -419,7 +435,8 @@ public class MonitorServiceController {
         configTopology.registerConfigListeners(mapValidationParams);
         logger.info("Map params {}", mapValidationParams);
         if (mapValidationAlgo instanceof StreamsTopology streamsAlgo) {
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(mapValidation));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(mapValidation,
+                    mapValidationParams.getInputTopicName()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, mapValidation, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, mapValidation, healthTopic));
             algoMap.put(mapValidation, streamsAlgo);
@@ -444,7 +461,8 @@ public class MonitorServiceController {
         final SpatValidationParameters spatValidationParams = conflictMonitorProps.getSpatValidationParameters();
         configTopology.registerConfigListeners(spatValidationParams);
         if (spatValidationAlgo instanceof StreamsTopology streamsAlgo) {
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(spatValidation));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(spatValidation,
+                    spatValidationParams.getInputTopicName()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, spatValidation, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, spatValidation, healthTopic));
             algoMap.put(spatValidation, streamsAlgo);
@@ -456,6 +474,16 @@ public class MonitorServiceController {
         // Plugin min data aggregation
         final SpatMinimumDataAggregationAlgorithm spatMinDataAggAlgo = getSpatMinimumDataAggregationAlgorithm();
         spatValidationAlgo.setMinimumDataAggregationAlgorithm(spatMinDataAggAlgo);
+        // Plugin Spat Time Change Details + Message Count Progression + ESP (single consume)
+        spatValidationAlgo.setSpatTimeChangeDetailsAlgorithm(getSpatTimeChangeDetailsAlgorithm());
+        spatValidationAlgo.setSpatMessageCountProgressionAlgorithm(getSpatMessageCountProgressionAlgorithm());
+        // ESP enable switch remains message.ingest.enableEventStateProgression
+        final MessageIngestParameters messageIngestParams = conflictMonitorProps.getMessageIngestParameters();
+        if (messageIngestParams.isEnableEventStateProgression()) {
+            spatValidationAlgo.setEventStateProgressionAlgorithm(getEventStateProgressionAlgorithm());
+        } else {
+            logger.info("EventStateProgression plugin not attached (message.ingest.enableEventStateProgression=false)");
+        }
         Runtime.getRuntime().addShutdownHook(new Thread(spatValidationAlgo::stop));
         spatValidationAlgo.start();
     }
@@ -469,7 +497,8 @@ public class MonitorServiceController {
         rtcmValidationAlgo.setParameters(validationParams);
         configTopology.registerConfigListeners(validationParams);
         if (rtcmValidationAlgo instanceof StreamsTopology streamsAlgo) {
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(rtcmValidation));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(rtcmValidation,
+                    validationParams.getInputTopicName()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, rtcmValidation, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, rtcmValidation, healthTopic));
             algoMap.put(rtcmValidation, streamsAlgo);
@@ -482,44 +511,12 @@ public class MonitorServiceController {
 
 
 
-    private void startSpatTimeChangeDetailsAlgorithm() {
-        final String spatTimeChangeDetails = "spatTimeChangeDetails";
-        final SpatTimeChangeDetailsAlgorithmFactory spatTCDAlgoFactory = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithmFactory();
-        final String spatTCDAlgo = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithm();
-        final SpatTimeChangeDetailsAlgorithm spatTimeChangeDetailsAlgo = spatTCDAlgoFactory.getAlgorithm(spatTCDAlgo);
-        final SpatTimeChangeDetailsParameters spatTimeChangeDetailsParams = conflictMonitorProps.getSpatTimeChangeDetailsParameters();
-        configTopology.registerConfigListeners(spatTimeChangeDetailsParams);
-        if (spatTimeChangeDetailsAlgo instanceof StreamsTopology) {
-            final var streamsAlgo = (StreamsTopology)spatTimeChangeDetailsAlgo;
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(spatTimeChangeDetails));
-            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, spatTimeChangeDetails, stateChangeTopic, healthTopic));
-            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, spatTimeChangeDetails, healthTopic));
-            algoMap.put(spatTimeChangeDetails, streamsAlgo);
-        }
-        spatTimeChangeDetailsAlgo.setParameters(spatTimeChangeDetailsParams);
-
-        // Plug in aggregation algorithm
-        final TimeChangeDetailsAggregationAlgorithm aggAlgorithm = getTimeChangeDetailsAggregationAlgorithm();
-        spatTimeChangeDetailsAlgo.setAggregationAlgorithm(aggAlgorithm);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(spatTimeChangeDetailsAlgo::stop));
-        spatTimeChangeDetailsAlgo.start();
-    }
-
     private SpatTimeChangeDetailsAlgorithm getSpatTimeChangeDetailsAlgorithm() {
-        final String spatTimeChangeDetails = "spatTimeChangeDetails";
         final SpatTimeChangeDetailsAlgorithmFactory spatTCDAlgoFactory = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithmFactory();
         final String spatTCDAlgo = conflictMonitorProps.getSpatTimeChangeDetailsAlgorithm();
         final SpatTimeChangeDetailsAlgorithm spatTimeChangeDetailsAlgo = spatTCDAlgoFactory.getAlgorithm(spatTCDAlgo);
         final SpatTimeChangeDetailsParameters spatTimeChangeDetailsParams = conflictMonitorProps.getSpatTimeChangeDetailsParameters();
         configTopology.registerConfigListeners(spatTimeChangeDetailsParams);
-        if (spatTimeChangeDetailsAlgo instanceof StreamsTopology) {
-            final var streamsAlgo = (StreamsTopology)spatTimeChangeDetailsAlgo;
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(spatTimeChangeDetails));
-            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, spatTimeChangeDetails, stateChangeTopic, healthTopic));
-            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, spatTimeChangeDetails, healthTopic));
-            algoMap.put(spatTimeChangeDetails, streamsAlgo);
-        }
         spatTimeChangeDetailsAlgo.setParameters(spatTimeChangeDetailsParams);
 
         // Plug in aggregation algorithm
@@ -537,7 +534,9 @@ public class MonitorServiceController {
         final MapSpatMessageAssessmentParameters mapSpatAlignmentParams = conflictMonitorProps.getMapSpatMessageAssessmentParameters();
         configTopology.registerConfigListeners(mapSpatAlignmentParams);
         if (mapSpatAlignmentAlgo instanceof StreamsTopology streamsAlgo) {
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(mapSpatAlignment));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(mapSpatAlignment,
+                    mapSpatAlignmentParams.getSpatInputTopicName(),
+                    mapSpatAlignmentParams.getMapInputTopicName()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, mapSpatAlignment, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, mapSpatAlignment, healthTopic));
             algoMap.put(mapSpatAlignment, streamsAlgo);
@@ -569,7 +568,8 @@ public class MonitorServiceController {
         configTopology.registerConfigListeners(mapMessageCountProgressionParams);
         if (mapMessageCountProgressionAlgo instanceof StreamsTopology) {
             final var streamsAlgo = (StreamsTopology)mapMessageCountProgressionAlgo;
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(mapMessageCountProgression));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(mapMessageCountProgression,
+                    mapMessageCountProgressionParams.getMapInputTopicName()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, mapMessageCountProgression, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, mapMessageCountProgression, healthTopic));
             algoMap.put(mapMessageCountProgression, streamsAlgo);
@@ -584,28 +584,19 @@ public class MonitorServiceController {
         mapMessageCountProgressionAlgo.start();
     }
 
-    private void startSpatMessageCountProgressionAlgorithm() {
-        final String spatMessageCountProgression = "spatMessageCountProgression";
+    private SpatMessageCountProgressionAlgorithm getSpatMessageCountProgressionAlgorithm() {
         final SpatMessageCountProgressionAlgorithmFactory spatMessageCountProgressionAlgoFactory = conflictMonitorProps.getSpatMessageCountProgressionAlgorithmFactory();
         final String spatMessageCountProgressionAlgorithm = conflictMonitorProps.getSpatMessageCountProgressionAlgorithm();
         final SpatMessageCountProgressionAlgorithm spatMessageCountProgressionAlgo = spatMessageCountProgressionAlgoFactory.getAlgorithm(spatMessageCountProgressionAlgorithm);
         final SpatMessageCountProgressionParameters spatMessageCountProgressionParams = conflictMonitorProps.getSpatMessageCountProgressionAlgorithmParameters();
         configTopology.registerConfigListeners(spatMessageCountProgressionParams);
-        if (spatMessageCountProgressionAlgo instanceof StreamsTopology) {
-            final var streamsAlgo = (StreamsTopology)spatMessageCountProgressionAlgo;
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(spatMessageCountProgression));
-            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, spatMessageCountProgression, stateChangeTopic, healthTopic));
-            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, spatMessageCountProgression, healthTopic));
-            algoMap.put(spatMessageCountProgression, streamsAlgo);
-        }
         spatMessageCountProgressionAlgo.setParameters(spatMessageCountProgressionParams);
 
         // Plug in aggregation algorithm
         var aggregationAlgorithm = getSpatMessageCountProgressionAggregationAlgorithm();
         spatMessageCountProgressionAlgo.setAggregationAlgorithm(aggregationAlgorithm);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(spatMessageCountProgressionAlgo::stop));
-        spatMessageCountProgressionAlgo.start();
+        return spatMessageCountProgressionAlgo;
     }
 
     private void startBsmMessageCountProgressionAlgorithm() {
@@ -617,7 +608,8 @@ public class MonitorServiceController {
         configTopology.registerConfigListeners(bsmMessageCountProgressionParams);
         if (bsmMessageCountProgressionAlgo instanceof StreamsTopology) {
             final var streamsAlgo = (StreamsTopology)bsmMessageCountProgressionAlgo;
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(bsmMessageCountProgression));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(bsmMessageCountProgression,
+                    bsmMessageCountProgressionParams.getBsmInputTopicName()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, bsmMessageCountProgression, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, bsmMessageCountProgression, healthTopic));
             algoMap.put(bsmMessageCountProgression, streamsAlgo);
@@ -640,7 +632,8 @@ public class MonitorServiceController {
         final RtcmMessageCountProgressionParameters params = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithmParameters();
         configTopology.registerConfigListeners(params);
         if (algorithm instanceof StreamsTopology streamsTopology) {
-            streamsTopology.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsTopology.setStreamsProperties(streamsPropertiesFactory.create(name,
+                    params.getRtcmInputTopicName()));
             streamsTopology.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
             streamsTopology.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
             algoMap.put(name, streamsTopology);
@@ -663,7 +656,9 @@ public class MonitorServiceController {
         final PriorityPreemptionRequestAlgorithm algorithm = factory.getAlgorithm(algorithmName);
         configTopology.registerConfigListeners(params);
         if (algorithm instanceof StreamsTopology streamsAlgo) {
-            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsAlgo.setStreamsProperties(streamsPropertiesFactory.create(name,
+                    params.getProcessedSrmInputTopic(),
+                    params.getProcessedSsmInputTopic()));
             streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
             streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
             algoMap.put(name, streamsAlgo);

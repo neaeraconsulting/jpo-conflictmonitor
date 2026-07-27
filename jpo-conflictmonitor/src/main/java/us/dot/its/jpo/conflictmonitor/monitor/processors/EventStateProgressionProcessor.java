@@ -13,19 +13,22 @@ import org.apache.kafka.streams.state.VersionedKeyValueStore;
 import org.apache.kafka.streams.state.VersionedRecord;
 import org.apache.kafka.streams.state.VersionedRecordIterator;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.EventStateProgressionState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.RsuIntersectionSignalGroupKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Slf4j
 public class EventStateProgressionProcessor
         extends ContextualProcessor<RsuIntersectionSignalGroupKey, SpatMovementState, RsuIntersectionSignalGroupKey, SpatMovementStateTransition> {
 
-    // Store to keep track of the latest Spat MovementState per signal group
-    VersionedKeyValueStore<RsuIntersectionSignalGroupKey, SpatMovementState> stateStore;
+    VersionedKeyValueStore<RsuIntersectionSignalGroupKey, EventStateProgressionState> stateStore;
     KeyValueStore<RsuIntersectionSignalGroupKey, Long> latestTransitionStore;
+    /** Last observed phase per signal group for unchanged-phase fast path. */
+    KeyValueStore<RsuIntersectionSignalGroupKey, EventStateProgressionState> latestPhaseStore;
 
     final EventStateProgressionParameters parameters;
 
@@ -38,25 +41,46 @@ public class EventStateProgressionProcessor
         super.init(context);
         stateStore = context.getStateStore(parameters.getMovementStateStoreName());
         latestTransitionStore = context.getStateStore(parameters.getLatestTransitionStoreName());
+        latestPhaseStore = context.getStateStore(parameters.getLatestPhaseStoreName());
     }
 
     @Override
     public void process(Record<RsuIntersectionSignalGroupKey, SpatMovementState> record) {
+        SpatMovementState value = record.value();
+        if (value == null) {
+            return;
+        }
 
         if (parameters.isDebug()) {
             log.trace("Received record: timestamp {}, signal group {}, phase {}", record.timestamp(), record.key().getSignalGroup(),
-                    record.value().getPhaseState());
+                    value.getPhaseState());
         }
 
-        // Insert new record into the buffer
-        stateStore.put(record.key(), record.value(), record.timestamp());
+        EventStateProgressionState current = EventStateProgressionState.from(value);
+        EventStateProgressionState lastPhase = latestPhaseStore.get(record.key());
+        boolean phaseUnchanged = lastPhase != null
+                && Objects.equals(lastPhase.getPhaseState(), current.getPhaseState());
+
+        if (phaseUnchanged) {
+            // Skip versioned put when phase is stable. Keep querying until stream time advances
+            // past lastPut + grace so the put enters the grace-excluded query window at least once.
+            VersionedRecord<EventStateProgressionState> latest = stateStore.get(record.key());
+            if (latest == null) {
+                return;
+            }
+            long streamTime = context().currentStreamTimeMs();
+            if (streamTime > latest.timestamp() + parameters.getBufferGracePeriodMs()) {
+                return;
+            }
+        } else {
+            latestPhaseStore.put(record.key(), current);
+            stateStore.put(record.key(), current, record.timestamp());
+        }
 
         // Query the buffer, excluding the grace period relative to stream time "now".
         Instant excludeGracePeriod =
                 Instant.ofEpochMilli(context().currentStreamTimeMs())
                         .minusMillis(parameters.getBufferGracePeriodMs());
-
-
 
         // Start query at the latest transition point to avoid duplicates
         Long latestTransitionTime = latestTransitionStore.get(record.key());
@@ -70,28 +94,25 @@ public class EventStateProgressionProcessor
         }
 
         // Verify that the exclude grace period is after the start time of the query
-        if(excludeGracePeriod.compareTo(startTime) > 0){
+        if (excludeGracePeriod.compareTo(startTime) > 0) {
             var query =
-                    MultiVersionedKeyQuery.<RsuIntersectionSignalGroupKey, SpatMovementState>withKey(record.key())
+                    MultiVersionedKeyQuery.<RsuIntersectionSignalGroupKey, EventStateProgressionState>withKey(record.key())
                             .fromTime(startTime)
                             .toTime(excludeGracePeriod)
                             .withAscendingTimestamps();
 
-
-            QueryResult<VersionedRecordIterator<SpatMovementState>> result =
+            QueryResult<VersionedRecordIterator<EventStateProgressionState>> result =
                     stateStore.query(query,
                             PositionBound.unbounded(),
                             new QueryConfig(false));
 
             if (result.isSuccess()) {
-
-                // Identify transitions, and forward transition messages
-                try (VersionedRecordIterator<SpatMovementState> iterator = result.getResult()) {
-                    SpatMovementState previousState = null;
+                try (VersionedRecordIterator<EventStateProgressionState> iterator = result.getResult()) {
+                    EventStateProgressionState previousState = null;
 
                     while (iterator.hasNext()) {
-                        final VersionedRecord<SpatMovementState> state = iterator.next();
-                        final SpatMovementState thisState = state.value();
+                        final VersionedRecord<EventStateProgressionState> state = iterator.next();
+                        final EventStateProgressionState thisState = state.value();
                         if (previousState != null && previousState.getPhaseState() != thisState.getPhaseState()) {
 
                             if (parameters.isDebug()) {
@@ -102,10 +123,11 @@ public class EventStateProgressionProcessor
 
                             latestTransitionStore.put(record.key(), record.timestamp());
 
-                            // Transition detected,
                             context().forward(record
                                     .withTimestamp(state.timestamp())
-                                    .withValue(new SpatMovementStateTransition(previousState, thisState)));
+                                    .withValue(new SpatMovementStateTransition(
+                                            previousState.toSpatMovementState(),
+                                            thisState.toSpatMovementState())));
 
                         }
                         previousState = thisState;
@@ -114,8 +136,9 @@ public class EventStateProgressionProcessor
             } else {
                 log.error("Failed to query state store: {}", result.getFailureMessage());
             }
-        }else{
-            log.warn("Skipping Query for Event State Progression Processor because start time " + startTime + " did not happen before end time: " + excludeGracePeriod);
+        } else if (parameters.isDebug()) {
+            log.warn("Skipping Query for Event State Progression Processor because start time {} did not happen before end time: {}",
+                    startTime, excludeGracePeriod);
         }
     }
 

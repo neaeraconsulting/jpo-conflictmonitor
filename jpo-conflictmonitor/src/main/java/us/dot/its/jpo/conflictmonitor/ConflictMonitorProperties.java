@@ -1076,7 +1076,10 @@ public class ConflictMonitorProperties implements EnvironmentAware  {
       streamProps.put(StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG,
             AlwaysContinueProductionExceptionHandler.class.getName());
 
-      streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamsConfigNumStreamThreads);
+      // 0 means auto (sized later by StreamsPropertiesFactory from topic partitions).
+      // Non-Streams callers (Admin/producer) fall back to 1 when auto is selected.
+      streamProps.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG,
+              streamsConfigNumStreamThreads > 0 ? streamsConfigNumStreamThreads : 1);
 
       streamProps.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, streamsConfigReplicationFactor);
       streamProps.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), streamsConfigAcks);

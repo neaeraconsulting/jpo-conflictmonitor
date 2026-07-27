@@ -232,7 +232,7 @@ public class IntersectionEventTopology
 
     private static BsmAggregator getBsmsByTimeVehicle(ReadOnlyWindowStore<BsmIntersectionIdKey, ProcessedBsm<Point>> bsmWindowStore,
                                                       Instant start, Instant end, BsmIntersectionIdKey key){
-        logger.info("getBsmsByTimeVehicle: Start: {}, End: {}, key: {}", start, end, key);
+        logger.debug("getBsmsByTimeVehicle: Start: {}, End: {}, key: {}", start, end, key);
         final String rsuId = key.getRsuId();
         final String vehicleId = key.getBsmId();
         final int intersectionId = key.getIntersectionId();
@@ -274,7 +274,7 @@ public class IntersectionEventTopology
         bsmRange.close();
         agg.sort();
 
-        logger.info("Found {} BSMs", agg.getBsms().size());
+        logger.debug("Found {} BSMs", agg.getBsms().size());
 
         return agg;
     }
@@ -282,7 +282,7 @@ public class IntersectionEventTopology
     private static SpatAggregator getSpatByTime(ReadOnlyWindowStore<RsuIntersectionKey, ProcessedSpat> spatWindowStore, Instant start,
                                                 Instant end, RsuIntersectionKey key){
 
-        logger.info("getSpatByTime: Start: {}, End: {}, Key: {}", start, end, key);
+        logger.debug("getSpatByTime: Start: {}, End: {}, Key: {}", start, end, key);
         final int intersection = key.getIntersectionId();
         final int region = key.getRegion();
 
@@ -309,8 +309,8 @@ public class IntersectionEventTopology
         spatRange.close();
         spatAggregator.sort();
 
-        logger.info("Total SPATs: {}", allSpats.size());
-        logger.info("Found {} SPATs", spatAggregator.getSpats().size());
+        logger.debug("Total SPATs: {}", allSpats.size());
+        logger.debug("Found {} SPATs", spatAggregator.getSpats().size());
 
         return spatAggregator;
     }
@@ -326,13 +326,13 @@ public class IntersectionEventTopology
                 if (key.getRegion() > 0) {
                     // Non-test region specified, get matching region MAP
                     if (key.getRegion() == storedKey.getRegion() && key.getIntersectionId() == storedKey.getIntersectionId()) {
-                        logger.info("Found MAP intersectionID = {}, region = {}", storedKey.getIntersectionId(), storedKey.getRegion());
+                        logger.debug("Found MAP intersectionID = {}, region = {}", storedKey.getIntersectionId(), storedKey.getRegion());
                         return kvp.value;
                     }
                 } else {
                     // No region, or test region; get first MAP matching the intersectionID ignoring the region
                     if (key.getIntersectionId() == storedKey.getIntersectionId()) {
-                        logger.info("Found MAP intersectionID = {}, region = {}", storedKey.getIntersectionId(), storedKey.getRegion());
+                        logger.debug("Found MAP intersectionID = {}, region = {}", storedKey.getIntersectionId(), storedKey.getRegion());
                         return kvp.value;
                     }
                 }
@@ -458,10 +458,10 @@ public class IntersectionEventTopology
                 }
 
 
-                logger.info("Detected Vehicle Event");
-                logger.info("Vehicle ID: {}", key.getBsmId());
-                logger.info("Captured Bsms: {}", bsms.getBsms().size());
-                logger.info("Captured Spats: {}", spats.getSpats().size());
+                logger.debug("Detected Vehicle Event");
+                logger.debug("Vehicle ID: {}", key.getBsmId());
+                logger.debug("Captured Bsms: {}", bsms.getBsms().size());
+                logger.debug("Captured Spats: {}", spats.getSpats().size());
 
                 return result;
             }
@@ -493,7 +493,6 @@ public class IntersectionEventTopology
             }
         );
 
-        logger.info("LaneDirectionOfTravelEventStream: {}", laneDirectionOfTravelEventStream);
         laneDirectionOfTravelEventStream.to(
             conflictMonitorProps.getKafkaTopicCmLaneDirectionOfTravelEvent(), 
             Produced.with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
@@ -517,7 +516,7 @@ public class IntersectionEventTopology
                         event.setSource(value.getSource());
                         result.add(new KeyValue<>(key, event));
                     }else{
-                        logger.info("No Lane Connection of Travel Event Found");
+                        logger.debug("No Lane Connection of Travel Event Found");
                     }
                 }
                 return result;
@@ -635,10 +634,10 @@ public class IntersectionEventTopology
         }
         if (storedBsmEvent == null) return true;
         long interval = Math.abs(storedBsmEvent.getStartingBsmTimestamp() - bsmEvent.getStartingBsmTimestamp());
-        logger.info("Stored BSM event exists for key {}. BSMEvent interval = {}", key, interval);
+        logger.debug("Stored BSM event exists for key {}. BSMEvent interval = {}", key, interval);
         boolean filter = interval > BSM_EVENT_INTERVAL_MS;
         if (!filter) {
-            logger.info("The duplicate BSMEvent interval is less than {} ms, it will be filtered out", BSM_EVENT_INTERVAL_MS);
+            logger.debug("The duplicate BSMEvent interval is less than {} ms, it will be filtered out", BSM_EVENT_INTERVAL_MS);
         }
         return filter;
     }
@@ -657,7 +656,7 @@ public class IntersectionEventTopology
                 long interval = currentTimestamp - storedTimestamp;
                 if (interval > BSM_EVENT_MAX_AGE_MS) {
                     tombstones.add(KeyValue.pair(storedKey, (BsmEvent)null));
-                    logger.info("Old BSMEvent with key {}, timestamp {} will be removed from deduplicate store",
+                    logger.debug("Old BSMEvent with key {}, timestamp {} will be removed from deduplicate store",
                             storedKey, storedTimestamp);
                 }
             }

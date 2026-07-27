@@ -8,8 +8,6 @@ import us.dot.its.jpo.geojsonconverter.pojos.spat.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import static us.dot.its.jpo.conflictmonitor.monitor.utils.DateTimeUtils.toMillis;
-
 /**
  * Key information from one movement state/event from a SPaT in a flat format
  */
@@ -64,33 +62,26 @@ public class SpatMovementState {
     /**
      * Helper function to create SpatMovementState objects from the ProcessedSpat message. 
      */
+    /**
+     * Builds slim movement states used for phase-transition detection
+     * (signal group, phase, event timestamp only).
+     */
     public static List<SpatMovementState> fromProcessedSpat(ProcessedSpat spat) {
         List<SpatMovementState> stateList = new ArrayList<>();
         if (spat.getStates() == null) return stateList;
-        final long ingestTime = SpatUtils.getOdeReceivedAt(spat);
         final long eventTime = SpatUtils.getTimestamp(spat);
         for (ProcessedMovementState state : spat.getStates()) {
             var sms = new SpatMovementState();
-            sms.setOdeReceivedAt(ingestTime);
             sms.setUtcTimeStamp(eventTime);
-            int revision = spat.getRevision() != null ? spat.getRevision() : -1;
-            sms.setRevision(revision);
             int signalGroup = state.getSignalGroup() != null ? state.getSignalGroup() : -1;
             sms.setSignalGroup(signalGroup);
             List<ProcessedMovementEvent> movementEventList = state.getStateTimeSpeed();
             ProcessedMovementEvent firstMovementEvent =
                     movementEventList != null && !movementEventList.isEmpty() ? movementEventList.getFirst() : null;
-            if  (firstMovementEvent != null) {
+            if (firstMovementEvent != null) {
                 sms.setPhaseState(firstMovementEvent.getEventState());
-                TimingChangeDetails timing = firstMovementEvent.getTiming();
-                if (timing != null) {
-                    sms.setStartTime(toMillis(timing.getStartTime()));
-                    sms.setMaxEndTime(toMillis(timing.getMaxEndTime()));
-                    sms.setMinEndTime(toMillis(timing.getMinEndTime()));
-                }
             }
             stateList.add(sms);
-
         }
         return stateList;
     }

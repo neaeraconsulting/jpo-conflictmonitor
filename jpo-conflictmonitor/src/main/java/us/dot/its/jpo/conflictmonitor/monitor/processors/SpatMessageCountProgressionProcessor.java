@@ -15,18 +15,18 @@ import org.apache.kafka.streams.state.VersionedRecordIterator;
 
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatMessageCountState;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Slf4j
 public class SpatMessageCountProgressionProcessor extends ContextualProcessor<RsuIntersectionKey, ProcessedSpat, RsuIntersectionKey, SpatMessageCountProgressionEvent> {
 
-    private VersionedKeyValueStore<RsuIntersectionKey, ProcessedSpat> stateStore;
-    private KeyValueStore<RsuIntersectionKey, ProcessedSpat> lastProcessedStateStore;
+    private VersionedKeyValueStore<RsuIntersectionKey, SpatMessageCountState> stateStore;
+    private KeyValueStore<RsuIntersectionKey, SpatMessageCountState> lastProcessedStateStore;
     private final SpatMessageCountProgressionParameters parameters;
 
     public SpatMessageCountProgressionProcessor(SpatMessageCountProgressionParameters parameters) {
@@ -44,19 +44,40 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
     public void process(Record<RsuIntersectionKey, ProcessedSpat> record) {
         RsuIntersectionKey key = record.key();
         ProcessedSpat value = record.value();
+        if (value == null) {
+            return;
+        }
         long timestamp = record.timestamp();
-    
+        SpatMessageCountState currentState = SpatMessageCountState.fromProcessedSpat(value);
+
+        VersionedRecord<SpatMessageCountState> latest = stateStore.get(key);
+        if (latest != null) {
+            SpatMessageCountState previous = latest.value();
+            // Identical repeat — no progression event possible
+            if (currentState.sameRevisionAndContent(previous)) {
+                return;
+            }
+            // Common 10 Hz path: content changed and msgCnt incremented by 1 (incl. wrap 127→0)
+            boolean validIncrement = previous.getContentHash() != currentState.getContentHash()
+                    && (previous.getRevision() + 1) % 128 == currentState.getRevision();
+            if (validIncrement) {
+                stateStore.put(key, currentState, timestamp);
+                lastProcessedStateStore.put(key, currentState);
+                return;
+            }
+        }
+
         // Insert new record into the buffer
-        stateStore.put(key, value, timestamp);
-    
+        stateStore.put(key, currentState, timestamp);
+
         // Query the buffer, excluding the grace period relative to stream time "now".
         Instant excludeGracePeriod =
                 Instant.ofEpochMilli(context().currentStreamTimeMs())
                         .minusMillis(parameters.getBufferGracePeriodMs());
-    
-        ProcessedSpat lastProcessedSpat = lastProcessedStateStore.get(key);
+
+        SpatMessageCountState lastProcessedSpat = lastProcessedStateStore.get(key);
         Instant startTime;
-        if (lastProcessedSpat != null) {
+        if (lastProcessedSpat != null && lastProcessedSpat.getUtcTimeStamp() != null) {
             startTime = Instant.ofEpochMilli(lastProcessedSpat.getUtcTimeStamp().toInstant().toEpochMilli());
         } else {
             // No transitions yet, base start time on time window
@@ -68,37 +89,43 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
         if (excludeGracePeriod.isBefore(startTime)) {
             excludeGracePeriod = startTime;
         }
-        
-        var query = MultiVersionedKeyQuery.<RsuIntersectionKey, ProcessedSpat>withKey(record.key())
+
+        var query = MultiVersionedKeyQuery.<RsuIntersectionKey, SpatMessageCountState>withKey(record.key())
             .fromTime(startTime.minusMillis(1)) // Add a small buffer to include the exact startTime record
             .toTime(excludeGracePeriod)
             .withAscendingTimestamps();
 
-        QueryResult<VersionedRecordIterator<ProcessedSpat>> result = stateStore.query(query,
+        QueryResult<VersionedRecordIterator<SpatMessageCountState>> result = stateStore.query(query,
                 PositionBound.unbounded(),
                 new QueryConfig(false));
 
         if (result.isSuccess()) {
-            try (VersionedRecordIterator<ProcessedSpat> iterator = result.getResult()) {
-                ProcessedSpat previousState = null;
+            try (VersionedRecordIterator<SpatMessageCountState> iterator = result.getResult()) {
+                SpatMessageCountState previousState = null;
                 int recordCount = 0;
 
                 while (iterator.hasNext()) {
-                    final VersionedRecord<ProcessedSpat> state = iterator.next();
-                    final ProcessedSpat thisState = state.value();
+                    final VersionedRecord<SpatMessageCountState> state = iterator.next();
+                    final SpatMessageCountState thisState = state.value();
                     recordCount++;
 
                     // Skip records older than the last processed state
-                    if (lastProcessedSpat != null && thisState.getUtcTimeStamp().isBefore(lastProcessedSpat.getUtcTimeStamp())) {
+                    if (lastProcessedSpat != null
+                            && lastProcessedSpat.getUtcTimeStamp() != null
+                            && thisState.getUtcTimeStamp() != null
+                            && thisState.getUtcTimeStamp().isBefore(lastProcessedSpat.getUtcTimeStamp())) {
                         continue;
                     }
 
-                    if (previousState != null) {
-                        long timeDifference = thisState.getUtcTimeStamp().toInstant().toEpochMilli() - previousState.getUtcTimeStamp().toInstant().toEpochMilli();
+                    if (previousState != null
+                            && previousState.getUtcTimeStamp() != null
+                            && thisState.getUtcTimeStamp() != null) {
+                        long timeDifference = thisState.getUtcTimeStamp().toInstant().toEpochMilli()
+                                - previousState.getUtcTimeStamp().toInstant().toEpochMilli();
 
                         if (timeDifference < parameters.getBufferTimeMs()) {
-                            int previousHash = calculateHash(previousState);
-                            int currentHash = calculateHash(thisState);
+                            int previousHash = previousState.getContentHash();
+                            int currentHash = thisState.getContentHash();
                             int previousRevision = previousState.getRevision();
                             int currentRevision = thisState.getRevision();
 
@@ -120,26 +147,8 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
             }
         }
     }
-    
-    private int calculateHash(ProcessedSpat spat) {
 
-        ZonedDateTime utcTimeStamp = spat.getUtcTimeStamp();
-        int revision = spat.getRevision();
-        String odeReceivedAt = spat.getOdeReceivedAt();
-        spat.setUtcTimeStamp(null);
-        spat.setRevision(0);
-        spat.setOdeReceivedAt(null);
-
-        int hash = spat.hashCode();
-        
-        spat.setUtcTimeStamp(utcTimeStamp);
-        spat.setRevision(revision);
-        spat.setOdeReceivedAt(odeReceivedAt);
-
-        return hash;
-    }
-
-    private SpatMessageCountProgressionEvent createEvent(ProcessedSpat previousState, ProcessedSpat thisState) {
+    private SpatMessageCountProgressionEvent createEvent(SpatMessageCountState previousState, SpatMessageCountState thisState) {
         SpatMessageCountProgressionEvent event = new SpatMessageCountProgressionEvent();
         event.setMessageType("SPaT");
         event.setMessageCountA(previousState.getRevision());

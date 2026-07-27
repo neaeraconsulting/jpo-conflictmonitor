@@ -8,9 +8,13 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.Properties;
 
 import us.dot.its.jpo.conflictmonitor.ConflictMonitorProperties;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.AggregationParameters;
@@ -62,6 +66,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.metrics.StreamsPropertiesFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.CommonMetricsParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithmFactory;
@@ -115,9 +120,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatVal
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionParameters;
@@ -137,6 +142,7 @@ public class MonitorServiceControllerTest {
     @Mock KafkaTemplate<String, String> kafkaTemplate;
     @Mock ConfigTopology configTopology;
     @Mock ConfigParameters configParameters;
+    @Mock StreamsPropertiesFactory streamsPropertiesFactory;
     @Mock
     ConfigInitializer configInitializer;
 
@@ -268,7 +274,7 @@ public class MonitorServiceControllerTest {
     StopLineStopAssessmentParameters stopLineStopAssessmentParameters = new StopLineStopAssessmentParameters();
 
     @Mock SpatMessageCountProgressionAlgorithmFactory spatMessageCountProgressionAlgorithmFactory;
-    @Mock SpatMessageCountProgressionAlgorithm spatMessageCountProgressionAlgorithm;
+    @Mock SpatMessageCountProgressionStreamsAlgorithm spatMessageCountProgressionAlgorithm;
     SpatMessageCountProgressionParameters spatMessageCountProgressionParameters = new SpatMessageCountProgressionParameters();
 
     @Mock MapMessageCountProgressionAlgorithmFactory mapMessageCountProgressionAlgorithmFactory;
@@ -506,6 +512,7 @@ public class MonitorServiceControllerTest {
         when(eventAlgorithmFactory.getAlgorithm(defaultAlgo)).thenReturn(eventAlgorithm);
         when(conflictMonitorProperties.getEventParameters()).thenReturn(eventParameters);
 
+        when(streamsPropertiesFactory.create(anyString(), any(String[].class))).thenReturn(new Properties());
 
         var monitorServiceController = new MonitorServiceController(
                 conflictMonitorProperties,
@@ -513,7 +520,8 @@ public class MonitorServiceControllerTest {
                 configTopology,
                 configParameters,
                 configInitializer,
-                mapIndex
+                mapIndex,
+                streamsPropertiesFactory
         );
         assertThat(monitorServiceController, notNullValue());
 
@@ -521,7 +529,9 @@ public class MonitorServiceControllerTest {
         verify(mapValidationAlgorithm, times(1)).start();
         verify(spatValidationAlgorithm, times(1)).start();
         verify(rtcmValidationAlgorithm, times(1)).start();
-//        verify(spatTimeChangeDetailsAlgorithm, times(1)).start();
+        verify(spatValidationAlgorithm, times(1)).setSpatTimeChangeDetailsAlgorithm(spatTimeChangeDetailsAlgorithm);
+        verify(spatValidationAlgorithm, times(1)).setSpatMessageCountProgressionAlgorithm(spatMessageCountProgressionAlgorithm);
+        verify(spatValidationAlgorithm, times(1)).setEventStateProgressionAlgorithm(spatTransitionAlgorithm);
         verify(mapSpatMessageAssessmentAlgorithm, times(1)).start();
         //verify(bsmEventAlgorithm, times(1)).start();
         //verify(messageIngestAlgorithm, times(1)).start();
@@ -531,7 +541,6 @@ public class MonitorServiceControllerTest {
         verify(connectionOfTravelAssessmentAlgorithm, times(1)).start();
         verify(stopLineStopAssessmentAlgorithm, times(1)).start();
         verify(mapMessageCountProgressionAlgorithm, times(1)).start();
-        verify(spatMessageCountProgressionAlgorithm, times(1)).start();
         verify(rtcmMessageCountProgressionAlgorithm, times(1)).start();
         verify(priorityPreemptionRequestAlgorithm, times(1)).start();
     }

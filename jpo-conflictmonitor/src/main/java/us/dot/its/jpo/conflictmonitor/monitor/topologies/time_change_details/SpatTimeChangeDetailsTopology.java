@@ -5,14 +5,13 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsBuilder;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationKey;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationStreamsAlgorithm;
@@ -26,6 +25,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.TimeChangeDet
 import us.dot.its.jpo.conflictmonitor.monitor.processors.SpatSequenceProcessorSupplier;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
+import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
+import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,10 +36,11 @@ import static us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes.Rs
 
 @Component(DEFAULT_SPAT_TIME_CHANGE_DETAILS_ALGORITHM)
 public class SpatTimeChangeDetailsTopology
-        extends BaseStreamsTopology<SpatTimeChangeDetailsParameters>
+        extends BaseStreamsBuilder<SpatTimeChangeDetailsParameters>
         implements SpatTimeChangeDetailsStreamsAlgorithm {
 
     private static final Logger logger = LoggerFactory.getLogger(SpatTimeChangeDetailsTopology.class);
+
     @Override
     protected Logger getLogger() {
         return logger;
@@ -47,9 +49,10 @@ public class SpatTimeChangeDetailsTopology
     private TimeChangeDetailsAggregationStreamsAlgorithm aggregationAlgorithm;
 
     @Override
-    public Topology buildTopology() {
-
-        StreamsBuilder builder = new StreamsBuilder();
+    public void buildTopology(StreamsBuilder builder, KStream<RsuIntersectionKey, ProcessedSpat> inputStream) {
+        if (parameters.isAggregateEvents() && aggregationAlgorithm == null) {
+            throw new IllegalStateException("Aggregation algorithm is not set.");
+        }
 
         builder.addStateStore(
                 Stores.keyValueStoreBuilder(
@@ -59,13 +62,7 @@ public class SpatTimeChangeDetailsTopology
                 )
         );
 
-        var timeChangeEventStream = builder
-                .stream(
-                    parameters.getSpatInputTopicName(),
-                    Consumed.with(
-                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat()
-                    ))
+        var timeChangeEventStream = inputStream
                 .process(new SpatSequenceProcessorSupplier(parameters),
                         parameters.getSpatTimeChangeDetailsStateStoreName());
 
@@ -108,18 +105,14 @@ public class SpatTimeChangeDetailsTopology
             // Notifications
             buildNotificationTopology(timeChangeEventStream);
         }
-
-        return builder.build(streamsProperties);
     }
 
     // Notifications of non-aggregated events
     private void buildNotificationTopology(KStream<RsuIntersectionSignalGroupKey, TimeChangeDetailsEvent> timeChangeEventStream) {
-        //timeChangeEventStream.print(Printed.toSysOut());
-
         KStream<String, TimeChangeDetailsNotification> timeChangeDetailsNotificationStream = timeChangeEventStream
                 .flatMap(
                         (key, value) -> {
-                            List<KeyValue<String, TimeChangeDetailsNotification>> result = new ArrayList<KeyValue<String, TimeChangeDetailsNotification>>();
+                            List<KeyValue<String, TimeChangeDetailsNotification>> result = new ArrayList<>();
 
                             TimeChangeDetailsNotification notification = new TimeChangeDetailsNotification();
                             notification.setEvent(value);
@@ -185,14 +178,6 @@ public class SpatTimeChangeDetailsTopology
             this.aggregationAlgorithm = aggregationStreamsAlgorithm;
         } else {
             throw new IllegalArgumentException("Aggregation algorithm must be a Streams algorithm");
-        }
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-        if (aggregationAlgorithm == null) {
-            throw new IllegalStateException("Aggregation algorithm is not set.");
         }
     }
 }

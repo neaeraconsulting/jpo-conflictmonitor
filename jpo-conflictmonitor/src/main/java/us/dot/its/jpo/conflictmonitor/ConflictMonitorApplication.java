@@ -25,12 +25,16 @@ import javax.management.ObjectName;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.metrics.KafkaMetricsAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 
-@SpringBootApplication
+// Exclude Kafka Micrometer binders: they register the same meter names with different tag
+// keys (e.g. with/without "topic"), which makes /actuator/prometheus return HTTP 500 while
+// /actuator/health and /actuator/metrics still work.
+@SpringBootApplication(exclude = { KafkaMetricsAutoConfiguration.class })
 @EnableConfigurationProperties(ConflictMonitorProperties.class)
 public class ConflictMonitorApplication {
 

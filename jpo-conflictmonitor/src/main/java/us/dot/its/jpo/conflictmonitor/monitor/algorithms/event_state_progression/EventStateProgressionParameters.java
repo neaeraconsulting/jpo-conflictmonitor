@@ -54,6 +54,11 @@ public class EventStateProgressionParameters {
         updateType = READ_ONLY)
     String latestTransitionStoreName;
 
+    @ConfigData(key = "event.state.progression.latestPhaseStoreName",
+        description = "Name of key-value store for last observed phase (unchanged-phase fast path)",
+        updateType = READ_ONLY)
+    String latestPhaseStoreName = "latestPhaseStateStore";
+
     @ConfigData(key = "event.state.progression.bufferTimeMs",
         description = "The size of the spat buffer.  Must be larger than the expected interval between spats and expected jitter time.",
         units = UnitsEnum.MILLISECONDS,

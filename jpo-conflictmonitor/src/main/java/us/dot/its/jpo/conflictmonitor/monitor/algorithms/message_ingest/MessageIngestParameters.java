@@ -68,5 +68,39 @@ public class MessageIngestParameters {
         description = "The name of the spatially indexed global state store for MAP bounding boxes.",
         updateType = READ_ONLY)
     String mapSpatialIndexStoreName;
-    
+
+    @ConfigData(key = "message.ingest.materializeBsmWindow",
+        description = "Materialize BSM window store for IntersectionEvent vehicle snapshots. Disable when BSM assessments are unused.",
+        updateType = READ_ONLY)
+    boolean materializeBsmWindow = true;
+
+    @ConfigData(key = "message.ingest.materializeSpatWindow",
+        description = "Materialize SPaT window store for IntersectionEvent vehicle snapshots. Disable when BSM assessments are unused (EventStateProgression still runs).",
+        updateType = READ_ONLY)
+    boolean materializeSpatWindow = true;
+
+    @ConfigData(key = "message.ingest.enableEventStateProgression",
+        description = "Run illegal SPaT phase-transition detection inside MessageIngest",
+        updateType = READ_ONLY)
+    boolean enableEventStateProgression = true;
+
+    @ConfigData(key = "message.ingest.bsmWindowSizeMs",
+        description = "BSM window store segment size in milliseconds",
+        updateType = READ_ONLY)
+    long bsmWindowSizeMs = 1000;
+
+    @ConfigData(key = "message.ingest.bsmWindowGraceMs",
+        description = "BSM window store grace period in milliseconds",
+        updateType = READ_ONLY)
+    long bsmWindowGraceMs = 60000;
+
+    @ConfigData(key = "message.ingest.spatWindowSizeMs",
+        description = "SPaT window store segment size in milliseconds",
+        updateType = READ_ONLY)
+    long spatWindowSizeMs = 1000;
+
+    @ConfigData(key = "message.ingest.spatWindowGraceMs",
+        description = "SPaT window store grace period in milliseconds",
+        updateType = READ_ONLY)
+    long spatWindowGraceMs = 10000;
 }

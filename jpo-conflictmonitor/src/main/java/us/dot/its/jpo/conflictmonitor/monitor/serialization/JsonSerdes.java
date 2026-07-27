@@ -49,7 +49,9 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.*;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.priority_preemption_request.*;
+import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatMessageCountState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimeChangeDetailAggregator;
+import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.EventStateProgressionState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.RsuIntersectionSignalGroupKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementState;
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
@@ -165,6 +167,12 @@ public class JsonSerdes {
         return Serdes.serdeFrom(
             new JsonSerializer<SpatTimeChangeDetailAggregator>(),
             new JsonDeserializer<>(SpatTimeChangeDetailAggregator.class));
+    }
+
+    public static Serde<SpatMessageCountState> SpatMessageCountState() {
+        return Serdes.serdeFrom(
+            new JsonSerializer<SpatMessageCountState>(),
+            new JsonDeserializer<>(SpatMessageCountState.class));
     }
 
     public static Serde<SpatMap> SpatMap() {
@@ -422,6 +430,12 @@ public class JsonSerdes {
         return Serdes.serdeFrom(
                 new JsonSerializer<SpatMovementState>(),
                 new JsonDeserializer<>(SpatMovementState.class));
+    }
+
+    public static Serde<EventStateProgressionState> EventStateProgressionState() {
+        return Serdes.serdeFrom(
+                new JsonSerializer<EventStateProgressionState>(),
+                new JsonDeserializer<>(EventStateProgressionState.class));
     }
 
     public static Serde<EventStateProgressionEvent> EventStateProgressionEvent() {

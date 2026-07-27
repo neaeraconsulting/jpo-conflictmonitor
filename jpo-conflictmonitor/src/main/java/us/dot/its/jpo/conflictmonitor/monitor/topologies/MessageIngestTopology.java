@@ -74,114 +74,95 @@ public class MessageIngestTopology
     public void buildTopology(StreamsBuilder builder) {
 
         /*
-         * 
-         * 
-         *  BSM MESSAGES
-         * 
+         *  BSM MESSAGES — only when vehicle-assessment window store is enabled
          */
+        if (parameters.isMaterializeBsmWindow()) {
+            KStream<BsmIntersectionIdKey, ProcessedBsm<Point>> bsmJsonStream =
+                builder.stream(
+                    parameters.getBsmTopic(),
+                    Consumed.with(
+                                    JsonSerdes.BsmIntersectionIdKey(),
+                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm())
+                        .withTimestampExtractor(new BsmTimestampExtractor())
+                    );
 
-        //BSM Input Stream
-        // Ingest only BSMs within the intersection bounding box
-        KStream<BsmIntersectionIdKey, ProcessedBsm<Point>> bsmJsonStream =
-            builder.stream(
-                parameters.getBsmTopic(), 
-                Consumed.with(
-                                JsonSerdes.BsmIntersectionIdKey(),
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm())
-                    .withTimestampExtractor(new BsmTimestampExtractor())
-                );
+            KGroupedStream<BsmIntersectionIdKey, ProcessedBsm<Point>> bsmKeyGroup =
+                    bsmJsonStream.groupByKey(
+                            Grouped.with(
+                                    JsonSerdes.BsmIntersectionIdKey(),
+                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm()));
 
-        //Group up all of the BSM's based upon the new ID.
-        KGroupedStream<BsmIntersectionIdKey, ProcessedBsm<Point>> bsmKeyGroup =
-                bsmJsonStream.groupByKey(
-                        Grouped.with(
-                                JsonSerdes.BsmIntersectionIdKey(),
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm()));
+            var bsmWindowed = bsmKeyGroup.windowedBy(TimeWindows.ofSizeAndGrace(
+                            Duration.ofMillis(parameters.getBsmWindowSizeMs()),
+                            Duration.ofMillis(parameters.getBsmWindowGraceMs())))
+            .reduce(
+                (oldValue, newValue) -> newValue,
+                Materialized.<BsmIntersectionIdKey, ProcessedBsm<Point>, WindowStore<Bytes, byte[]>>as(parameters.getBsmStoreName())
+                        .withKeySerde(JsonSerdes.BsmIntersectionIdKey())
+                        .withValueSerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm())
+                        .withLoggingDisabled()
+                        .withRetention(Duration.ofMinutes(10))
+            );
 
-        //Take the BSM's and Materialize them into a Temporal Time window. The length of the time window shouldn't matter much
-        //but enables kafka to temporally query the records later. If there are duplicate keys, the more recent value is taken.
-        var bsmWindowed = bsmKeyGroup.windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofMillis(1), Duration.ofMillis(60000)))
-        .reduce(
-            (oldValue, newValue)->{
-                System.out.println("Overwriting BSM");
-                return newValue;
-            },
-            Materialized.<BsmIntersectionIdKey, ProcessedBsm<Point>, WindowStore<Bytes, byte[]>>as(parameters.getBsmStoreName())
-                    .withKeySerde(JsonSerdes.BsmIntersectionIdKey())
-                    .withValueSerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedBsm())
-                    .withCachingDisabled()
-                    // .withLoggingEnabled(loggingConfig)
-                    .withLoggingDisabled()
-                    .withRetention(Duration.ofMinutes(10))
-        );
-
-        // Check partition of windowed data
-        if (parameters.isDebug()) {
-            bsmWindowed.toStream().process(() -> new DiagnosticProcessor<>("Windowed BSMs", logger));
+            if (parameters.isDebug()) {
+                bsmWindowed.toStream().process(() -> new DiagnosticProcessor<>("Windowed BSMs", logger));
+            }
+        } else {
+            logger.info("Skipping BSM window materialization (message.ingest.materializeBsmWindow=false)");
         }
 
 
          /*
-          *
-          *
-          *  SPAT MESSAGES
-          *
+          *  SPAT MESSAGES — only when vehicle-assessment window store needs them.
+          *  EventStateProgression is hosted by SpatValidationTopology (single consume).
           */
-
-
-
-        // SPaT Input Stream
-        KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream =
-            builder.stream(
-                parameters.getSpatTopic(), 
-                Consumed.with(
-                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat())
-                    .withTimestampExtractor(new SpatTimestampExtractor())
-                )   // Filter out null SPATs
-                    .filter((key, value) -> {
-                        if (value == null) {
-                            logger.error("Encountered null SPAT");
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    });
-
-        // Plug Illegal Spat Transition check into here since it needs the stream with event timestamp
-        spatTransitionAlgorithm.buildTopology(builder, processedSpatStream);
-
-
-        if (parameters.isDebug()) {
-            processedSpatStream.process(() -> new DiagnosticProcessor<>("ProcessedSpats", logger));
+        if (parameters.isEnableEventStateProgression()) {
+            logger.info("EventStateProgression is hosted by SpatValidationTopology (not MessageIngest)");
         }
+        if (parameters.isMaterializeSpatWindow()) {
+            KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream =
+                builder.stream(
+                    parameters.getSpatTopic(),
+                    Consumed.with(
+                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat())
+                        .withTimestampExtractor(new SpatTimestampExtractor())
+                    )
+                        .filter((key, value) -> {
+                            if (value == null) {
+                                logger.error("Encountered null SPAT");
+                                return false;
+                            }
+                            return true;
+                        });
 
-        // Group up all of the Spats's based upon the new key. Generally speaking this shouldn't change anything as the Spats's have unique keys
-        KGroupedStream<RsuIntersectionKey, ProcessedSpat> spatKeyGroup =
-                processedSpatStream.groupByKey(
-                        Grouped.with(
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat()));
+            if (parameters.isDebug()) {
+                processedSpatStream.process(() -> new DiagnosticProcessor<>("ProcessedSpats", logger));
+            }
 
+            KGroupedStream<RsuIntersectionKey, ProcessedSpat> spatKeyGroup =
+                    processedSpatStream.groupByKey(
+                            Grouped.with(
+                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat()));
 
+            var spatWindowed = spatKeyGroup.windowedBy(TimeWindows.ofSizeAndGrace(
+                            Duration.ofMillis(parameters.getSpatWindowSizeMs()),
+                            Duration.ofMillis(parameters.getSpatWindowGraceMs())))
+            .reduce(
+                (oldValue, newValue) -> newValue,
+                Materialized.<RsuIntersectionKey, ProcessedSpat, WindowStore<Bytes, byte[]>>as(parameters.getSpatStoreName())
+                        .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
+                        .withValueSerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat())
+                        .withLoggingDisabled()
+                        .withRetention(Duration.ofMinutes(5))
+            );
 
-        // //Take the Spats's and Materialize them into a Temporal Time window. The length of the time window shouldn't matter much
-        // //but enables kafka to temporally query the records later. If there are duplicate keys, the more recent value is taken.
-        var spatWindowed = spatKeyGroup.windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofMillis(1), Duration.ofMillis(10000)))
-        .reduce(
-            (oldValue, newValue)->{
-                    return newValue;
-            },
-            Materialized.<RsuIntersectionKey, ProcessedSpat, WindowStore<Bytes, byte[]>>as(parameters.getSpatStoreName())
-                    .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
-                    .withValueSerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat())
-                    .withCachingDisabled()
-                    .withLoggingDisabled()
-                    .withRetention(Duration.ofMinutes(5))
-        );
-
-        if (parameters.isDebug()) {
-            spatWindowed.toStream().process(() -> new DiagnosticProcessor<>("Windowed SPATs", logger));
+            if (parameters.isDebug()) {
+                spatWindowed.toStream().process(() -> new DiagnosticProcessor<>("Windowed SPATs", logger));
+            }
+        } else {
+            logger.info("Skipping MessageIngest SPaT consume (message.ingest.materializeSpatWindow=false)");
         }
 
         //

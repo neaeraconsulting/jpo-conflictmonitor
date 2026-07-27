@@ -1,5 +1,7 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
@@ -10,6 +12,7 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.BaseStreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.*;
@@ -40,6 +43,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentConstants.DEFAULT_MAP_SPAT_MESSAGE_ASSESSMENT_ALGORITHM;
 
@@ -57,27 +61,53 @@ public class MapSpatMessageAssessmentTopology
     private RevocableEnabledLaneAlignmentStreamsAlgorithm revocableEnabledLaneAlignmentAlgorithm;
 
     private final MapDerivedAssessmentCache.Manager assessmentCacheManager = new MapDerivedAssessmentCache.Manager();
+    /** Last SPaT phase/enabled-lane fingerprint per intersection; skip conflict eval when unchanged. */
+    private final ConcurrentHashMap<String, Long> lastConflictSpatFingerprint = new ConcurrentHashMap<>();
     private AlignmentEmitGate referenceAlignmentGate;
     private AlignmentEmitGate signalGroupAlignmentGate;
+
+    @Autowired(required = false)
+    private MeterRegistry meterRegistry;
+
+    private Timer signalStateConflictTimer;
 
     @Override
     protected Logger getLogger() {
         return logger;
     }
 
-    private ProcessedMovementPhaseState getSpatEventStateBySignalGroup(ProcessedSpat spat, int signalGroup) {
+    private Map<Integer, ProcessedMovementPhaseState> indexSpatEventStatesBySignalGroup(ProcessedSpat spat) {
+        Map<Integer, ProcessedMovementPhaseState> bySignalGroup = new HashMap<>();
         if (spat == null || spat.getStates() == null) {
-            return null;
+            return bySignalGroup;
         }
         for (ProcessedMovementState state : spat.getStates()) {
-            if (state.getSignalGroup() == signalGroup) {
-                List<ProcessedMovementEvent> movementEvents = state.getStateTimeSpeed();
-                if (movementEvents != null && !movementEvents.isEmpty()) {
-                    return movementEvents.getFirst().getEventState();
-                }
+            if (state.getSignalGroup() == null) {
+                continue;
+            }
+            List<ProcessedMovementEvent> movementEvents = state.getStateTimeSpeed();
+            if (movementEvents != null && !movementEvents.isEmpty()) {
+                bySignalGroup.put(state.getSignalGroup(), movementEvents.getFirst().getEventState());
             }
         }
-        return null;
+        return bySignalGroup;
+    }
+
+    /**
+     * Fingerprint of SPaT fields that affect signal-state conflict evaluation
+     * (phases + enabled lanes). Stable across 10 Hz repeats with unchanged phases.
+     */
+    static long conflictSpatFingerprint(
+            Map<Integer, ProcessedMovementPhaseState> spatStatesBySignalGroup,
+            Set<Integer> enabledLanes) {
+        long hash = 1L;
+        // TreeMap for stable ordering across calls
+        for (Map.Entry<Integer, ProcessedMovementPhaseState> entry
+                : new TreeMap<>(spatStatesBySignalGroup).entrySet()) {
+            hash = 31L * hash + Objects.hash(entry.getKey(), entry.getValue());
+        }
+        hash = 31L * hash + (enabledLanes != null ? enabledLanes.hashCode() : 0);
+        return hash;
     }
 
 //    private String hashLaneConnection(Integer intersectionID, int ingressOne, int ingressTwo, int egressOne, int egressTwo){
@@ -108,6 +138,82 @@ public class MapSpatMessageAssessmentTopology
         boolean ingressNotEnabled = !enabledLanes.contains(ingressId);
         boolean egressNotEnabled = !enabledLanes.contains(egressId);
         return (ingressIsRevocable && ingressNotEnabled) || (egressIsRevocable && egressNotEnabled);
+    }
+
+    private List<KeyValue<RsuIntersectionKey, SignalStateConflictEvent>> evaluateSignalStateConflicts(
+            RsuIntersectionKey key,
+            SpatMap value,
+            Set<ConnectedLanesPair> allowConcurrentPermissiveSet) {
+
+        ArrayList<KeyValue<RsuIntersectionKey, SignalStateConflictEvent>> events = new ArrayList<>();
+        if (value == null || value.getMap() == null || value.getSpat() == null) {
+            return events;
+        }
+
+        ProcessedMap<LineString> map = value.getMap();
+        ProcessedSpat spat = value.getSpat();
+
+        Set<Integer> enabledLanes = spat.getEnabledLanes() != null
+                ? new HashSet<>(spat.getEnabledLanes())
+                : Set.of();
+        Map<Integer, ProcessedMovementPhaseState> spatStatesBySignalGroup =
+                indexSpatEventStatesBySignalGroup(spat);
+
+        String cacheKey = key.toString();
+        long fingerprint = conflictSpatFingerprint(spatStatesBySignalGroup, enabledLanes);
+        Long previousFingerprint = lastConflictSpatFingerprint.put(cacheKey, fingerprint);
+        if (previousFingerprint != null && previousFingerprint == fingerprint) {
+            // Phases + enabled lanes unchanged — conflict outcomes cannot change
+            return events;
+        }
+
+        MapDerivedAssessmentCache cache = assessmentCacheManager.getOrBuild(
+                cacheKey, map, allowConcurrentPermissiveSet);
+
+        Set<Integer> revocableLaneIds = cache.getRevocableLaneIds();
+
+        for (ConflictingConnectionPair pair : cache.getConflictPairs()) {
+            boolean firstDisabled = isRevocableDisabled(
+                    pair.getFirstIngressLaneId(), pair.getFirstEgressLaneId(),
+                    revocableLaneIds, enabledLanes);
+            boolean secondDisabled = isRevocableDisabled(
+                    pair.getSecondIngressLaneId(), pair.getSecondEgressLaneId(),
+                    revocableLaneIds, enabledLanes);
+            if (firstDisabled || secondDisabled) {
+                log.debug("For key: {}, conflicting pair involves revocable disabled lanes. Skipping.", key);
+                continue;
+            }
+
+            ProcessedMovementPhaseState firstState = spatStatesBySignalGroup.get(pair.getFirstSignalGroup());
+            ProcessedMovementPhaseState secondState = spatStatesBySignalGroup.get(pair.getSecondSignalGroup());
+
+            if (firstState == null || secondState == null) {
+                continue;
+            }
+
+            if (doStatesConflict(firstState, secondState)) {
+                SignalStateConflictEvent event = new SignalStateConflictEvent();
+                event.setTimestamp(SpatTimestampExtractor.getSpatTimestamp(spat));
+                event.setRoadRegulatorID(cache.getRoadRegulatorId());
+                event.setIntersectionID(cache.getIntersectionId());
+                event.setFirstConflictingSignalGroup(pair.getFirstSignalGroup());
+                event.setSecondConflictingSignalGroup(pair.getSecondSignalGroup());
+                event.setFirstConflictingSignalState(firstState);
+                event.setSecondConflictingSignalState(secondState);
+                event.setSource(key.toString());
+
+                if (firstState.equals(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
+                        || firstState.equals(ProcessedMovementPhaseState.PROTECTED_CLEARANCE)) {
+                    event.setConflictType(secondState);
+                } else {
+                    event.setConflictType(firstState);
+                }
+
+                events.add(new KeyValue<>(key, event));
+            }
+        }
+
+        return events;
     }
 
     private List<KeyValue<String, IntersectionReferenceAlignmentEvent>> evaluateIntersectionReferenceAlignment(
@@ -184,6 +290,13 @@ public class MapSpatMessageAssessmentTopology
         referenceAlignmentGate = new AlignmentEmitGate(parameters.getAlignmentSampleIntervalMs());
         signalGroupAlignmentGate = new AlignmentEmitGate(parameters.getAlignmentSampleIntervalMs());
         assessmentCacheManager.clear();
+        lastConflictSpatFingerprint.clear();
+        if (meterRegistry != null) {
+            assessmentCacheManager.bindMetrics(meterRegistry);
+            signalStateConflictTimer = Timer.builder("cm.map_spat.signal_state_conflict")
+                    .description("Time spent evaluating SPaT states against cached MAP conflict pairs")
+                    .register(meterRegistry);
+        }
 
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -325,67 +438,16 @@ public class MapSpatMessageAssessmentTopology
         // Signal State Conflict Event Check — evaluate SPaT states against precomputed MAP conflict pairs
         KStream<RsuIntersectionKey, SignalStateConflictEvent> signalStateConflictEventStream = spatWithMap.flatMap(
                 (key, value) -> {
-
-                    ArrayList<KeyValue<RsuIntersectionKey, SignalStateConflictEvent>> events = new ArrayList<>();
-
-                    ProcessedMap<LineString> map = value.getMap();
-                    ProcessedSpat spat = value.getSpat();
-
-                    MapDerivedAssessmentCache cache = assessmentCacheManager.getOrBuild(
-                            key.toString(), map, allowConcurrentPermissiveSet);
-
-                    Set<Integer> revocableLaneIds = cache.getRevocableLaneIds();
-                    Set<Integer> enabledLanes = spat.getEnabledLanes() != null
-                            ? new HashSet<>(spat.getEnabledLanes())
-                            : Set.of();
-
-                    for (ConflictingConnectionPair pair : cache.getConflictPairs()) {
-                        boolean firstDisabled = isRevocableDisabled(
-                                pair.getFirstIngressLaneId(), pair.getFirstEgressLaneId(),
-                                revocableLaneIds, enabledLanes);
-                        boolean secondDisabled = isRevocableDisabled(
-                                pair.getSecondIngressLaneId(), pair.getSecondEgressLaneId(),
-                                revocableLaneIds, enabledLanes);
-                        if (firstDisabled || secondDisabled) {
-                            log.debug("For key: {}, conflicting pair involves revocable disabled lanes. Skipping.", key);
-                            continue;
-                        }
-
-                        ProcessedMovementPhaseState firstState = getSpatEventStateBySignalGroup(spat,
-                                pair.getFirstSignalGroup());
-                        ProcessedMovementPhaseState secondState = getSpatEventStateBySignalGroup(spat,
-                                pair.getSecondSignalGroup());
-
-                        if (firstState == null || secondState == null) {
-                            continue;
-                        }
-
-                        if (doStatesConflict(firstState, secondState)) {
-                            SignalStateConflictEvent event = new SignalStateConflictEvent();
-                            event.setTimestamp(SpatTimestampExtractor.getSpatTimestamp(spat));
-                            event.setRoadRegulatorID(cache.getRoadRegulatorId());
-                            event.setIntersectionID(cache.getIntersectionId());
-                            event.setFirstConflictingSignalGroup(pair.getFirstSignalGroup());
-                            event.setSecondConflictingSignalGroup(pair.getSecondSignalGroup());
-                            event.setFirstConflictingSignalState(firstState);
-                            event.setSecondConflictingSignalState(secondState);
-                            event.setSource(key.toString());
-
-                            if (firstState.equals(ProcessedMovementPhaseState.PROTECTED_MOVEMENT_ALLOWED)
-                                    || firstState.equals(ProcessedMovementPhaseState.PROTECTED_CLEARANCE)) {
-                                event.setConflictType(secondState);
-                            } else {
-                                event.setConflictType(firstState);
-                            }
-
-                            events.add(new KeyValue<>(key, event));
-                        }
+                    if (signalStateConflictTimer != null) {
+                        return signalStateConflictTimer.record(() ->
+                                evaluateSignalStateConflicts(key, value, allowConcurrentPermissiveSet));
                     }
-
-                    return events;
+                    return evaluateSignalStateConflicts(key, value, allowConcurrentPermissiveSet);
                 });
 
         // Revocable Enabled Lane Alignment Algorithm uses the joined Spat/Map stream (map present)
+        revocableEnabledLaneAlignmentAlgorithm.setAssessmentCacheManager(
+                assessmentCacheManager, allowConcurrentPermissiveSet);
         revocableEnabledLaneAlignmentAlgorithm.buildTopology(builder, spatWithMap);
 
         if (parameters.isAggregateSignalStateConflictEvents()) {

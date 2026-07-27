@@ -13,6 +13,8 @@ import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
 
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.time_change_details.spat.SpatTimeChangeDetailsStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
@@ -21,6 +23,10 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.Spat
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.timestamp_delta.SpatTimestampDeltaTopology;
 import us.dot.its.jpo.conflictmonitor.testutils.TopologyTestUtils;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.ProcessedValidationMessage;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
@@ -192,6 +198,16 @@ public class SpatValidationTopologyTest {
         var timestampParameters = getTimestampParameters();
         timestampTopology.setParameters(timestampParameters);
         spatValidationTopology.setTimestampDeltaAlgorithm(timestampTopology);
+
+        // TCD / msg-count plugins are covered by their own tests; stub for single-consume host wiring
+        SpatTimeChangeDetailsStreamsAlgorithm tcdPlugin = mock(SpatTimeChangeDetailsStreamsAlgorithm.class);
+        doNothing().when(tcdPlugin).buildTopology(any(), any());
+        spatValidationTopology.setSpatTimeChangeDetailsAlgorithm(tcdPlugin);
+
+        SpatMessageCountProgressionStreamsAlgorithm msgCountPlugin = mock(SpatMessageCountProgressionStreamsAlgorithm.class);
+        doNothing().when(msgCountPlugin).buildTopology(any(), any());
+        spatValidationTopology.setSpatMessageCountProgressionAlgorithm(msgCountPlugin);
+
         return spatValidationTopology.buildTopology();
     }
 

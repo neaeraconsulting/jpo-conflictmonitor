@@ -3,8 +3,12 @@ package us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KStream;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.models.Intersection.MapDerivedAssessmentCache;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
+import us.dot.its.jpo.conflictmonitor.monitor.models.concurrent_permissive.ConnectedLanesPair;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
+
+import java.util.Set;
 
 /**
  * Mock of Revocable Lanes subtopology that does nothing for testing other parts of the Map/Spat Message Alignment
@@ -29,6 +33,13 @@ public class MockRevocableEnabledLaneAlignmentStreamsAlgorithm implements Revoca
 
     @Override
     public void buildTopology(StreamsBuilder builder, KStream<RsuIntersectionKey, SpatMap> spatMapStream) {
+        // Do nothing
+    }
+
+    @Override
+    public void setAssessmentCacheManager(
+            MapDerivedAssessmentCache.Manager assessmentCacheManager,
+            Set<ConnectedLanesPair> allowConcurrentPermissiveSet) {
         // Do nothing
     }
 

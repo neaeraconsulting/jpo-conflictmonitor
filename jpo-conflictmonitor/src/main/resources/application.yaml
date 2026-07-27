@@ -5,6 +5,38 @@ artifactId: ^project.artifactId^
 version: ^project.version^
 server.port: 8082
 
+# Spring Boot Actuator / Micrometer
+# Preferred scrape URL: /health/prometheus (AppHealthMonitor; Prometheus text format)
+# /actuator/prometheus is intercepted by PrometheusScrapeFilter (also text format)
+# Debug: /health/prometheus-debug
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,threaddump,heapdump
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    # Built-in OpenMetrics negotiation returns HTTP 500; use filter + /health/prometheus instead
+    prometheus:
+      enabled: false
+  metrics:
+    tags:
+      application: conflictmonitor
+    enable:
+      jvm: true
+      process: true
+      system: true
+      kafka: false
+  prometheus:
+    metrics:
+      export:
+        properties:
+          io.prometheus.exporter.exemplarsOnAllMetricTypes: "false"
+spring.autoconfigure.exclude: org.springframework.boot.actuate.autoconfigure.metrics.KafkaMetricsAutoConfiguration
+
 # Kafka properties
 spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 spring.kafka.producer.properties.max-request.size: 2097152
@@ -21,11 +53,11 @@ streams-config-replication-factor: ${CM_STREAMS_CONFIG_REPLICATION_FACTOR:1}
 # 1 default, all recommended for robustness in prod
 # May use 0 or 1 for dev
 streams-config-acks: ${CM_STREAMS_CONFIG_ACKS:1}
-# Default 10 threads to match Connect default
-# Keep near partition count; excess threads add overhead when partitions are few
-streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:2}
+# 0 = auto-size num.stream.threads from each topology's input topic partition counts
+# Positive value = explicit override for all Streams apps
+streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:0}
 streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING:1048576}
-streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:100}
+streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:1000}
 streams-config-compression-type: ${CM_STREAMS_CONFIG_COMPRESSION_TYPE:zstd}
 # Amount of time to wait to try and increase batching
 # Default 5 ms
@@ -504,6 +536,16 @@ message.ingest:
   spatStoreName: SpatWindowStore
   mapStoreName: ProcessedMapWindowStore
   mapSpatialIndexStoreName: MapSpatialIndexStore
+  # Window stores only needed for IntersectionEvent vehicle snapshots (BSM assessments).
+  # Disable for SPaT/MAP-only CTI deployments to avoid RocksDB writes at full SPaT rate.
+  materializeBsmWindow: ${CM_MESSAGE_INGEST_MATERIALIZE_BSM_WINDOW:true}
+  materializeSpatWindow: ${CM_MESSAGE_INGEST_MATERIALIZE_SPAT_WINDOW:true}
+  enableEventStateProgression: ${CM_MESSAGE_INGEST_ENABLE_EVENT_STATE_PROGRESSION:true}
+  # Larger segments cut window-store churn; fetchAll time-range queries still work
+  bsmWindowSizeMs: ${CM_MESSAGE_INGEST_BSM_WINDOW_SIZE_MS:1000}
+  bsmWindowGraceMs: ${CM_MESSAGE_INGEST_BSM_WINDOW_GRACE_MS:60000}
+  spatWindowSizeMs: ${CM_MESSAGE_INGEST_SPAT_WINDOW_SIZE_MS:1000}
+  spatWindowGraceMs: ${CM_MESSAGE_INGEST_SPAT_WINDOW_GRACE_MS:10000}
 
 # MAP Message Count Progression
 map.message.count.progression:
@@ -582,6 +624,7 @@ event.state.progression:
   aggNotificationTopicName: topic.CmEventStateProgressionNotificationAggregation
   movementStateStoreName: spatTransitionStateStore
   latestTransitionStoreName: latestTransitionStateStore
+  latestPhaseStoreName: latestPhaseStateStore
   bufferTimeMs: 1000
   bufferGracePeriodMs: 100
   aggregateEvents: ${ENABLE_AGGREGATE_EVENT_STATE_PROGRESSION:false}

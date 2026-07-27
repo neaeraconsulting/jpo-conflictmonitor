@@ -18,13 +18,14 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_e
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.models.Intersection.MapDerivedAssessmentCache;
 import us.dot.its.jpo.conflictmonitor.monitor.models.SpatMap;
+import us.dot.its.jpo.conflictmonitor.monitor.models.concurrent_permissive.ConnectedLanesPair;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.LaneTypeAttributesMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentEventAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.RevocableEnabledLaneAlignmentNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.RevocableEnabledLaneAlignmentNotificationAggregation;
-import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.SignalGroupAlignmentNotificationAggregation;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.SpatUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
@@ -33,15 +34,13 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.ProcessedMap;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
-import us.dot.its.jpo.ode.plugin.j2735.J2735LaneTypeAttributes;
-
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentConstants.DEFAULT_REVOCABLE_ENABLED_LANE_ALIGNMENT_ALGORITHM;
-import static us.dot.its.jpo.conflictmonitor.monitor.utils.ProcessedMapUtils.*;
+import static us.dot.its.jpo.conflictmonitor.monitor.utils.ProcessedMapUtils.getLaneTypeAttributesMap;
+import static us.dot.its.jpo.conflictmonitor.monitor.utils.ProcessedMapUtils.getRevocableLanes;
 
 /**
  * Revocable/Enabled Lane Alignment Algorithm implementation.
@@ -59,6 +58,18 @@ public class RevocableEnabledLaneAlignmentTopology
     }
 
     RevocableEnabledLaneAlignmentAggregationStreamsAlgorithm aggregationAlgorithm;
+    MapDerivedAssessmentCache.Manager assessmentCacheManager;
+    Set<ConnectedLanesPair> allowConcurrentPermissiveSet = Collections.emptySet();
+
+    @Override
+    public void setAssessmentCacheManager(
+            MapDerivedAssessmentCache.Manager assessmentCacheManager,
+            Set<ConnectedLanesPair> allowConcurrentPermissiveSet) {
+        this.assessmentCacheManager = assessmentCacheManager;
+        this.allowConcurrentPermissiveSet = allowConcurrentPermissiveSet != null
+                ? allowConcurrentPermissiveSet
+                : Collections.emptySet();
+    }
 
     @Override
     public void buildTopology(StreamsBuilder builder, KStream<RsuIntersectionKey, SpatMap> spatMapStream) {
@@ -71,11 +82,20 @@ public class RevocableEnabledLaneAlignmentTopology
                 candidateEvent.setTimestamp(SpatUtils.getTimestamp(spatMap.getSpat()));
                 candidateEvent.setSource(spatMap.getSpat().getOriginIp());
 
-                // Check the MAP for revocable lanes
+                // Prefer MAP-derived cache (shared with MapSpat) over per-SPaT MAP walks
                 ProcessedMap<LineString> map = spatMap.getMap();
-                LaneTypeAttributesMap allLaneAttributes = getLaneTypeAttributesMap(map);
+                LaneTypeAttributesMap allLaneAttributes;
+                Set<Integer> revocableLanes;
+                if (assessmentCacheManager != null && map != null) {
+                    MapDerivedAssessmentCache cache = assessmentCacheManager.getOrBuild(
+                            rsuIntersectionKey.toString(), map, allowConcurrentPermissiveSet);
+                    allLaneAttributes = cache.getLaneTypeAttributes();
+                    revocableLanes = cache.getRevocableLaneIds();
+                } else {
+                    allLaneAttributes = getLaneTypeAttributesMap(map);
+                    revocableLanes = getRevocableLanes(allLaneAttributes);
+                }
                 candidateEvent.setLaneTypeAttributes(allLaneAttributes);
-                Set<Integer> revocableLanes = getRevocableLanes(allLaneAttributes);
                 candidateEvent.setRevocableLaneList(revocableLanes);
 
                 // Check the SPAT for enabled lanes

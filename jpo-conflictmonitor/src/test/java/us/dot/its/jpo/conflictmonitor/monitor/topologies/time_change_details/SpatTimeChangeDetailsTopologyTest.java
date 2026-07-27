@@ -2,9 +2,11 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies.time_change_details;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.junit.Test;
 import org.testng.collections.Lists;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.TimeChangeDetailsNotification;
@@ -43,7 +45,14 @@ public class SpatTimeChangeDetailsTopologyTest {
 
         spatTopology.setParameters(parameters);
 
-        Topology topology = spatTopology.buildTopology();
+        StreamsBuilder builder = new StreamsBuilder();
+        var inputStream = builder.stream(
+                parameters.getSpatInputTopicName(),
+                Consumed.with(
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat()));
+        spatTopology.buildTopology(builder, inputStream);
+        Topology topology = builder.build();
 
         final String rsuId = "127.0.0.1";
         final int region = 0;
