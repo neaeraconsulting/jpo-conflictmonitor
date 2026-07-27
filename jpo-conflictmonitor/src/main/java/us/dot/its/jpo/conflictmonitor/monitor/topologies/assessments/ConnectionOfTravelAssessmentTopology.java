@@ -115,8 +115,6 @@ public class ConnectionOfTravelAssessmentTopology
             Produced.with(Serdes.String(),
                     JsonSerdes.ConnectionOfTravelAssessment()));
 
-        connectionOfTravelAssessmentStream.print(Printed.toSysOut());
-
 
         KStream<String, ConnectionOfTravelNotification> notificationEventStream = connectionOfTravelEventAssessmentStream.flatMap(
             (key, value)->{
@@ -163,7 +161,7 @@ public class ConnectionOfTravelAssessmentTopology
                     JsonSerdes.ConnectionOfTravelNotification()));
 
                     
-        return builder.build();
+        return builder.build(streamsProperties);
     }    
 
 

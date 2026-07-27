@@ -1,9 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.events;
 
-import lombok.Setter;
-import lombok.EqualsAndHashCode;
-import lombok.Generated;
-import lombok.Getter;
+import lombok.*;
 
 /**
  * A processing time period with begin and end timestamps
@@ -12,6 +9,8 @@ import lombok.Getter;
 @Setter
 @EqualsAndHashCode
 @Generated
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProcessingTimePeriod {
     
     /**

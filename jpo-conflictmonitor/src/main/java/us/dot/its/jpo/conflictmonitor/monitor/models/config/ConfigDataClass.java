@@ -12,7 +12,7 @@ import java.lang.annotation.ElementType;
  * Conflict Monitor Configuration Data class-level annotation
  * 
  * <p>Marks a Parameters class that is stored in the database 
- * and causes the class to be indesxed by the 
+ * and causes the class to be indexed by the
  * {@link us.dot.its.jpo.conflictmonitor.monitor.algorithms.AlgorithmParameters} 
  * component, and can have fields annotated with {@link ConfigData} to be
  * updated at runtime.

@@ -52,7 +52,7 @@ public class AssessmentTopology
         
 
 
-        return builder.build();
+        return builder.build(streamsProperties);
 
     }
 

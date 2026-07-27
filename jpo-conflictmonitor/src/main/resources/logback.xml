@@ -4,22 +4,14 @@
 
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-			<pattern>%date{"yyyy-MM-dd HH:mm:ss", UTC} [%thread] %-5level %logger{0} - %msg %n</pattern>
+			<pattern>%date{"yyyy-MM-dd HH:mm:ss.SSS", UTC} [%thread] %-5level %logger{0} - %msg %n</pattern>
 		</encoder>
 	</appender>
-
-<!--	<logger name="us.dot.its.jpo.conflictmonitor.eventlog.EventLogger" level="ERROR" />-->
-	
-<!--	<logger name="org.springframework.web" level="INFO" />-->
-
-	<!-- Uncomment to enable detailed debugging info for event aggregation -->
-	<!--<logger name="us.dot.its.jpo.conflictmonitor.monitor.processors.aggregation" level="DEBUG"/>-->
-
-<!--	<logger name="us.dot.its.jpo.conflictmonitor.monitor.topologies.validation" level="WARN"/>-->
-
-<!--	<logger name="us.dot.its.jpo.conflictmonitor" level="INFO" />-->
-
-	<root level="ERROR">
+	<logger name="org.apache.kafka.streams.processor.internals.RecordCollectorImpl" level="ERROR"/>
+	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="WARN"/>
+	<logger name="us.dot.its.jpo.conflictmonitor.BoundedMemoryRocksDBConfig" level="WARN"/>
+	<logger name="us.dot.its.jpo.conflictmonitor" level="INFO"/>
+	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>
 </configuration>

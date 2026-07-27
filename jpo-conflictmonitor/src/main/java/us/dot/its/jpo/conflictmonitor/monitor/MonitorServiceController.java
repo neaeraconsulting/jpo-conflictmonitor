@@ -19,9 +19,12 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_me
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalGroupAlignmentAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_spat_message_assessment.SignalStateConflictAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.rtcm_message_count_progression.RtcmMessageCountProgressionAggregationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.time_change_details.TimeChangeDetailsAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.rtcm.RtcmMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_event.BsmEventAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_event.BsmEventAlgorithmFactory;
@@ -51,11 +54,19 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assess
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.message_ingest.MessageIngestParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.priority_request.PriorityRequestMetricsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.notification.NotificationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.event_state_progression.EventStateProgressionAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.priority_preemption_request.PriorityPreemptionRequestParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.revocable_enabled_lane_alignment.RevocableEnabledLaneAlignmentAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.rtcm_message_count_progression.RtcmMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.stop_line_passage.StopLinePassageParameters;
@@ -85,9 +96,15 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.Sp
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationAlgorithmFactory;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationParameters;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.rtcm.RtcmValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorAlgorithmFactory;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.vehicle_misbehavior.VehicleMisbehaviorParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapIndex;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.config.ConfigInitializer;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.config.ConfigTopology;
@@ -174,6 +191,9 @@ public class MonitorServiceController {
             
             // Spat Validation Topology
             startSpatValidationAlgorithm();
+
+            // RTCM Validation Topology
+            startRtcmValidationAlgorithm();
 
             // Spat Time Change Details Assessment
             //Sends Time Change Details Events when the time deltas in spat messages are incorrect
@@ -353,9 +373,17 @@ public class MonitorServiceController {
 
             //Spat Message Count Progression Topology
             startSpatMessageCountProgressionAlgorithm();
-            
+
             //Bsm Message Count Progression Topology
-            startBsmMessageCountProgressionAlgorithm(); 
+            startBsmMessageCountProgressionAlgorithm();
+
+            //Vehicle Misbehavior Topology
+            startVehicleMisbehaviorAlgorithm();
+            // RTCM Message Count Progression Topology
+            startRtcmMessageCountProgressionAlgorithm();
+
+            // Priority/Preemption Request Topology
+            startPriorityPreemptionRequestTopology();
 
             // Combined Event Topology
             final String event = "event";
@@ -436,6 +464,28 @@ public class MonitorServiceController {
         Runtime.getRuntime().addShutdownHook(new Thread(spatValidationAlgo::stop));
         spatValidationAlgo.start();
     }
+
+    private void startRtcmValidationAlgorithm() {
+        final String rtcmValidation = "rtcmValidation";
+        final RtcmValidationAlgorithmFactory algoFactory = conflictMonitorProps.getRtcmValidationAlgorithmFactory();
+        final RtcmValidationParameters validationParams = conflictMonitorProps.getRtcmValidationParameters();
+        final String algo = conflictMonitorProps.getRtcmValidationAlgorithm();
+        final RtcmValidationAlgorithm rtcmValidationAlgo = algoFactory.getAlgorithm(algo);
+        rtcmValidationAlgo.setParameters(validationParams);
+        configTopology.registerConfigListeners(validationParams);
+        if (rtcmValidationAlgo instanceof StreamsTopology streamsAlgo) {
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(rtcmValidation));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, rtcmValidation, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, rtcmValidation, healthTopic));
+            algoMap.put(rtcmValidation, streamsAlgo);
+        }
+        final RtcmMinimumDataAggregationAlgorithm aggAlgo = getRtcmMinimumDataAggregationAlgorithm();
+        rtcmValidationAlgo.setMinimumDataAggregationAlgorithm(aggAlgo);
+        Runtime.getRuntime().addShutdownHook(new Thread(rtcmValidationAlgo::stop));
+        rtcmValidationAlgo.start();
+    }
+
+
 
     private void startSpatTimeChangeDetailsAlgorithm() {
         final String spatTimeChangeDetails = "spatTimeChangeDetails";
@@ -587,6 +637,82 @@ public class MonitorServiceController {
         bsmMessageCountProgressionAlgo.start();
     }
 
+    private void startVehicleMisbehaviorAlgorithm() {
+        final String vehicleMisbehavior = "vehicleMisbehavior";
+        final VehicleMisbehaviorAlgorithmFactory vehicleMisbehaviorAlgoFactory = conflictMonitorProps.getVehicleMisbehaviorAlgorithmFactory();
+        final String vehicleMisbehaviorAlgorithm = conflictMonitorProps.getVehicleMisbehaviorAlgorithm();
+        final VehicleMisbehaviorAlgorithm vehicleMisbehaviorAlgo = vehicleMisbehaviorAlgoFactory.getAlgorithm(vehicleMisbehaviorAlgorithm);
+        final VehicleMisbehaviorParameters vehicleMisbehaviorParams = conflictMonitorProps.getVehicleMisbehaviorParameters();
+        configTopology.registerConfigListeners(vehicleMisbehaviorParams);
+        if (vehicleMisbehaviorAlgo instanceof StreamsTopology) {
+            final var streamsAlgo = (StreamsTopology)vehicleMisbehaviorAlgo;
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(vehicleMisbehavior));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, vehicleMisbehavior, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, vehicleMisbehavior, healthTopic));
+            algoMap.put(vehicleMisbehavior, streamsAlgo);
+        }
+        vehicleMisbehaviorAlgo.setParameters(vehicleMisbehaviorParams);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(vehicleMisbehaviorAlgo::stop));
+        vehicleMisbehaviorAlgo.start();
+    }
+
+    private void startRtcmMessageCountProgressionAlgorithm() {
+        final String name = "rtcmMessageCountProgression";
+        final RtcmMessageCountProgressionAlgorithmFactory factory = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithm();
+        final RtcmMessageCountProgressionAlgorithm algorithm = factory.getAlgorithm(algorithmName);
+        final RtcmMessageCountProgressionParameters params = conflictMonitorProps.getRtcmMessageCountProgressionAlgorithmParameters();
+        configTopology.registerConfigListeners(params);
+        if (algorithm instanceof StreamsTopology streamsTopology) {
+            streamsTopology.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsTopology.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
+            streamsTopology.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
+            algoMap.put(name, streamsTopology);
+        }
+        algorithm.setParameters(params);
+
+        // Plug in aggregation algorithm
+        var aggregationAlgorithm = getRtcmMessageCountProgressionAggregationAlgorithm();
+        algorithm.setAggregationAlgorithm(aggregationAlgorithm);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(algorithm::stop));
+        algorithm.start();
+    }
+
+    private void startPriorityPreemptionRequestTopology() {
+        final String name = "priorityPreemptionRequest";
+        final PriorityPreemptionRequestAlgorithmFactory factory = conflictMonitorProps.getPriorityPreemptionRequestAlgorithmFactory();
+        final PriorityPreemptionRequestParameters params = conflictMonitorProps.getPriorityPreemptionRequestParameters();
+        final String algorithmName = conflictMonitorProps.getPriorityPreemptionRequestAlgorithm();
+        final PriorityPreemptionRequestAlgorithm algorithm = factory.getAlgorithm(algorithmName);
+        configTopology.registerConfigListeners(params);
+        if (algorithm instanceof StreamsTopology streamsAlgo) {
+            streamsAlgo.setStreamsProperties(conflictMonitorProps.createStreamProperties(name));
+            streamsAlgo.registerStateListener(new StateChangeHandler(kafkaTemplate, name, stateChangeTopic, healthTopic));
+            streamsAlgo.registerUncaughtExceptionHandler(new StreamsExceptionHandler(kafkaTemplate, name, healthTopic));
+            algoMap.put(name, streamsAlgo);
+        }
+        algorithm.setParameters(params);
+        final PriorityRequestMetricsAlgorithm metricsAlgorithm = getPriorityRequestMetricsAlgorithm();
+        algorithm.setPriorityRequestMetricsAlgorithm(metricsAlgorithm);
+        Runtime.getRuntime().addShutdownHook(Thread.ofVirtual().unstarted(algorithm::stop));
+        algorithm.start();
+    }
+
+    private PriorityRequestMetricsAlgorithm getPriorityRequestMetricsAlgorithm() {
+        final var factory = conflictMonitorProps.getPriorityRequestMetricsAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getPriorityRequestMetricsAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getPriorityRequestMetricsParameters();
+        algorithm.setParameters(parameters);
+        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
+        logger.info("Get Common parameters: {}", commonParameters);
+        algorithm.setCommonParameters(commonParameters);
+        logger.info("Set Common parameters: {}", algorithm.getCommonParameters());
+        return algorithm;
+    }
+
     private MapTimestampDeltaAlgorithm getMapTimestampDeltaAlgorithm() {
         final var factory = conflictMonitorProps.getMapTimestampDeltaAlgorithmFactory();
         final String algorithmName = conflictMonitorProps.getMapTimestampDeltaAlgorithm();
@@ -617,6 +743,15 @@ public class MonitorServiceController {
     private MapMinimumDataAggregationAlgorithm getMapMinimumDataAggregationAlgorithm() {
         final var factory = conflictMonitorProps.getMapMinimumDataAggregationAlgorithmFactory();
         final String algorithmName = conflictMonitorProps.getMapMinimumDataAggregationAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getAggregationParameters();
+        algorithm.setParameters(parameters);
+        return algorithm;
+    }
+
+    private RtcmMinimumDataAggregationAlgorithm getRtcmMinimumDataAggregationAlgorithm() {
+        final var factory = conflictMonitorProps.getRtcmMinimumDataAggregationAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRtcmMinimumDataAggregationAlgorithm();
         final var algorithm = factory.getAlgorithm(algorithmName);
         final var parameters = conflictMonitorProps.getAggregationParameters();
         algorithm.setParameters(parameters);
@@ -709,15 +844,12 @@ public class MonitorServiceController {
         return algorithm;
     }
 
-    private RevocableEnabledLaneAlignmentAlgorithm getRevocableEnabledLaneAlignmentAlgorithm() {
-        final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithmFactory();
-        final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithm();
-        final var algorithm = factory.getAlgorithm(algorithmName);
-        final var parameters = conflictMonitorProps.getRevocableEnabledLaneAlignmentParameters();
+    private RtcmMessageCountProgressionAggregationAlgorithm getRtcmMessageCountProgressionAggregationAlgorithm() {
+        final RtcmMessageCountProgressionAggregationAlgorithmFactory factory = conflictMonitorProps.getRtcmMessageCountProgressionAggregationAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRtcmMessageCountProgressionAggregationAlgorithm();
+        final RtcmMessageCountProgressionAggregationAlgorithm algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getAggregationParameters();
         algorithm.setParameters(parameters);
-        // Plug in aggregation algorithm
-        final var aggAlgorithm = getRevocableEnabledLaneAlignmentAggregationAlgorithm();
-        algorithm.setAggregationAlgorithm(aggAlgorithm);
         return algorithm;
     }
 
@@ -729,4 +861,34 @@ public class MonitorServiceController {
         algorithm.setParameters(parameters);
         return algorithm;
     }
+
+    private RevocableEnabledLaneAlignmentAlgorithm getRevocableEnabledLaneAlignmentAlgorithm() {
+        final var factory = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getRevocableEnabledLaneAlignmentAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getRevocableEnabledLaneAlignmentParameters();
+        algorithm.setParameters(parameters);
+        // Plug in aggregation algorithm
+        final var aggAlgorithm = getRevocableEnabledLaneAlignmentAggregationAlgorithm();
+        algorithm.setAggregationAlgorithm(aggAlgorithm);
+        // Plug in dynamic lane activation metrics algorithm
+        final var metricsAlgorithm = getDynamicLaneActivationMetricsAlgorithm();
+        algorithm.setDynamicLaneActivationMetricsAlgorithm(metricsAlgorithm);
+        return algorithm;
+    }
+
+    private us.dot.its.jpo.conflictmonitor.monitor.algorithms.metrics.dynamic_lane_activation.DynamicLaneActivationMetricsAlgorithm
+    getDynamicLaneActivationMetricsAlgorithm() {
+        final var factory = conflictMonitorProps.getDynamicLaneActivationMetricsAlgorithmFactory();
+        final String algorithmName = conflictMonitorProps.getDynamicLaneActivationMetricsAlgorithm();
+        final var algorithm = factory.getAlgorithm(algorithmName);
+        final var parameters = conflictMonitorProps.getDynamicLaneActivationMetricsParameters();
+        algorithm.setParameters(parameters);
+        final var commonParameters = conflictMonitorProps.getCommonMetricsParameters();
+        algorithm.setCommonParameters(commonParameters);
+        return algorithm;
+    }
 }
+
+
+

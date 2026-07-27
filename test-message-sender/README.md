@@ -46,9 +46,11 @@ Run Script:
   Maven:
     $ mvn spring-boot:run -Dspring-boot.run.arguments=<filename>
 
-  <filename> : (Required in script run mode) Input ODE JSON script file
-               Formatted as line-delimited CSV/JSON like:
-               <BSM or MAP or SPAT>,<millisecond offset>,<Templated ODE JSON>
+  <filename> : (Required in script run mode) Input JSON script file consisting of line-delimited JSON like:
+                    <BSM or MAP or SPAT>,<millisecond offset>,<JSON>
+               for ODE Json objects or like:
+                    <ProcessedMap or ProcessedSpat>;<RSU IP>;<Intersection ID>,<millisecond offset>,<JSON>
+               for Processed Maps or Spats.
 
 Send hex log to ODE and create script:
 
@@ -59,29 +61,46 @@ Send hex log to ODE and create script:
     $ mvn spring-boot:run -Dspring-boot.run.arguments="--infile=<filename> --outfile=<filename> ..."
 
   Options:
-    --hexfile=<filename> : (Required in hex log mode) Input hex log file
-                           formatted as line-delimited JSON like
-                           { "timeStamp": <epoch milliseconds>, "dir": <"S" or "R">, "hexMessage": "00142846F..." }
+    --hexfile=<filename>  : (Required in hex log mode) Input hex log file
+                            formatted as line-delimited JSON like
+                            { "timeStamp": <epoch milliseconds>, "dir": <"S" or "R">, "hexMessage": "00142846F..." }
 
-    --outfile=<filename> : (Optional) Output file to save JSON received from the ODE as a script,
-                           optionally substituting placeholders for timestamps
+    --outfile=<filename>  : (Optional) Output file to save JSON received from the ODE as a script,
+                            optionally substituting placeholders for timestamps
 
-    --placeholders       : (Optional) If present substitute placeholders in the output script:
+    --placeholders        : (Optional) If present substitute placeholders in the output script:
 
-                           @ISO_DATE_TIME@ for 'odeReceivedAt'
-                           @MINUTE_OF_YEAR@ for 'timeStamp' and 'intersection.moy' in SPATs
-                           @MILLI_OF_MINUTE@ for 'intersection.timeStamp' in SPATs and 'secMark' in BSMs
-                                                    @TEMP_ID@ for 'coreData.id' in BSMs
+                            @ISO_DATE_TIME@ for 'odeReceivedAt'
+                            @MINUTE_OF_YEAR@ for 'timeStamp' and 'intersection.moy' in SPATs
+                            @MILLI_OF_MINUTE@ for 'intersection.timeStamp' in SPATs and 'secMark' in BSMs
+                                                     @TEMP_ID@ for 'coreData.id' in BSMs
 
-    --mapfile=<filename> : (Optional) Output file to save MAPs as line-delimited JSON
+    --mapfile=<filename>  : (Optional) Output file to save MAPs as line-delimited JSON
 
-    --spatfile=<filename>: (Optional) Output file to save SPATs as line-delimited JSON
+    --spatfile=<filename> : (Optional) Output file to save SPATs as line-delimited JSON
 
-    --bsmfile=<filename> : (Optional) Output file to save BSMs as line-delimited JSON
+    --bsmfile=<filename>  : (Optional) Output file to save BSMs as line-delimited JSON
 
-    --ip=<docker host ip>: (Optional) IP address of docker host to send UDP packets to
+    --rtcmfile=<filename> : (Optional) Output file to save RTCMs as line-delimited JSON
 
-                           Uses DOCKER_HOST_IP env variable if not specified.
+    --srmfile=<filename>  : (Optional) Output file to save SRMs as line-delimited JSON
+
+    --ssmfile=<filename>  : (Optional) Output file to save SSMs as line-delimited JSON
+
+    --ip=<docker host ip> : (Optional) IP address of docker host to send UDP packets to
+                            Uses DOCKER_HOST_IP env variable if not specified.
+
+    --delay=<milliseconds>  : (Optional) Delay in milliseconds before starting to send messages.
+
+    --immediate             : In hex log mode, send all messages in order as fast as possible. Don't schedule send based on timestamps
+
+    --space=<milliseconds>  : Space between messages with immediate option.
+
+    --accelerate=<integer>  : Factor to accelerate the timestamps in the output script by, for example 10 to
+
+                             produce timestamps 10x faster than the input
+
+    --keeprunning=<seconds> : Min number of seconds to keep running to receive responses (default 60)
 
 ```
 
@@ -125,4 +144,12 @@ Example command line to schedule sending a hex log through the system and genera
 
 ```bash
 java -jar script-runner-cli.jar --ip=172.25.0.112 --hexfile=input.log --outfile=output.csv --delay=60000 --placeholders --mapfile=map.jsonl --spatfile=spat.jsonl --bsmfile=bsm.jsonl
+```
+
+Example with immediate send options, and 1 second space between each message to preserve order of received messages,
+with the output script timestamps accelerated by a factor of 10, and keeping the kafka consumers running for 320 
+seconds to finish receiving all messages:
+
+```bash
+java -jar script-runner-cli.jar --ip=172.26.19.45 --hexfile=./SSM_SRM/SSM-SRM-Example-1.jsonl --outfile=./ssm-srm-example-1.csv --immediate --placeholders --space=1000 --accelerate=10 --keeprunning=320
 ```

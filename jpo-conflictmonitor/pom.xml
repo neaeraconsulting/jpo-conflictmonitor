@@ -6,22 +6,22 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.3.2</version>
+    <version>3.3.10</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>usdot.jpo.ode</groupId>
   <artifactId>jpo-conflictmonitor</artifactId>
-  <version>3.1.1</version>
+  <version>3.2.0</version>
   <packaging>jar</packaging>
   <name>jpo-conflictmonitor</name>
   <url>http://maven.apache.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <geotools.version>29-SNAPSHOT</geotools.version>
+    <geotools.version>29.6</geotools.version>
     <sonar.organization>usdot-jpo-ode</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <!-- <maven.deploy.skip>false</maven.deploy.skip> -->
-    <description>Detects Intersection Message Conflicts from messaged passed by the ODE</description>
+    <description>Detects Intersection Message Conflicts from messages passed by the ODE</description>
     <java.version>21</java.version>
     <!-- Resource delimeter for build properties in application.yaml -->
     <resource.delimeter>^</resource.delimeter>
@@ -34,6 +34,14 @@
     <sonar.language>java</sonar.language>
     <!-- Allow override of github organization when publishing artifacts to github -->
     <github_organization>usdot-jpo-ode</github_organization>
+
+    <!-- Kafka Streams version -->
+    <kafka.streams.version>3.9.1</kafka.streams.version>
+
+    <!-- Override default Kafka version for Spring Kafka and tests that use Spring EmbeddedKafka -->
+    <!-- Ref. https://docs.spring.io/spring-kafka/reference/appendix/override-boot-dependencies.html -->
+    <kafka.version>${kafka.streams.version}</kafka.version>
+    <spring-kafka.version>${kafka.streams.version}</spring-kafka.version>
 
   </properties>
   <dependencies>
@@ -93,10 +101,12 @@
     <dependency>
       <groupId>org.springframework.kafka</groupId>
       <artifactId>spring-kafka</artifactId>
+      <version>${project.parent.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.kafka</groupId>
       <artifactId>spring-kafka-test</artifactId>
+      <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -104,8 +114,8 @@
     <dependency>
       <groupId>usdot.jpo.ode</groupId>
       <artifactId>jpo-geojsonconverter</artifactId>
-      <version>3.2.0</version>
-      <!-- Allow using newer streams version than geojsonconverter -->
+      <version>3.3.0</version>
+      <!-- Exclude kafka dependencies to allow using newer streams version than geojsonconverter -->
       <exclusions>
         <exclusion>
           <groupId>org.apache.kafka</groupId>
@@ -115,23 +125,61 @@
           <groupId>org.apache.kafka</groupId>
           <artifactId>kafka-streams-test-utils</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka-clients</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka-server</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka-server-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka_2.11</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>kafka_2.13</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.kafka</groupId>
+          <artifactId>spring-kafka</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka-streams-test-utils</artifactId>
-      <version>3.7.1</version>
-      <scope>test</scope>
-    </dependency>
+
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-streams</artifactId>
-      <version>3.7.1</version>
+      <version>${kafka.streams.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>${kafka.streams.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.javacrumbs.json-unit</groupId>
+      <artifactId>json-unit</artifactId>
+      <version>5.1.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -149,18 +197,19 @@
 
     <dependency>
       <groupId>org.geotools</groupId>
-      <artifactId>gt-shapefile</artifactId>
+      <artifactId>gt-main</artifactId>
       <version>${geotools.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-opengis</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>33.0.0-jre</version>
-    </dependency>
-    <dependency>
-      <groupId>org.geotools</groupId>
-      <artifactId>gt-epsg-wkt</artifactId>
-      <version>${geotools.version}</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-math3 -->
@@ -213,7 +262,7 @@
       <name>Central Repository</name>
       <url>https://repo.maven.apache.org/maven2</url>
     </repository>
-    <!-- OSGEO repositories -->
+    <!-- OSGEO repositories for jts and geotools.  Only use release versions, not snapshots  -->
     <repository>
       <id>osgeo</id>
       <name>OSGeo Release Repository</name>
@@ -223,17 +272,6 @@
       </snapshots>
       <releases>
         <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>osgeo-snapshot</id>
-      <name>OSGeo Snapshot Repository</name>
-      <url>https://repo.osgeo.org/repository/snapshot/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>false</enabled>
       </releases>
     </repository>
   </repositories>
@@ -359,7 +397,7 @@
   <!-- GitHub Artifact publishing configuration -->
   <distributionManagement>
     <repository>
-      <id>github</id>
+      <id>github_cm</id>
       <name>GitHub Packages</name>
       <url>https://maven.pkg.github.com/${github_organization}/jpo-conflictmonitor</url>
     </repository>

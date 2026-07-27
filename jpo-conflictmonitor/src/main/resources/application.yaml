@@ -8,12 +8,72 @@ server.port: 8082
 # Kafka properties
 spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 spring.kafka.producer.properties.max-request.size: 2097152
+logging.level.org.apache.kafka: WARN
 
-logging.level.org.apache.kafka: INFO
-logging.level: INFO
-log4j.logger.kafka: OFF
-log4j.logger.org.apache.kafka: OFF
+# ----------------------------------------------------------------------------------------------------------------------
+# Kafka streams config properties
+# Replication factor
+# https://kafka.apache.org/11/streams/developer-guide/config-streams/#replicationfactor
+# -1 = broker default, 1 is default, 3 recommended for prod
+streams-config-replication-factor: ${CM_STREAMS_CONFIG_REPLICATION_FACTOR:1}
+# Acks
+# https://kafka.apache.org/11/streams/developer-guide/config-streams/#recommended-configuration-parameters-for-resiliency
+# 1 default, all recommended for robustness in prod
+# May use 0 or 1 for dev
+streams-config-acks: ${CM_STREAMS_CONFIG_ACKS:1}
+# Default 10 threads to match Connect default
+streams-config-num-stream-threads: ${CM_STREAMS_CONFIG_NUM_STREAM_THREADS:10}
+streams-config-cache-max-bytes-buffering: ${CM_STREAMS_CONFIG_CACHE_MAX_BYTES_BUFFERING:1048576}
+streams-config-commit-interval-ms: ${CM_STREAMS_CONFIG_COMMIT_INTERVAL_MS:100}
+streams-config-compression-type: ${CM_STREAMS_CONFIG_COMPRESSION_TYPE:zstd}
+# Amount of time to wait to try and increase batching
+# Default 5 ms
+streams-config-linger-ms: ${CM_STREAMS_CONFIG_LINGER_MS:50}
+# Producer batch size.  Default 16384
+streams-config-batch-size: ${CM_STREAMS_CONFIG_BATCH_SIZE:16384}
+streams-config-topology-optimization: ${CM_STREAMS_CONFIG_TOPOLOGY_OPTIMIZATION:all}
 
+# Topology-specific streams configs
+streams.config:
+  topologies:
+    - topology: config
+      threads: 2
+    - topology: notification
+      threads: 8
+    - topology: mapValidation
+      threads: 10
+    - topology: spatValidation
+      threads: 10
+    - topology: rtcmValidation
+      threads: 10
+    - topology: spatTimeChangeDetails
+      threads: 20
+    - topology: mapSpatAlignment
+      threads: 80
+    - topology: bsmEvent
+      threads: 10
+    - topology: intersectionEvent
+      threads: 40
+    - topology: stopLinePassageAssessment
+      threads: 20
+    - topology: stopLineStopAssessment
+      threads: 20
+    - topology: laneDirectionOfTravelAssessment
+      threads: 20
+    - topology: connectionOfTravelAssessment
+      threads: 20
+    - topology: mapMessageCountProgression
+      threads: 10
+    - topology: spatMessageCountProgression
+      threads: 10
+    - topology: bsmMessageCountProgression
+      threads: 10
+    - topology: rtcmMessageCountProgression
+      threads: 10
+    - topology: priorityPreemptionRequest
+      threads: 70
+    - topology: event
+      threads: 10
 
 
 kafkaStateChangeEventTopic: topic.CmKafkaStateChangeEvents
@@ -42,8 +102,7 @@ kafkaTopicCmConnectionOfTravelEvent: topic.CmConnectionOfTravelEvent
 kafkaTopicCmStopLinePassageEvent: topic.CmStopLinePassageEvent
 kafakTopicCmVehicleStopEvent: topic.CmStopLineStopEvent
 
-# Amount of time to wait to try and increase batching
-kafka.linger_ms: 50
+
 
 # Custom kafka properties
 # TODO Remove, use jpo-utils instead
@@ -178,6 +237,9 @@ kafka.topics:
     - name: topic.CmTimestampDeltaEvent
       cleanupPolicy: delete
       retentionMs: 300000
+    - name: topic.CmVehicleMisbehaviorEvents
+      cleanupPolicy: delete
+      retentionMs: 300000
     - name: topic.CmTimestampDeltaNotification
       cleanupPolicy: compact
     - name: topic.CmSpatTransitionEvent
@@ -240,6 +302,15 @@ kafka.topics:
       cleanupPolicy: compact
     - name: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
       cleanupPolicy: compact
+    - name: topic.CmPriorityPreemptionRequestEvent
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmPriorityRequestMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmDynamicLaneActivationMetrics
+      cleanupPolicy: delete
+      retentionMs: 300000
 
 
 # Connection of Travel
@@ -544,6 +615,21 @@ spat.timestamp.delta:
 #  retentionTimeMinutes: 5
   notificationTopicName: topic.CmTimestampDeltaNotification
 
+vehicle.misbehavior:
+  algorithm: defaultVehicleMisbehaviorAlgorithm
+  debug: false
+  lateral_acceleration_range: 13.1
+  longitudinal_acceleration_range: 39.4
+  vertical_acceleration_range: 13.1
+  speed_range: 10
+  yaw_rate_range: 10 
+  allowable_max_speed: 156.5 # miles per hour
+  allowable_max_heading_delta: 85.9 # degrees / second
+  processedBsmStateStoreName: processedBsmVehicleMisbehaviorStateStore
+  bsmInputTopicName: topic.ProcessedBsm
+  vehicleMisbehaviorEventOutputTopicName: topic.CmVehicleMisbehaviorEvents
+
+
 event.state.progression:
   algorithm: defaultEventStateProgressionAlgorithm
   debug: true
@@ -594,6 +680,7 @@ aggregation:
   eventTopicMap:
     SpatMinimumDataAggregation: topic.CmSpatMinimumDataEventAggregation
     MapMinimumDataAggregation: topic.CmMapMinimumDataEventAggregation
+    RtcmMinimumDataAggregation: topic.CmRtcmMinimumDataEventAggregation
     IntersectionReferenceAlignmentAggregation: topic.CmIntersectionReferenceAlignmentEventAggregation
     SignalGroupAlignmentAggregation: topic.CmSignalGroupAlignmentEventAggregation
     SignalStateConflictAggregation: topic.CmSignalStateConflictEventAggregation
@@ -602,10 +689,12 @@ aggregation:
     BsmMessageCountProgressionAggregation: topic.CmBsmMessageCountProgressionEventAggregation
     MapMessageCountProgressionAggregation: topic.CmMapMessageCountProgressionEventAggregation
     SpatMessageCountProgressionAggregation: topic.CmSpatMessageCountProgressionEventAggregation
+    RtcmMessageCountProgressionAggregation: topic.CmRtcmMessageCountProgressionEventAggregation
     RevocableEnabledLaneAlignmentAggregation: topic.CmRevocableEnabledLaneAlignmentEventAggregation
   eventAlgorithmMap:
     SpatMinimumDataAggregation: defaultSpatMinimumDataAggregationAlgorithm
     MapMinimumDataAggregation: defaultMapMinimumDataAggregationAlgorithm
+    RtcmMinimumDataAggregation: defaultRtcmMinimumDataAggregationAlgorithm
     IntersectionReferenceAlignmentAggregation: defaultIntersectionReferenceAlignmentAggregationAlgorithm
     SignalGroupAlignmentAggregation: defaultSignalGroupAlignmentAggregationAlgorithm
     SignalStateConflictAggregation: defaultSignalStateConflictAggregationAlgorithm
@@ -614,6 +703,7 @@ aggregation:
     BsmMessageCountProgressionAggregation: defaultBsmMessageCountProgressionAggregationAlgorithm
     MapMessageCountProgressionAggregation: defaultMapMessageCountProgressionAggregationAlgorithm
     SpatMessageCountProgressionAggregation: defaultSpatMessageCountProgressionAggregationAlgorithm
+    RtcmMessageCountProgressionAggregation: defaultRtcmMessageCountProgressionAggregationAlgorithm
     RevocableEnabledLaneAlignmentAggregation: defaultRevocableEnabledLaneAlignmentAggregationAlgorithm
 
 
@@ -625,6 +715,66 @@ revocable.enabled.lane.alignment:
   notificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotification
   aggNotificationTopicName: topic.CmRevocableEnabledLaneAlignmentNotificationAggregation
 
+rtcm.validation:
+  algorithm: defaultRtcmValidationAlgorithm
+  lower-bound: 9
+  upper-bound: 11
+  msm-lower-bound: 9
+  msm-upper-bound: 110
+  debug: true
+  grace-period-milliseconds: 5000
+  output-interval-seconds: 5
+  rolling-period-seconds: 10
+  minimum-data-topic-name: topic.CmRtcmMinimumDataEvents
+  broadcast-rate-topic-name: topic.CmRtcmBroadcastRateEvents
+  input-topic-name: topic.ProcessedRtcm
+  aggregate-minimum-data-events: ${ENABLE_AGGREGATE_RTCM_MINIMUM_DATA_EVENTS:false}
 
+rtcm.message.count.progression:
+  algorithm: defaultRtcmMessageCountProgressionAlgorithm
+  debug: false
+  rtcm-input-topic-name: topic.ProcessedRtcm
+  rtcm-message-count-progression-output-topic-name: topic.CmRtcmMessageCountProgressionEvents
+  processed-rtcm-state-store-name: processedRtcmStateStore
+  latest-rtcm-state-store-name: latestRtcmStateStore
+  latest-event-state-store-name: latestRtcmMessageCountProgressionEventStore
+  buffer-time-ms: 3000
+  buffer-grace-period-ms: 500
+  aggregateEvents: ${ENABLE_AGGREGATE_RTCM_MESSAGE_COUNT_PROGRESSION:false}
+  check-interval-ms: 500
+
+priority.preemption.request:
+  algorithm: defaultPriorityPreemptionRequestAlgorithm
+  debug: true
+  processed-srm-input-topic: topic.ProcessedSrm
+  processed-ssm-input-topic: topic.ProcessedSsm
+  output-event-topic: topic.CmPriorityPreemptionRequestEvent
+  srm-store-name: srm-request-store
+  ssm-store-name: ssm-status-store
+  joined-store-name: joined-srm-ssm-store
+  deduplicate-events-store-name: srm-ssm-event-deduplicate-store
+  store-retention-time: 1
+  retention-time-units: MINUTES
+  max-time-between-srms: 30
+  max-time-between-srms-units: SECONDS
+
+metrics:
+  common:
+    interval: 30
+    interval-units: SECONDS
+    grace-period-ms: 500
+    check-interval: 10
+    check-interval-units: SECONDS
+    retention-time: 1
+    retention-time-units: MINUTES
+  priority.request:
+    algorithm: defaultPriorityRequestMetricsAlgorithm
+    debug: true
+    input-event-topic: topic.CmPriorityPreemptionRequestEvent
+    output-metric-topic: topic.CmPriorityRequestMetrics
+  dynamic.lane.activation:
+    algorithm: defaultDynamicLaneActivationMetricsAlgorithm
+    debug: true
+    output-metric-topic: topic.CmDynamicLaneActivationMetrics
 
 

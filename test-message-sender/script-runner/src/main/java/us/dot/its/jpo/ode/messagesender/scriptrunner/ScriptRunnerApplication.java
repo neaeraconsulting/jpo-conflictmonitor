@@ -49,22 +49,31 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		"  Maven:\n" +
 		"    $ mvn spring-boot:run -Dspring-boot.run.arguments=\"--infile=<filename> --outfile=<filename> ...\"\n\n" +
 		"  Options: \n" +
-		"    --hexfile=<filename> : (Required in hex log mode) Input hex log file\n" +
-		"                           formatted as line-delimited JSON like\n" + 
-		"                           { \"timeStamp\": <epoch milliseconds>, \"dir\": <\"S\" or \"R\">, \"hexMessage\": \"00142846F...\" }\n\n" +
-		"    --outfile=<filename> : (Optional) Output file to save JSON received from the ODE as a script,\n" +
-		"                           optionally substituting placeholders for timestamps\n\n" +
-		"    --placeholders       : (Optional) If present substitute placeholders in the output script:\n\n" +
-		"                           @ISO_DATE_TIME@ for 'odeReceivedAt'\n" +
-		"                           @MINUTE_OF_YEAR@ for 'timeStamp' and 'intersection.moy' in SPATs\n" +
-		"                           @MILLI_OF_MINUTE@ for 'intersection.timeStamp' in SPATs and 'secMark' in BSMs\n" +
-		"						    @TEMP_ID@ for 'coreData.id' in BSMs\n\n" +
-		"    --mapfile=<filename> : (Optional) Output file to save MAPs as line-delimited JSON\n\n" +
-		"    --spatfile=<filename>: (Optional) Output file to save SPATs as line-delimited JSON\n\n" +
-		"    --bsmfile=<filename> : (Optional) Output file to save BSMs as line-delimited JSON\n\n" +
-		"    --ip=<docker host ip>: (Optional) IP address of docker host to send UDP packets to\n" +
-		"                           Uses DOCKER_HOST_IP env variable if not specified.\n\n" +
-		"    --delay=<milliseconds> : (Optional) Delay in milliseconds before starting to send messages.\n\n";
+		"    --hexfile=<filename>  : (Required in hex log mode) Input hex log file\n" +
+		"                            formatted as line-delimited JSON like\n" +
+		"                            { \"timeStamp\": <epoch milliseconds>, \"dir\": <\"S\" or \"R\">, \"hexMessage\": \"00142846F...\" }\n\n" +
+		"    --outfile=<filename>  : (Optional) Output file to save JSON received from the ODE as a script,\n" +
+		"                            optionally substituting placeholders for timestamps\n\n" +
+		"    --placeholders        : (Optional) If present substitute placeholders in the output script:\n\n" +
+		"                            @ISO_DATE_TIME@ for 'odeReceivedAt'\n" +
+		"                            @MINUTE_OF_YEAR@ for 'timeStamp' and 'intersection.moy' in SPATs\n" +
+		"                            @MILLI_OF_MINUTE@ for 'intersection.timeStamp' in SPATs and 'secMark' in BSMs\n" +
+		"						     @TEMP_ID@ for 'coreData.id' in BSMs\n\n" +
+		"    --mapfile=<filename>  : (Optional) Output file to save MAPs as line-delimited JSON\n\n" +
+		"    --spatfile=<filename> : (Optional) Output file to save SPATs as line-delimited JSON\n\n" +
+		"    --bsmfile=<filename>  : (Optional) Output file to save BSMs as line-delimited JSON\n\n" +
+		"    --rtcmfile=<filename> : (Optional) Output file to save RTCMs as line-delimited JSON\n\n" +
+		"    --srmfile=<filename>  : (Optional) Output file to save SRMs as line-delimited JSON\n\n" +
+		"    --ssmfile=<filename>  : (Optional) Output file to save SSMs as line-delimited JSON\n\n" +
+		"    --ip=<docker host ip> : (Optional) IP address of docker host to send UDP packets to\n" +
+		"                            Uses DOCKER_HOST_IP env variable if not specified.\n\n" +
+		"    --delay=<milliseconds>  : (Optional) Delay in milliseconds before starting to send messages.\n\n" +
+		"    --immediate             : In hex log mode, send all messages in order as fast as possible. Don't schedule send based on timestamps\n\n" +
+		"    --space=<milliseconds>  : Space between messages with immediate option.\n\n" +
+		"    --accelerate=<integer>  : Factor to accelerate the timestamps in the output script by, for example 10 to\n\n" +
+		"                             produce timestamps 10x faster than the input\n\n" +
+		"    --keeprunning=<seconds> : Min number of seconds to keep running to receive responses (default 60)\n\n";
+
 
 		
 	@Autowired
@@ -112,7 +121,13 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		String mapfile = optionNames.contains("mapfile") ? appArgs.getOptionValues("mapfile").get(0) : null;
 		String spatfile = optionNames.contains("spatfile") ? appArgs.getOptionValues("spatfile").get(0) : null;
 		String bsmfile = optionNames.contains("bsmfile") ? appArgs.getOptionValues("bsmfile").get(0) : null;
-
+		String rtcmfile = optionNames.contains("rtcmfile") ? appArgs.getOptionValues("rtcmfile").get(0) : null;
+		String srmfile = optionNames.contains("srmfile") ? appArgs.getOptionValues("srmfile").get(0) : null;
+		String ssmfile = optionNames.contains("ssmfile") ? appArgs.getOptionValues("ssmfile").get(0) : null;
+		boolean immediate = optionNames.contains("immediate");
+		Long space = optionNames.contains("space") ? Long.parseLong(appArgs.getOptionValues("space").get(0)) : null;
+		Integer accelerate = optionNames.contains("accelerate") ? Integer.parseInt(appArgs.getOptionValues("accelerate").get(0)) : null;
+		int keeprunning = optionNames.contains("keeprunning") ? Integer.parseInt(appArgs.getOptionValues("keeprunning").get(0)) : 60;
 
 		if (ip == null) {
 			ip = System.getenv("DOCKER_HOST_IP");
@@ -124,8 +139,12 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		
 		if (missingOptions) exitUsage();
 
-		convertHexLogToScript(ip, infile, outfile, delay, placeholders, mapfile, spatfile, bsmfile);
-		
+		convertHexLogToScript(ip, infile, outfile, delay, placeholders, mapfile, spatfile, bsmfile, rtcmfile, srmfile,
+				ssmfile, immediate, space, accelerate, keeprunning);
+		// Wait to receive responses
+		scheduler.setWaitForTasksToCompleteOnShutdown(true);
+		scheduler.setAwaitTerminationSeconds(60*15);
+		scheduler.shutdown();
 	}
 
 	private void exitUsage() {
@@ -152,7 +171,10 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 	}
 
 	private void convertHexLogToScript(String dockerHostIp, String inputFilePath, String outputFilePath, int delay,
-			boolean placeholders, String mapFilePath, String spatFilePath, String bsmFilePath) throws IOException {
+			boolean placeholders, String mapFilePath, String spatFilePath, String bsmFilePath, String rtcmFilePath,
+			String srmFilePath, String ssmFilePath, boolean immediate, final Long space, final Integer accelerate,
+									   final int keeprunning)
+			throws IOException {
 		logger.info("Docker Host IP: {}", dockerHostIp);
 		logger.info("Input File Path: {}", inputFilePath);
 		logger.info("Output File Path: {}", outputFilePath);
@@ -161,6 +183,13 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		logger.info("MAP File Path: {}", mapFilePath);
 		logger.info("SPAT File Path: {}", spatFilePath);
 		logger.info("BSM File Path: {}", bsmFilePath);
+		logger.info("RTCM File Path: {}", rtcmFilePath);
+		logger.info("SRM File Path: {}", srmFilePath);
+		logger.info("SSM File Path: {}", ssmFilePath);
+		logger.info("Send immediately: {}", immediate);
+		logger.info("Space: {}", space);
+		logger.info("Accelerate: {}", accelerate);
+		logger.info("Keeprunning: {}", keeprunning);
 
 		var inputFile = new File(inputFilePath);
 		if (!inputFile.exists()) {
@@ -171,12 +200,15 @@ public class ScriptRunnerApplication implements ApplicationRunner  {
 		var mapFile = mapFilePath != null ? new File(mapFilePath) : null;
 		var spatFile = spatFilePath != null ? new File(spatFilePath) : null;
 		var bsmFile = bsmFilePath != null ? new File(bsmFilePath) : null;
+		var rtcmFile = bsmFilePath != null ? new File(rtcmFilePath) : null;
+		var srmFile = bsmFilePath != null ? new File(srmFilePath) : null;
+		var ssmFile = bsmFilePath != null ? new File(ssmFilePath) : null;
 		
 		
-		hexLogRunner.convertHexLogToScript(dockerHostIp, inputFile, outputFile, delay, placeholders, mapFile, spatFile, bsmFile);
-		scheduler.setWaitForTasksToCompleteOnShutdown(true);
-		scheduler.setAwaitTerminationSeconds(60*15);
-		scheduler.shutdown();
+		hexLogRunner.convertHexLogToScript(dockerHostIp, inputFile, outputFile, delay, placeholders, mapFile, spatFile,
+				bsmFile, rtcmFile, srmFile, ssmFile, immediate, space, accelerate, keeprunning);
+
+
 	}
 
 }
