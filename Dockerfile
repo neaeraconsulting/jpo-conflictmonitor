@@ -22,7 +22,7 @@ RUN mvn -s settings.xml dependency:resolve
 COPY ./jpo-conflictmonitor/src ./src
 RUN mvn -s settings.xml install -DskipTests
 
-FROM amazoncorretto:21
+FROM amazoncorretto:21-al2
 
 WORKDIR /home
 
@@ -35,7 +35,7 @@ COPY --from=builder /home/jpo-conflictmonitor/target/jpo-conflictmonitor.jar /ho
 # Use jemalloc for RocksDB per Confluent recommendation:
 # https://docs.confluent.io/platform/current/streams/developer-guide/memory-mgmt.html#rocksdb
 RUN amazon-linux-extras install -y epel && \
-     yum install -y jemalloc-devel
+    yum install -y jemalloc-devel
 ENV LD_PRELOAD="/usr/lib64/libjemalloc.so"
 
 # Entrypoint for prod: JMX not exposed.
@@ -49,7 +49,7 @@ ENV LD_PRELOAD="/usr/lib64/libjemalloc.so"
 #   * If off heap is approx 1G, and total memory is 4G, set -XX:MaxRAMPercentage=75.0
 #   * If off heap is 1G and total memory is 8G, set -XX:MaxRAMPercentage=85.0 (~7/8)
 ENTRYPOINT ["java", \
-	"-Dlogback.configurationFile=/home/logback.xml", \
+    "-Dlogback.configurationFile=/home/logback.xml", \
     "-XX:+UseG1GC", \
     "-XX:MaxGCPauseMillis=20", \
     "-XX:InitiatingHeapOccupancyPercent=35", \
@@ -60,8 +60,8 @@ ENTRYPOINT ["java", \
     "-XX:InitialRAMPercentage=5.0", \
     "-XX:MaxRAMPercentage=65.0", \
     "-XX:+ExitOnOutOfMemoryError", \
-	"-jar", \
-	"/home/jpo-conflictmonitor.jar"]
+    "-jar", \
+    "/home/jpo-conflictmonitor.jar"]
 
 # Entrypoint for testing: enables nonlocal JMX on port 10090
 #ENTRYPOINT ["java", \
