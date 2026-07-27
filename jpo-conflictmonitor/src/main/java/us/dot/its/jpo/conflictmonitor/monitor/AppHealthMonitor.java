@@ -6,6 +6,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.streams.KafkaStreams;
@@ -90,6 +93,79 @@ public class AppHealthMonitor {
     @Autowired ConfigTopology configTopology;
     @Autowired MapIndex mapIndex;
     @Autowired IntersectionEventTopology intersectionEventTopology;
+    @Autowired MeterRegistry meterRegistry;
+    @Autowired(required = false) PrometheusMeterRegistry prometheusMeterRegistry;
+
+    /**
+     * Prometheus text scrape on the proven /health controller.
+     * Prefer this over /actuator/prometheus: curl localhost:8082/health/prometheus
+     */
+    @GetMapping(value = "/prometheus", produces = "text/plain;version=0.0.4;charset=utf-8")
+    public ResponseEntity<String> prometheusText() {
+        PrometheusMeterRegistry prometheus = resolvePrometheusRegistry();
+        if (prometheus == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("No PrometheusMeterRegistry available; type=" + meterRegistry.getClass().getName());
+        }
+        try {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/plain;version=0.0.4;charset=utf-8"))
+                    .body(prometheus.scrape());
+        } catch (Exception e) {
+            logger.error("Prometheus text scrape failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(e.getClass().getName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Debug scrape formats. Use when diagnosing scrape failures.
+     */
+    @GetMapping(value = "/prometheus-debug", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> prometheusDebug() {
+        PrometheusMeterRegistry prometheus = resolvePrometheusRegistry();
+        if (prometheus == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("No PrometheusMeterRegistry available; type=" + meterRegistry.getClass().getName());
+        }
+        StringBuilder out = new StringBuilder();
+        try {
+            String body = prometheus.scrape();
+            out.append("prometheus text scrape OK, chars=").append(body.length()).append('\n');
+            out.append(body, 0, Math.min(body.length(), 2000)).append("\n\n");
+        } catch (Exception e) {
+            out.append("prometheus text scrape FAILED: ")
+                    .append(e.getClass().getName()).append(": ").append(e.getMessage()).append('\n');
+        }
+        try {
+            String openMetrics = prometheus.scrape("application/openmetrics-text; version=1.0.0; charset=utf-8");
+            out.append("openmetrics scrape OK, chars=").append(openMetrics.length()).append('\n');
+        } catch (Exception e) {
+            out.append("openmetrics scrape FAILED: ")
+                    .append(e.getClass().getName()).append(": ").append(e.getMessage()).append('\n');
+        }
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(out.toString());
+    }
+
+    private PrometheusMeterRegistry resolvePrometheusRegistry() {
+        if (prometheusMeterRegistry != null) {
+            return prometheusMeterRegistry;
+        }
+        if (meterRegistry instanceof PrometheusMeterRegistry prometheus) {
+            return prometheus;
+        }
+        if (meterRegistry instanceof CompositeMeterRegistry composite) {
+            for (MeterRegistry child : composite.getRegistries()) {
+                if (child instanceof PrometheusMeterRegistry prometheus) {
+                    return prometheus;
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * Returns a list of configuration and algorithm parameter objects.
@@ -123,6 +199,8 @@ public class AppHealthMonitor {
                 "topics",
                 "properties",
                 "streams",
+                "streams/cpu",
+                "prometheus",
                 "spatial-indexes",
                 "spat-window-store",
                 "bsm-window-store",
@@ -207,6 +285,82 @@ public class AppHealthMonitor {
         }
 
         return getResponse(propMap);
+    }
+
+    /**
+     * Ranks Kafka Streams topologies by compute indicators (process-ratio and process-latency).
+     *
+     * @return response entity with topologies sorted by average process-ratio descending
+     */
+    @GetMapping(value = "/streams/cpu")
+    public @ResponseBody ResponseEntity<List<StreamsCpuSummary>> streamsCpuSummary() {
+        var streamsMap = getKafkaStreamsMap();
+        List<StreamsCpuSummary> summaries = new ArrayList<>();
+
+        for (Map.Entry<String, KafkaStreams> entry : streamsMap.entrySet()) {
+            String name = entry.getKey();
+            KafkaStreams streams = entry.getValue();
+            StreamsCpuSummary summary = new StreamsCpuSummary();
+            summary.setName(name);
+            if (streams == null) {
+                summary.setState(null);
+                summaries.add(summary);
+                continue;
+            }
+            summary.setState(streams.state());
+
+            double processRatioSum = 0.0;
+            int processRatioCount = 0;
+            double processLatencyAvgSum = 0.0;
+            int processLatencyCount = 0;
+            double processLatencyMax = 0.0;
+            double pollRatioSum = 0.0;
+            int pollRatioCount = 0;
+            double recordsProcessedRateSum = 0.0;
+
+            var metrics = streams.metrics();
+            for (Map.Entry<MetricName, ? extends org.apache.kafka.common.Metric> metricEntry : metrics.entrySet()) {
+                MetricName metricName = metricEntry.getKey();
+                Object value = metricEntry.getValue().metricValue();
+                if (!(value instanceof Number number)) {
+                    continue;
+                }
+                double numeric = number.doubleValue();
+                String group = metricName.group();
+                String metric = metricName.name();
+
+                if ("stream-thread-metrics".equals(group)) {
+                    switch (metric) {
+                        case "process-ratio" -> {
+                            processRatioSum += numeric;
+                            processRatioCount++;
+                        }
+                        case "process-latency-avg" -> {
+                            processLatencyAvgSum += numeric;
+                            processLatencyCount++;
+                        }
+                        case "process-latency-max" -> processLatencyMax = Math.max(processLatencyMax, numeric);
+                        case "poll-ratio" -> {
+                            pollRatioSum += numeric;
+                            pollRatioCount++;
+                        }
+                        case "process-rate" -> recordsProcessedRateSum += numeric;
+                        default -> { }
+                    }
+                }
+            }
+
+            summary.setAvgProcessRatio(processRatioCount > 0 ? processRatioSum / processRatioCount : 0.0);
+            summary.setAvgProcessLatencyMs(processLatencyCount > 0 ? processLatencyAvgSum / processLatencyCount : 0.0);
+            summary.setMaxProcessLatencyMs(processLatencyMax);
+            summary.setAvgPollRatio(pollRatioCount > 0 ? pollRatioSum / pollRatioCount : 0.0);
+            summary.setProcessRate(recordsProcessedRateSum);
+            summary.setThreadCount(processRatioCount);
+            summaries.add(summary);
+        }
+
+        summaries.sort((a, b) -> Double.compare(b.getAvgProcessRatio(), a.getAvgProcessRatio()));
+        return getResponse(summaries);
     }
 
     /**
@@ -544,6 +698,22 @@ public class AppHealthMonitor {
     public class StreamsInfo {
         State state;
         String detailsUrl;      
+    }
+
+    /**
+     * Per-topology compute summary derived from Kafka Streams thread metrics.
+     */
+    @Getter
+    @Setter
+    public static class StreamsCpuSummary {
+        String name;
+        State state;
+        double avgProcessRatio;
+        double avgProcessLatencyMs;
+        double maxProcessLatencyMs;
+        double avgPollRatio;
+        double processRate;
+        int threadCount;
     }
 
     /** Map of metric group names to MetricsGroup objects. */
