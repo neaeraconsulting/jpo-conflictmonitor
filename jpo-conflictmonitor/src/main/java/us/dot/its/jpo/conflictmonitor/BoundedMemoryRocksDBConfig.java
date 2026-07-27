@@ -78,9 +78,10 @@ public class BoundedMemoryRocksDBConfig implements RocksDBConfigSetter {
         MAX_MANIFEST_FILE_SIZE = getEnvLong("ROCKSDB_MAX_MANIFEST_FILE_SIZE", 100 * MB);
 
         log.info("Initialized BoundedMemoryRocksDBConfig.  TOTAL_OFF_HEAP_MEMORY = {}, INDEX_FILTER_BLOCK_RATIO = {}," +
-                " TOTAL_MEMTABLE_MEMORY = {}, BLOCK_SIZE = {}, N_MEMTABLES = {}, MEMTABLE_SIZE = {}",
+                " TOTAL_MEMTABLE_MEMORY = {}, BLOCK_SIZE = {}, N_MEMTABLES = {}, MEMTABLE_SIZE = {}, " +
+                        "MAX_MANIFEST_FILE_SIZE = {}",
                 TOTAL_OFF_HEAP_MEMORY, INDEX_FILTER_BLOCK_RATIO, TOTAL_MEMTABLE_MEMORY, BLOCK_SIZE, N_MEMTABLES,
-                MEMTABLE_SIZE);
+                MEMTABLE_SIZE, MAX_MANIFEST_FILE_SIZE);
     }
 
 
