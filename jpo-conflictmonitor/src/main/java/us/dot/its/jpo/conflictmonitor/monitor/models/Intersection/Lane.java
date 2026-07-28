@@ -98,7 +98,8 @@ public class Lane {
             lanePoints = lanePoints.reverse();
         }
 
-        if(((MapProperties)feature.getProperties()).getLaneType().getCrosswalk() != null){
+        MapProperties props = (MapProperties) feature.getProperties();
+        if(props!= null && props.getLaneType() != null && props.getLaneType().getCrosswalk() != null){
             lane.crosswalk = true;
         }
         else{
