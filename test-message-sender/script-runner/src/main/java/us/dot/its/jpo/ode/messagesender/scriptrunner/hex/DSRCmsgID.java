@@ -4,13 +4,15 @@ import lombok.Getter;
 
 
 /**
- * Includes J2735 Message Frame IDs found in the Utah test data.
+ * J2735 Message Frame IDs.
  */
 public enum DSRCmsgID {
     MAP(18, "0012", 44920, "topic.OdeMapJson"), 
     SPAT(19, "0013", 44910, "topic.OdeSpatJson"), 
     BSM(20, "0014", 46800, "topic.OdeBsmJson"), 
-    RTCM(28, "001C", 0, ""),
+    RTCM(28, "001C", 44960, "topic.OdeRtcmJson"),
+    SRM(29, "001D", 44930, "topic.OdeSrmJson"),
+    SSM(30, "001E", 44900, "topic.OdeSsmJson"),
     TEST_MESSAGE_01(241, "00F1", 0, "")
     ;
 
@@ -37,7 +39,7 @@ public enum DSRCmsgID {
 
     public static DSRCmsgID fromHex(String hex) {
         for (DSRCmsgID dsrcMsgId : DSRCmsgID.values()) {
-            if (dsrcMsgId.getHex().equals(hex)) {
+            if (dsrcMsgId.getHex().equalsIgnoreCase(hex)) {
                 return dsrcMsgId;
             }
         }

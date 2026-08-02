@@ -52,6 +52,16 @@ public enum UnitsEnum {
     MILES_PER_HOUR,
 
     /**
+     * Unit in Feet per Second Squared
+     */
+    FEET_PER_SECOND_SQUARED,
+
+    /**
+     * Unit in Degrees per Second
+     */
+    DEGREES_PER_SECOND,
+
+    /**
      * No Unit Specified
      */
     NONE

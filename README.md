@@ -1,3 +1,6 @@
+[![GitHub Release](https://img.shields.io/github/v/release/usdot-jpo-ode/jpo-conflictmonitor)](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/releases) [![Docker Hub Build](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/actions/workflows/dockerhub.yml/badge.svg?branch=develop)](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/actions/workflows/dockerhub.yml?query=branch:develop) [![Tests](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/actions/workflows/ci.yml?query=branch:develop) [![Docker Pulls](https://img.shields.io/docker/pulls/usdotjpoode/jpo-conflictmonitor?label=Docker%20Pulls%20%28jpo-conflictmonitor%20releases%29)](https://hub.docker.com/r/usdotjpoode/jpo-conflictmonitor) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=usdot-jpo-ode_jpo-conflictmonitor\&metric=alert_status)](https://sonarcloud.io/project/overview?id=usdot-jpo-ode_jpo-conflictmonitor) [![License](https://img.shields.io/github/license/usdot-jpo-ode/jpo-conflictmonitor)](https://github.com/usdot-jpo-ode/jpo-conflictmonitor/blob/develop/LICENSE)
+
+
 # jpo-conflictmonitor
 
 The JPO Conflict Monitor is a real time validation system to verify corresponding SPAT, MAP and BSM messages. Validation is done by aggregating input messages, then performing appropriate analysis to establish and detect vehicle events for an intersection. Detected Events are published to Kafka Topics to be stored for further analysis. 
@@ -5,6 +8,8 @@ The JPO Conflict Monitor is a real time validation system to verify correspondin
 ![alt text](docs/ConflictMonitorAnalysisProcess.svg "Conflict Monitor Analysis Process")
 
 The conflict monitor is focused on validating messages (SPaT, MAP and BSM) against one another to develop a picture of what is happening at a given intersection. In particular, the conflict monitor is looking for state information which is not self consistent and is likely the function of incorrect message generation and broadcasting. The conflict monitor is not configurted to validate message structure, as this functionallity is performed by the jpo-geojsonconverter.
+
+This repository also contains the [`jpo-conflictmonitor-batch-processing`](jpo-conflictmonitor-batch-processing/README.md) subproject; see [Usage Example](#usage-example) below for an introduction.
 
 All stakeholders are invited to provide input to these documents. To provide feedback, we recommend that you create an "issue" in this repository (<https://github.com/usdot-jpo-ode/jpo-conflictmonitor/issues>). You will need a GitHub account to create an issue. If you don’t have an account, a dialog will be presented to you to create one at no cost.
 
@@ -35,6 +40,8 @@ All stakeholders are invited to provide input to these documents. To provide fee
 The jpo-conflict monitor uses JSON encoded ODE BSM data, along with the processed SPaT and MAP messages from the geojsonconverter to validate intersection performance. Data is partitioned based upon the receiving device (generally the RSU at an intersection) to ensure scalable performance. In order to verify your jpo-conflictmonitor is functioning, you must run the jpo-ode, the jpo-geojsonconverter and the jpo-conflictmonitor and then send the jpo-ode raw ASN1 encoded MAP, SPaT and BSM data through the ODE to validate performance.
 
 Follow the configuration section to properly configure and launch your jpo-ode, jpo-geojsonconverter, and jpo-conflictmonitor.
+
+This repository also contains the [`jpo-conflictmonitor-batch-processing`](jpo-conflictmonitor-batch-processing/README.md) subproject, a separate, independently deployed Spring Boot application for scheduled/batch analyses that don't fit this real-time model — notably comparing processed SPaT data against controller event logs pulled from an [ATSPM](https://github.com/udotdevelopment/ATSPM) server. See its README for background, configuration, and deployment details; it is also referenced from the Configuration and Deployment sections below.
 
 [Back to top](#toc)
 
@@ -91,6 +98,10 @@ The JPO-ConflictMonitor configuration is customized through the environment vari
 
 **Important!**
 You must rename `sample.env` to `.env` for Docker to automatically read the file. A `.env` file is also required in [jpo-utils](jpo-utils/sample.env). Do not push this file to source control.
+
+**Batch Processing Configuration:**
+
+The `jpo-conflictmonitor-batch-processing` subproject (see [Usage Example](#usage-example)) is configured separately, via its own `application.yaml` and a `CM_ATSPM_CLIENT_*`/`CM_DATABASE_NAME`/etc. block appended to the root `sample.env`/`.env`. See the [batch processing README](jpo-conflictmonitor-batch-processing/README.md#configuration) for the full list of settings, including ATSPM connection credentials and the per-route/per-signal phase mapping configuration.
 
 [Back to top](#toc)
 
@@ -269,6 +280,10 @@ This section outlines the software technology stacks of the GeoJsonConverter.
 - [JUnit](https://junit.org)
 - [JMockit](http://jmockit.github.io/)
 
+### Batch Processing Code
+
+The `jpo-conflictmonitor-batch-processing` subproject (see [Usage Example](#usage-example)) is also a Java/Maven/Spring Boot application, but queries MongoDB and an [ATSPM](https://github.com/udotdevelopment/ATSPM) server directly over HTTP rather than participating in the Kafka topology. See its [README](jpo-conflictmonitor-batch-processing/README.md) for details.
+
 [Back to top](#toc)
 
 <!--
@@ -300,6 +315,8 @@ Install the IDE of your choice:
 ## 6. Deployment
 
 Deployment of resources is largely managed through [docker compose profiles](https://docs.docker.com/reference/compose-file/profiles/). The available profiles are described in the Conflict Monitor [sample.env](sample.env) as well as in the JPO Utils [sample.env](jpo-utils/sample.env)
+
+The `jpo-conflictmonitor-batch-processing` subproject is deployed as its own container, via `docker-compose-batch.yml` or the root `docker-compose.yml`'s `cm_batch` profile (also included in `all`/`cm_full`/`cm_release`). See its [README](jpo-conflictmonitor-batch-processing/README.md#running) for details.
 
 [Back to top](#toc)
 

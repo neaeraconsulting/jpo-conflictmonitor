@@ -82,48 +82,49 @@ public class BsmMessageCountProgressionProcessor<Point> extends ContextualProces
                 new QueryConfig(false));
 
         if (result.isSuccess()) {
-            VersionedRecordIterator<ProcessedBsm<Point>> iterator = result.getResult();
-            ProcessedBsm<Point> previousState = null;
-            int recordCount = 0;
+            try (VersionedRecordIterator<ProcessedBsm<Point>> iterator = result.getResult()) {
+                ProcessedBsm<Point> previousState = null;
+                int recordCount = 0;
 
-            while (iterator.hasNext()) {
-                final VersionedRecord<ProcessedBsm<Point>> state = iterator.next();
-                final ProcessedBsm<Point> thisState = state.value();
-                recordCount++;
+                while (iterator.hasNext()) {
+                    final VersionedRecord<ProcessedBsm<Point>> state = iterator.next();
+                    final ProcessedBsm<Point> thisState = state.value();
+                    recordCount++;
 
-                // Skip records older than the last processed state
-                if (lastProcessedBsm != null && thisState.getProperties().getTimeStamp().isBefore(lastProcessedBsm.getProperties().getTimeStamp())) {
-                    continue;
-                }
+                    // Skip records older than the last processed state
+                    if (lastProcessedBsm != null && thisState.getProperties().getTimeStamp().isBefore(lastProcessedBsm.getProperties().getTimeStamp())) {
+                        continue;
+                    }
 
-                if (previousState != null) {
-                    long timeDifference = thisState.getProperties().getTimeStamp().toInstant().toEpochMilli() - previousState.getProperties().getTimeStamp().toInstant().toEpochMilli();
+                    if (previousState != null) {
+                        long timeDifference = thisState.getProperties().getTimeStamp().toInstant().toEpochMilli() - previousState.getProperties().getTimeStamp().toInstant().toEpochMilli();
 
-                    if (timeDifference < parameters.getBufferTimeMs()) {
-                        int previousHash = calculateHash(previousState);
-                        int currentHash = calculateHash(thisState);
+                        if (timeDifference < parameters.getBufferTimeMs()) {
+                            int previousHash = calculateHash(previousState);
+                            int currentHash = calculateHash(thisState);
 
-                        BsmProperties previousProperties = previousState.getProperties();
-                        BsmProperties currentProperties = thisState.getProperties();
+                            BsmProperties previousProperties = previousState.getProperties();
+                            BsmProperties currentProperties = thisState.getProperties();
 
-                        int previousMessageCount = previousProperties.getMsgCnt();
-                        int currentMessageCount = currentProperties.getMsgCnt();
+                            int previousMessageCount = previousProperties.getMsgCnt();
+                            int currentMessageCount = currentProperties.getMsgCnt();
 
-                        if (previousHash == currentHash && previousMessageCount == currentMessageCount) {
-                            // No change
-                        } else if (previousHash != currentHash && (previousMessageCount + 1) % 128 == currentMessageCount) {
-                            // changed with valid increment, including wrap-around from 127 to 0
-                        } else {
-                            BsmMessageCountProgressionEvent event = createEvent(previousState, thisState);
-                            context().forward(new Record<>(key, event, state.timestamp()));
+                            if (previousHash == currentHash && previousMessageCount == currentMessageCount) {
+                                // No change
+                            } else if (previousHash != currentHash && (previousMessageCount + 1) % 128 == currentMessageCount) {
+                                // changed with valid increment, including wrap-around from 127 to 0
+                            } else {
+                                BsmMessageCountProgressionEvent event = createEvent(previousState, thisState);
+                                context().forward(new Record<>(key, event, state.timestamp()));
+                            }
                         }
                     }
+                    previousState = thisState;
                 }
-                previousState = thisState;
-            }
-            if (recordCount > 1) {
-                // Update last processed state
-                lastProcessedStateStore.put(key, previousState);
+                if (recordCount > 1) {
+                    // Update last processed state
+                    lastProcessedStateStore.put(key, previousState);
+                }
             }
         }
     }

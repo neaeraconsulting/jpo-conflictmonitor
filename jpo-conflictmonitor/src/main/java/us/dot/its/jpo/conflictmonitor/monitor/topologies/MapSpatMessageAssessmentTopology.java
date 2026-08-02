@@ -40,7 +40,6 @@ import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_spat_message_assessment.MapSpatMessageAssessmentConstants.DEFAULT_MAP_SPAT_MESSAGE_ASSESSMENT_ALGORITHM;
 
@@ -311,6 +310,9 @@ public class MapSpatMessageAssessmentTopology
                     Set<Integer> enabledLanes = new HashSet<>(spat.getEnabledLanes());
                     var connections = new ArrayList<LaneConnection>();
                     for (LaneConnection connection : unfilteredConnections) {
+                        if (connection.getIngressLane() == null || connection.getEgressLane() == null) {
+                            continue;
+                        }
                         int ingressId = connection.getIngressLane().getId();
                         int egressId = connection.getEgressLane().getId();
                         boolean ingressIsRevocable = revocableLaneIds != null && revocableLaneIds.contains(ingressId);
@@ -430,7 +432,7 @@ public class MapSpatMessageAssessmentTopology
             signalStateConflictEventStream.print(Printed.toSysOut());
         }
 
-        return builder.build();
+        return builder.build(streamsProperties);
 
     }
 

@@ -1,0 +1,11 @@
+package us.dot.its.jpo.conflictmonitor.monitor.models.events;
+
+public enum VehicleMisbehaviorReason {
+    SPEED_DELTA_INVALID,
+    YAW_DELTA_INVALID,
+    EXCESSIVE_SPEED,
+    EXCESSIVE_ROTATION,
+    EXCESSIVE_LATERAL_ACCELERATION,
+    EXCESSIVE_LONGITUDINAL_ACCELERATION,
+    EXCESSIVE_VERTICAL_ACCELERATION
+}

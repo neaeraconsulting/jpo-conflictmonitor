@@ -178,7 +178,7 @@ public class LaneDirectionOfTravelAssessmentTopology
             Produced.with(Serdes.String(),
                     JsonSerdes.LaneDirectionOfTravelAssessmentNotification()));
 
-        return builder.build();
+        return builder.build(streamsProperties);
     }    
 
 

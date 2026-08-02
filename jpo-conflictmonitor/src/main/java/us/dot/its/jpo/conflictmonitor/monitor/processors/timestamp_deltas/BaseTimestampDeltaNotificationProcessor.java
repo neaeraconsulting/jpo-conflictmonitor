@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.processors.timestamp_deltas;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.kafka.streams.KeyValue;
@@ -39,6 +40,7 @@ import java.util.List;
  * @param <TEvent>        the type of timestamp delta event processed
  * @param <TNotification> the type of notification emitted
  */
+@Slf4j
 public abstract class BaseTimestampDeltaNotificationProcessor<TEvent extends BaseTimestampDeltaEvent,
         TNotification extends BaseTimestampDeltaNotification>
     extends ContextualProcessor<RsuIntersectionKey, TEvent, RsuIntersectionKey, TNotification> {
@@ -182,34 +184,39 @@ public abstract class BaseTimestampDeltaNotificationProcessor<TEvent extends Bas
                         .withAscendingTimestamps();
         QueryResult<VersionedRecordIterator<TEvent>> result =
                 eventStore.query(versionedQuery, PositionBound.unbounded(), new QueryConfig(false));
-        VersionedRecordIterator<TEvent> resultIterator = result.getResult();
+        if (result.isSuccess()) {
+            try (VersionedRecordIterator<TEvent> resultIterator = result.getResult()) {
 
-        SummaryStatistics stats = new SummaryStatistics();
-        DescriptiveStatistics absStats = new DescriptiveStatistics();
-        while (resultIterator.hasNext()) {
-            VersionedRecord<TEvent> record = resultIterator.next();
-            long recordTimestamp = record.timestamp();
-            Instant recordInstant = Instant.ofEpochMilli(recordTimestamp);
-            // Shouldn't happen but check timestamps, in case of stream-time vs clock time issue
-            if (recordInstant.isBefore(fromTime) || recordInstant.isAfter(toTime)) {
-                getLogger().warn("Record instant {} is not between {} and {}, skipping it.", recordInstant, fromTime, toTime);
-                continue;
+                SummaryStatistics stats = new SummaryStatistics();
+                DescriptiveStatistics absStats = new DescriptiveStatistics();
+                while (resultIterator.hasNext()) {
+                    VersionedRecord<TEvent> record = resultIterator.next();
+                    long recordTimestamp = record.timestamp();
+                    Instant recordInstant = Instant.ofEpochMilli(recordTimestamp);
+                    // Shouldn't happen but check timestamps, in case of stream-time vs clock time issue
+                    if (recordInstant.isBefore(fromTime) || recordInstant.isAfter(toTime)) {
+                        getLogger().warn("Record instant {} is not between {} and {}, skipping it.", recordInstant, fromTime, toTime);
+                        continue;
+                    }
+                    TEvent event = record.value();
+                    TimestampDelta delta = event.getDelta();
+                    stats.addValue((double) delta.getDeltaMillis());
+                    absStats.addValue((double) delta.getAbsDeltaMillis());
+                }
+
+                long numberOfEvents = stats.getN();
+                long minDeltaMillis = (long) stats.getMin();
+                long maxDeltaMillis = (long) stats.getMax();
+                double absMedianDelta = absStats.getPercentile(50.0);
+
+                if (numberOfEvents > 0) {
+                    TNotification notification =
+                            createNotification(key, fromTime, toTime, numberOfEvents, minDeltaMillis, maxDeltaMillis, absMedianDelta);
+                    context().forward(new Record<>(key, notification, timestamp));
+                }
             }
-            TEvent event = record.value();
-            TimestampDelta delta = event.getDelta();
-            stats.addValue((double)delta.getDeltaMillis());
-            absStats.addValue((double)delta.getAbsDeltaMillis());
-        }
-
-        long numberOfEvents = stats.getN();
-        long minDeltaMillis = (long)stats.getMin();
-        long maxDeltaMillis = (long)stats.getMax();
-        double absMedianDelta = absStats.getPercentile(50.0);
-
-        if (numberOfEvents > 0) {
-            TNotification notification =
-                    createNotification(key, fromTime, toTime, numberOfEvents, minDeltaMillis, maxDeltaMillis, absMedianDelta);
-            context().forward(new Record<>(key, notification, timestamp));
+        } else {
+            log.error("BaseTimestampDeltaNotificationProcessor: versioned store query failed");
         }
     }
 

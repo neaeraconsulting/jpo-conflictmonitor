@@ -1,0 +1,171 @@
+server.port: 8055
+
+
+spring:
+  application:
+    name: jpo-atspm-spat-validation-service
+  groovy:
+    template:
+      check-template-location: false
+  thymeleaf:
+    check-template-location: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSSZ
+    time-zone: UTC
+
+  data:
+    # Mongo properties ref:
+    # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.additional-hosts
+    mongodb:
+      database: ${CM_DATABASE_NAME:CV}
+      host: ${DB_HOST_IP:localhost}
+      port: ${MONGO_PORT:27017}
+      username: ${MONGO_READ_WRITE_USER:ode}
+      password: ${MONGO_READ_WRITE_PASS:replace_me}
+      authentication-database: ${CM_MONGO_AUTH_DB:admin}
+      # uri overrides individual properties above if it is set
+      # https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.data.spring.mongodb.uri
+      #uri: ${CM_MONGO_URI:mongodb://ode:replace_me@localhost:27017/CV}
+
+cm:
+  batch:
+    # Enables TestController's /test/** debug endpoints, which proxy ATSPM queries and can
+    # expose the live ATSPM access token. Disabled by default - only set to true for local
+    # development/testing, never in a shared or production environment.
+    test-controller:
+      enabled: ${CM_TEST_CONTROLLER_ENABLED:false}
+    scheduler:
+      thread.pool.size: 10
+      # Set to false to disable starting the batch algorithms on application startup,
+      # e.g. for tests that only need the Spring context to load.
+      enabled: true
+    # Clock config:
+    # In normal operation, set offset to false for system time.
+    # Or for testing or historical queries, set to true with start-timestamp set to the
+    # time in the past to start querying from.
+    clock:
+      offset: false
+      start-timestamp: "2026-04-26T02:30:00Z" # ignored if offset is false
+    atspm.spat.validation:
+      algorithm: defaultAtspmSpatValidationAlgorithm
+      client:
+        base-url: ${CM_ATSPM_CLIENT_BASE_URL:http://localhost:8055}
+        username: ${CM_ATSPM_CLIENT_USERNAME:username}
+        password: ${CM_ATSPM_CLIENT_PASSWORD:password}
+      local-time-zone: "America/Denver"
+      interval: 1
+      interval-units: HOURS
+      task-start-time-stagger: 2
+      task-start-time-stagger-units: MINUTES
+      # grace-period: Offset time to run scheduled queries.
+      # Set to an appropriate offset to ensure all data is present in the ATSPM and CIMMS databases for the
+      # time period being queried.
+      # It's not recommended to set this to 0, as current data in transit might be missed.
+      grace-period-offset: 1
+      grace-period-offset-units: HOURS
+      ## Sample Route Configuration
+      routes:
+        - routeId: 12
+          description: "Willow Creek Pkwy"
+          signals:
+            - signal-id: "2207201"
+              intersection-id: 51284
+              description: "Willow Creek Pkwy & Falcon Ridge Rd"
+              enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                  secondary-phase: 6
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 3
+                  primary-phase: 3
+                  secondary-phase: 8
+                - signal-group-id: 4
+                  primary-phase: 4
+                - signal-group-id: 5
+                  primary-phase: 5
+                  secondary-phase: 2
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 7
+                  primary-phase: 7
+                  secondary-phase: 4
+                - signal-group-id: 8
+                  primary-phase: 8
+            - signal-id: "2207198"
+              intersection-id: 0  # Missing MAP
+              description: "Willow Creek Pkwy & Heritage Trail"
+              enabled: false  # Missing SPATs
+            - signal-id: "2207196"
+              intersection-id: 62859
+              description: "Willow Creek Pkwy & Cascade Dr"
+              enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                  secondary-phase: 6
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 8
+                  primary-phase: 8
+            - signal-id: "2207194"
+              intersection-id: 71407
+              description: "Willow Creek Pkwy & Brighton Way"
+              enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                  secondary-phase: 6
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 8
+                  primary-phase: 8
+            - signal-id: "2207192"
+              intersection-id: 24810
+              description: "Willow Creek Pkwy & Founders Dr"
+              enabled: false  # Missing ATSPM data
+            - signal-id: "2207181"
+              intersection-id: 33291
+              description: "Sequoia Pass & Willow Creek Pkwy"
+              enabled: true
+              phases:
+                - signal-group-id: 1
+                  primary-phase: 1
+                  secondary-phase: 6
+                - signal-group-id: 2
+                  primary-phase: 2
+                - signal-group-id: 3
+                  primary-phase: 3
+                  secondary-phase: 8
+                - signal-group-id: 4
+                  primary-phase: 4
+                - signal-group-id: 5
+                  primary-phase: 5
+                  secondary-phase: 2
+                - signal-group-id: 6
+                  primary-phase: 6
+                - signal-group-id: 7
+                  primary-phase: 7
+                - signal-group-id: 8
+                  primary-phase: 8
+#        - routeId: 9999
+#          description: "Fake route for testing scalability"
+#          signals:
+#            - signal-id: "1111111"
+#              intersection-id: 1111111
+#              description: "Fake signal 1"
+#              enabled: false
+#            - signal-id: "2222222"
+#              intersection-id: 2222222
+#              description: "Fake signal 2"
+#              enabled: false
+
+
+

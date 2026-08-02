@@ -4,3 +4,4 @@ jpo-conflictmonitor/bin/**
 *.log
 .idea/
 *.class
+.claude/
