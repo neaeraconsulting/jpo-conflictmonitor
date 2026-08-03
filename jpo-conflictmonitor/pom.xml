@@ -114,7 +114,7 @@
     <dependency>
       <groupId>usdot.jpo.ode</groupId>
       <artifactId>jpo-geojsonconverter</artifactId>
-      <version>3.3.0</version>
+      <version>3.4.0-alpha3</version>
       <!-- Exclude kafka dependencies to allow using newer streams version than geojsonconverter -->
       <exclusions>
         <exclusion>
