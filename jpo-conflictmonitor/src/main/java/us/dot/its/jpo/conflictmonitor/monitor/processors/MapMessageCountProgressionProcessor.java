@@ -134,8 +134,7 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
         }
     }
 
-    // synchronize this method because it mutates the maps to test equality
-    private synchronized boolean testEquality(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2) {
+    private boolean testEquality(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2) {
         if (map1 == null && map2 == null) {
             return true;
         }
@@ -150,13 +149,16 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
         final MetadataProperties metadata1 = MetadataProperties.fromProcessedMap(map1);
         final MetadataProperties metadata2 = MetadataProperties.fromProcessedMap(map2);
         boolean equality;
-        try {
-            nullMetadataProperties(map1);
-            nullMetadataProperties(map2);
-            equality = map1.equals(map2);
-        } finally {
-            restoreMetadataProperties(map1, metadata1);
-            restoreMetadataProperties(map2, metadata2);
+        // synchronize during mutate and restore for thread safety
+        synchronized (this) {
+            try {
+                nullMetadataProperties(map1);
+                nullMetadataProperties(map2);
+                equality = map1.equals(map2);
+            } finally {
+                restoreMetadataProperties(map1, metadata1);
+                restoreMetadataProperties(map2, metadata2);
+            }
         }
         return equality;
     }
