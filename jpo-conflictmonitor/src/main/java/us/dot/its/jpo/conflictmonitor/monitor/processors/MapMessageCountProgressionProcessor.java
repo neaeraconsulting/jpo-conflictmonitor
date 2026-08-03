@@ -134,7 +134,8 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
         }
     }
 
-    private boolean testEquality(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2) {
+    // synchronize this method because it mutates the maps to test equality
+    private synchronized boolean testEquality(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2) {
         if (map1 == null && map2 == null) {
             return true;
         }
