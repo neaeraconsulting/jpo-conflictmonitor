@@ -58,7 +58,8 @@ public class BoundedMemoryRocksDBConfig implements RocksDBConfigSetter {
     // WriteBufferSize: Default 64MB
     private final static long MEMTABLE_SIZE;
 
-    // To limit the size of the manifest files, rolling change logs, which can grow very large
+    // To limit the size of the manifest files, rolling files log of state changes,
+    // which can grow very large
     private final static long MAX_MANIFEST_FILE_SIZE;
 
     private final static long KB = 1024L;
