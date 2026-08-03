@@ -16,12 +16,15 @@ import org.apache.kafka.streams.state.VersionedRecordIterator;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.MapMessageCountProgressionEvent;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
+import us.dot.its.jpo.geojsonconverter.pojos.ProcessedValidationMessage;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.ProcessedMap;
+import us.dot.its.jpo.ode.model.OdeMessageFrameMetadata;
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Slf4j
 public class MapMessageCountProgressionProcessor extends ContextualProcessor<RsuIntersectionKey, ProcessedMap<LineString>, RsuIntersectionKey, MapMessageCountProgressionEvent> {
@@ -98,20 +101,27 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                         long timeDifference = thisState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli() - previousState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
 
                         if (timeDifference < parameters.getBufferTimeMs()) {
-                            int previousHash = calculateHash(previousState);
-                            int currentHash = calculateHash(thisState);
                             int previousRevision = previousState.getProperties().getRevision();
                             int currentRevision = thisState.getProperties().getRevision();
                             int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
                             int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
-                            boolean revisionChanged = previousHash != currentHash && (previousRevision + 1) % 128 != currentRevision;
-                            boolean msgIssueRevisionChanged = previousHash != currentHash && (previousMsgIssueRevision + 1) % 128 != currentMsgIssueRevision;
 
-                            if (previousHash == currentHash && previousRevision == currentRevision && previousMsgIssueRevision == currentMsgIssueRevision) {
-                            } else if (revisionChanged || msgIssueRevisionChanged) {
+                            boolean isEqual = testEquality(previousState, thisState);
+                            boolean contentsChanged = !isEqual;
+
+                            boolean revisionChanged = previousRevision != currentRevision;
+                            boolean msgIssueRevisionChanged = previousMsgIssueRevision != currentMsgIssueRevision;
+                            boolean anyRevisionChanged = revisionChanged || msgIssueRevisionChanged;
+
+                            if ((anyRevisionChanged && !contentsChanged)
+                                  || (!anyRevisionChanged && contentsChanged)) {
+                                // Revision changed, but contents didn't change,
+                                // or contents changed, but revision didn't.
+                                // Issue an event in this case, this is a problem.
                                 MapMessageCountProgressionEvent event = createEvent(previousState, thisState, revisionChanged, msgIssueRevisionChanged);
                                 context().forward(new Record<>(key, event, state.timestamp()));
                             }
+
                         }
                     }
                     previousState = thisState;
@@ -124,24 +134,69 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
         }
     }
 
-    private int calculateHash(ProcessedMap<LineString> map) {
-        ZonedDateTime odeReceivedAt = map.getProperties().getOdeReceivedAt();
-        ZonedDateTime utcTimeStamp = map.getProperties().getTimeStamp();
-        int revision = map.getProperties().getRevision();
-        int msgIssueRevision = map.getProperties().getMsgIssueRevision();
+    private boolean testEquality(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2) {
+        if (map1 == null && map2 == null) {
+            return true;
+        }
+        if (map1 == null) {
+            return false;
+        }
+        if (map2 == null) {
+            return false;
+        }
+
+        // Exclude revisions, timestamps and other metadata that's not part of the original MAP
+        final MetadataProperties metadata1 = MetadataProperties.fromProcessedMap(map1);
+        final MetadataProperties metadata2 = MetadataProperties.fromProcessedMap(map2);
+        boolean equality;
+        try {
+            nullMetadataProperties(map1);
+            nullMetadataProperties(map2);
+            equality = map1.equals(map2);
+        } finally {
+            restoreMetadataProperties(map1, metadata1);
+            restoreMetadataProperties(map2, metadata2);
+        }
+        return equality;
+    }
+
+    private record MetadataProperties(ZonedDateTime odeReceivedAt, ZonedDateTime timeStamp, int revision,
+                                      int msgIssueRevision, String originIp, String asn1,
+                                      List<ProcessedValidationMessage> validationMessages,
+                                      OdeMessageFrameMetadata.Source source) {
+        public static MetadataProperties fromProcessedMap(ProcessedMap<LineString> map) {
+            return new MetadataProperties(
+                    map.getProperties().getOdeReceivedAt(),
+                    map.getProperties().getTimeStamp(),
+                    map.getProperties().getRevision(),
+                    map.getProperties().getMsgIssueRevision(),
+                    map.getProperties().getOriginIp(),
+                    map.getProperties().getAsn1(),
+                    map.getProperties().getValidationMessages(),
+                    map.getProperties().getMapSource());
+        }
+    }
+
+    private void nullMetadataProperties(ProcessedMap<LineString> map) {
         map.getProperties().setOdeReceivedAt(null);
         map.getProperties().setTimeStamp(null);
         map.getProperties().setRevision(0);
         map.getProperties().setMsgIssueRevision(0);
+        map.getProperties().setOriginIp(null);
+        map.getProperties().setAsn1(null);
+        map.getProperties().setValidationMessages(null);
+        map.getProperties().setMapSource(null);
+    }
 
-        int hash = map.hashCode();
-
-        map.getProperties().setOdeReceivedAt(odeReceivedAt);
-        map.getProperties().setTimeStamp(utcTimeStamp);
-        map.getProperties().setRevision(revision);
-        map.getProperties().setMsgIssueRevision(msgIssueRevision);
-
-        return hash;
+    private void restoreMetadataProperties(ProcessedMap<LineString> map, MetadataProperties metadata) {
+        map.getProperties().setOdeReceivedAt(metadata.odeReceivedAt);
+        map.getProperties().setTimeStamp(metadata.timeStamp);
+        map.getProperties().setRevision(metadata.revision);
+        map.getProperties().setMsgIssueRevision(metadata.msgIssueRevision);
+        map.getProperties().setOriginIp(metadata.originIp);
+        map.getProperties().setAsn1(metadata.asn1);
+        map.getProperties().setValidationMessages(metadata.validationMessages);
+        map.getProperties().setMapSource(metadata.source);
     }
 
     private MapMessageCountProgressionEvent createEvent(ProcessedMap<LineString> previousState, ProcessedMap<LineString> thisState, boolean revisionChanged, boolean msgIssueRevisionChanged) {
