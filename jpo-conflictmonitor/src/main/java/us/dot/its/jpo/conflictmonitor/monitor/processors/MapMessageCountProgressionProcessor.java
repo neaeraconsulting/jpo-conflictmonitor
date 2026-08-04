@@ -109,7 +109,8 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                     var thisReceivedAtInstant = thisReceivedAt.toInstant();
                     var streamTimeInstant = Instant.ofEpochMilli(context().currentStreamTimeMs());
                     var durationSinceFirst = Duration.between(thisReceivedAtInstant, streamTimeInstant);
-                    var bufferAndGraceDuration = Duration.ofMillis(parameters.getBufferTimeMs() + parameters.getBufferGracePeriodMs());
+                    var bufferAndGraceDuration = Duration.ofMillis((long)parameters.getBufferTimeMs() +
+                            parameters.getBufferGracePeriodMs());
                     if (recordCount == 1 &&
                             durationSinceFirst.compareTo(bufferAndGraceDuration) < 0) {
                         // Don't finish processing yet, buffer + grace hasn't elapsed relative to the first record
