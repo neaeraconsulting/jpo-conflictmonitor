@@ -46,7 +46,8 @@ public class MapMessageCountProgressionTopology
 
         final String processedMapStateStore = parameters.getProcessedMapStateStoreName();
         final String latestMapStateStore = parameters.getLatestMapStateStoreName();
-        final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
+        final Duration retentionTime = Duration.ofMillis(
+                (parameters.getBufferTimeMs() + parameters.getBufferGracePeriodMs()) * 2L);
 
         builder.addStateStore(
                 Stores.versionedKeyValueStoreBuilder(
