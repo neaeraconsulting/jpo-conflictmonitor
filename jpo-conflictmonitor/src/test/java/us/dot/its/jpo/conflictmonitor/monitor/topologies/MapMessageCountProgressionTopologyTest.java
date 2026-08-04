@@ -32,14 +32,14 @@ import static org.hamcrest.Matchers.notNullValue;
 @Slf4j
 public class MapMessageCountProgressionTopologyTest {
 
-    private final static String mapInputTopicName = "topic.ProcessedMap";
-    private final static String eventOutputTopicName = "topic.CmMapMessageCountProgressionEvents";
-    private final static String processedMapStateStoreName = "processedMapStateStore";
-    private final static String latestMapStateStoreName = "latestMapStateStore";
-    private final static int bufferTimeMs = 5000;
-    private final static int bufferGracePeriodMs = 800;
-    private final static boolean debug = true;
-    private final static boolean aggregateEvents = false;
+    private static final String mapInputTopicName = "topic.ProcessedMap";
+    private static final String eventOutputTopicName = "topic.CmMapMessageCountProgressionEvents";
+    private static final String processedMapStateStoreName = "processedMapStateStore";
+    private static final String latestMapStateStoreName = "latestMapStateStore";
+    private static final int bufferTimeMs = 5000;
+    private static final int bufferGracePeriodMs = 800;
+    private static final boolean debug = true;
+    private static final boolean aggregateEvents = false;
 
     final String rsuId = "127.18.0.1";
     final int intersectionId = 12112;
