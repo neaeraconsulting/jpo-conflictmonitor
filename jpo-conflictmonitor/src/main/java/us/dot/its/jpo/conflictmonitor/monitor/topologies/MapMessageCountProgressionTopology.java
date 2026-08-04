@@ -16,6 +16,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.map_message_count_progression.MapMessageCountProgressionAggregationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.map_message_count_progression.MapMessageCountProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.models.map.MapTimestampExtractor;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
@@ -65,7 +66,10 @@ public class MapMessageCountProgressionTopology
                 )
         );
 
-        KStream<RsuIntersectionKey, ProcessedMap<LineString>> inputStream = builder.stream(parameters.getMapInputTopicName(), Consumed.with(JsonSerdes.RsuIntersectionKey(), JsonSerdes.ProcessedMapGeoJson()));
+        KStream<RsuIntersectionKey, ProcessedMap<LineString>> inputStream =
+                builder.stream(parameters.getMapInputTopicName(),
+                        Consumed.with(JsonSerdes.RsuIntersectionKey(), JsonSerdes.ProcessedMapGeoJson())
+                                .withTimestampExtractor(new MapTimestampExtractor()));
 
         var eventStream = inputStream
             .process(() -> new MapMessageCountProgressionProcessor(parameters), processedMapStateStore, latestMapStateStore);
