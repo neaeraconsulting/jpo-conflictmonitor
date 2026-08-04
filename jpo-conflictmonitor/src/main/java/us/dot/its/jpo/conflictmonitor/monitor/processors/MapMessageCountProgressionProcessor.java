@@ -99,20 +99,20 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                     log.debug("record count: {}", recordCount);
 
                     // Skip records older than the last processed state
-                    var thisReceivedAt = thisState.getProperties().getOdeReceivedAt();
+                    ZonedDateTime thisReceivedAt = thisState.getProperties().getOdeReceivedAt();
                     if (lastProcessedMap != null && thisReceivedAt.isBefore(lastProcessedMap.getProperties().getOdeReceivedAt())) {
                         log.debug("Skipping record with ODE received at {} older than last processed at {}",
                                 thisState.getProperties().getOdeReceivedAt(), lastProcessedMap.getProperties().getOdeReceivedAt());
                         continue;
                     }
 
-                    var thisReceivedAtInstant = thisReceivedAt.toInstant();
-                    var streamTimeInstant = Instant.ofEpochMilli(context().currentStreamTimeMs());
-                    var durationSinceFirst = Duration.between(thisReceivedAtInstant, streamTimeInstant);
-                    var bufferAndGraceDuration = Duration.ofMillis((long)parameters.getBufferTimeMs() +
+                    // Check if we are within the buffer and grace period
+                    Instant thisReceivedAtInstant = thisReceivedAt.toInstant();
+                    Instant streamTimeInstant = Instant.ofEpochMilli(context().currentStreamTimeMs());
+                    Duration durationSinceFirst = Duration.between(thisReceivedAtInstant, streamTimeInstant);
+                    Duration bufferAndGraceDuration = Duration.ofMillis((long)parameters.getBufferTimeMs() +
                             parameters.getBufferGracePeriodMs());
-                    if (recordCount == 1 &&
-                            durationSinceFirst.compareTo(bufferAndGraceDuration) < 0) {
+                    if (recordCount == 1 && durationSinceFirst.compareTo(bufferAndGraceDuration) < 0) {
                         // Don't finish processing yet, buffer + grace hasn't elapsed relative to the first record
                         log.debug("not processing yet, buffer + grace hasn't elapsed relative to the first record: {} < {}", durationSinceFirst, bufferAndGraceDuration);
                         break;
@@ -124,34 +124,32 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                         long timeDifference = thisState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli()
                                 - previousState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
                         log.debug("timeDifference: {}, bufferTime: {}", timeDifference, parameters.getBufferTimeMs());
-                        if (timeDifference < parameters.getBufferTimeMs()) {
-                            int previousRevision = previousState.getProperties().getRevision();
-                            int currentRevision = thisState.getProperties().getRevision();
-                            int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
-                            int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
 
-                            boolean isEqual = testEquality(previousState, thisState);
-                            boolean contentsChanged = !isEqual;
+                        int previousRevision = previousState.getProperties().getRevision();
+                        int currentRevision = thisState.getProperties().getRevision();
+                        int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
+                        int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
 
-                            boolean revisionChanged = previousRevision != currentRevision;
-                            boolean msgIssueRevisionChanged = previousMsgIssueRevision != currentMsgIssueRevision;
-                            boolean anyRevisionChanged = revisionChanged || msgIssueRevisionChanged;
+                        boolean isEqual = testEquality(previousState, thisState);
+                        boolean contentsChanged = !isEqual;
 
-                            log.debug("revisionChanged: {}, msgIssueRevisionChanged: {}, anyRevisionChanged: {}, contentsChanged: {}",
-                                    revisionChanged, msgIssueRevisionChanged, anyRevisionChanged, contentsChanged);
+                        boolean revisionChanged = previousRevision != currentRevision;
+                        boolean msgIssueRevisionChanged = previousMsgIssueRevision != currentMsgIssueRevision;
+                        boolean anyRevisionChanged = revisionChanged || msgIssueRevisionChanged;
 
-                            if ((anyRevisionChanged && !contentsChanged)
-                                  || (!anyRevisionChanged && contentsChanged)) {
-                                // Revision changed, but contents didn't change,
-                                // or contents changed, but revision didn't.
-                                // Issue an event in this case, this is a problem.
-                                log.debug("producing event");
-                                MapMessageCountProgressionEvent event = createEvent(previousState, thisState, revisionChanged, msgIssueRevisionChanged);
-                                context().forward(new Record<>(key, event, state.timestamp()));
-                            } else {
-                                log.debug("no event produced");
-                            }
+                        log.debug("revisionChanged: {}, msgIssueRevisionChanged: {}, anyRevisionChanged: {}, contentsChanged: {}",
+                                revisionChanged, msgIssueRevisionChanged, anyRevisionChanged, contentsChanged);
 
+                        if ((anyRevisionChanged && !contentsChanged)
+                              || (!anyRevisionChanged && contentsChanged)) {
+                            // Revision changed, but contents didn't change,
+                            // or contents changed, but revision didn't.
+                            // Issue an event in this case, this is a problem.
+                            log.debug("producing event");
+                            MapMessageCountProgressionEvent event = createEvent(previousState, thisState, revisionChanged, msgIssueRevisionChanged);
+                            context().forward(new Record<>(key, event, state.timestamp()));
+                        } else {
+                            log.debug("no event produced");
                         }
                     }
                     previousState = thisState;
@@ -198,6 +196,9 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                                       List<ProcessedValidationMessage> validationMessages,
                                       OdeMessageFrameMetadata.Source source) {
         public static MetadataProperties fromProcessedMap(ProcessedMap<LineString> map) {
+            if (map == null) {
+                return new MetadataProperties(null, null, 0, 0, null, null, null, null);
+            }
             return new MetadataProperties(
                     map.getProperties().getOdeReceivedAt(),
                     map.getProperties().getTimeStamp(),

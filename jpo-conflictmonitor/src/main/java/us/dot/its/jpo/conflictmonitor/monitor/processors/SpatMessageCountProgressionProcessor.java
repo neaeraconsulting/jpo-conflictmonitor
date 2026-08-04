@@ -16,11 +16,15 @@ import org.apache.kafka.streams.state.VersionedRecordIterator;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.SpatMessageCountProgressionEvent;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
+import us.dot.its.jpo.geojsonconverter.pojos.ProcessedValidationMessage;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
+import us.dot.its.jpo.ode.model.OdeMessageFrameMetadata;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Slf4j
 public class SpatMessageCountProgressionProcessor extends ContextualProcessor<RsuIntersectionKey, ProcessedSpat, RsuIntersectionKey, SpatMessageCountProgressionEvent> {
@@ -57,16 +61,12 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
         ProcessedSpat lastProcessedSpat = lastProcessedStateStore.get(key);
         Instant startTime;
         if (lastProcessedSpat != null) {
-            startTime = Instant.ofEpochMilli(lastProcessedSpat.getUtcTimeStamp().toInstant().toEpochMilli());
+            startTime = lastProcessedSpat.getUtcTimeStamp().toInstant();
         } else {
             // No transitions yet, base start time on time window
-            startTime = Instant.ofEpochMilli(context().currentStreamTimeMs())
-                    .minusMillis(parameters.getBufferTimeMs());
-        }
-
-        // Ensure excludeGracePeriod is not earlier than startTime
-        if (excludeGracePeriod.isBefore(startTime)) {
-            excludeGracePeriod = startTime;
+            startTime = excludeGracePeriod.minusMillis(parameters.getBufferTimeMs());
+            // Populate last processed for the first time
+            lastProcessedStateStore.put(key, value);
         }
         
         var query = MultiVersionedKeyQuery.<RsuIntersectionKey, ProcessedSpat>withKey(record.key())
@@ -89,26 +89,58 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
                     recordCount++;
 
                     // Skip records older than the last processed state
-                    if (lastProcessedSpat != null && thisState.getUtcTimeStamp().isBefore(lastProcessedSpat.getUtcTimeStamp())) {
+                    ZonedDateTime thisTimestamp = thisState.getUtcTimeStamp();
+                    if (lastProcessedSpat != null && thisTimestamp.isBefore(lastProcessedSpat.getUtcTimeStamp())) {
+                        log.debug("Skipping record with timestamp {} older than last processed at {}",
+                                thisTimestamp, lastProcessedSpat.getUtcTimeStamp());
                         continue;
                     }
 
-                    if (previousState != null) {
-                        long timeDifference = thisState.getUtcTimeStamp().toInstant().toEpochMilli() - previousState.getUtcTimeStamp().toInstant().toEpochMilli();
+                    // Check if we are within the buffer and grace period
+                    Instant thisTimestampInstant = thisTimestamp.toInstant();
+                    Instant streamTimeInstant = Instant.ofEpochMilli(context().currentStreamTimeMs());
+                    Duration durationSinceFirst = Duration.between(thisTimestampInstant, streamTimeInstant);
+                    Duration bufferAndGraceDuration = Duration.ofMillis(
+                            (long)parameters.getBufferTimeMs() + parameters.getBufferGracePeriodMs());
+                    if (recordCount == 1 && durationSinceFirst.compareTo(bufferAndGraceDuration) < 0) {
+                        // Don't finish processing yet. Buffer + grace hasn't elapsed relative to the first record
+                        break;
+                    }
 
-                        if (timeDifference < parameters.getBufferTimeMs()) {
-                            int previousHash = calculateHash(previousState);
-                            int currentHash = calculateHash(thisState);
+                    if (previousState != null) {
+                        final long timeDifference = thisState.getUtcTimeStamp().toInstant().toEpochMilli()
+                                - previousState.getUtcTimeStamp().toInstant().toEpochMilli();
+
+                        // Don't compare if the time difference is not in the ballpark of what it should be for SPATs
+                        // otherwise there may be missing SPATs so the increment would not be known.
+                        final long minDifferenceMs = 60L;
+                        final long maxDifferenceMs = 150L;
+                        if (timeDifference >= minDifferenceMs && timeDifference <= maxDifferenceMs) {
                             int previousRevision = previousState.getRevision();
                             int currentRevision = thisState.getRevision();
 
-                            if (previousHash == currentHash && previousRevision == currentRevision) ; // No change
-                            else if (previousHash != currentHash && (previousRevision + 1) % 128 == currentRevision)
-                                ; // changed with valid increment, including wrap-around from 127 to 0
-                            else {
+                            boolean isEqual = testEquality(previousState, thisState);
+                            boolean contentsChanged = !isEqual;
+                            boolean revisionChanged = previousRevision != currentRevision;
+                            int revisionChange =
+                                    ((currentRevision + 1) % 128) - ((previousRevision + 1) % 128);
+                            boolean revisionIncremented = revisionChange == 1;
+
+                            if ((revisionChanged && !contentsChanged)
+                                 || (!revisionIncremented && contentsChanged)) {
+                                // Revision changed but contents did not,
+                                // or contents changed but revision did not increment by 1.
+                                // Issue an event, this is a problem
+                                log.debug("producing event");
                                 SpatMessageCountProgressionEvent event = createEvent(previousState, thisState);
                                 context().forward(new Record<>(key, event, state.timestamp()));
+                            } else {
+                                log.debug("no event produced");
                             }
+                        } else {
+                            log.warn("SPAT time difference {} ms is out of the normal range of {} - {} ms, " +
+                                            "not checking message count increment",
+                                    timeDifference, minDifferenceMs, maxDifferenceMs);
                         }
                     }
                     previousState = thisState;
@@ -120,23 +152,64 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
             }
         }
     }
-    
-    private int calculateHash(ProcessedSpat spat) {
 
-        ZonedDateTime utcTimeStamp = spat.getUtcTimeStamp();
-        int revision = spat.getRevision();
-        String odeReceivedAt = spat.getOdeReceivedAt();
+    private boolean testEquality(ProcessedSpat spat1, ProcessedSpat spat2) {
+        if (spat1 == null && spat2 == null) {
+            return true;
+        }
+        if (spat1 == null || spat2 == null) {
+            return false;
+        }
+
+        // Exclude revisions, timestamps and other metadata that's not part of the original SPAT
+        final MetadataProperties metadata1 = MetadataProperties.fromProcessedSpat(spat1);
+        final MetadataProperties metadata2 = MetadataProperties.fromProcessedSpat(spat2);
+        boolean equality;
+        // synchronize during mutate and restore for thread safety
+        synchronized (this) {
+            try {
+                nullMetadataProperties(spat1);
+                nullMetadataProperties(spat2);
+                equality = spat1.equals(spat2);
+            } finally {
+                restoreMetadataProperties(spat1, metadata1);
+                restoreMetadataProperties(spat2, metadata2);
+            }
+        }
+        return equality;
+    }
+
+    private record MetadataProperties(String odeReceivedAt, ZonedDateTime utcTimeStamp, int revision,
+                                      String originIp, String asn1,
+                                      List<ProcessedValidationMessage> validationMessages) {
+        public static MetadataProperties fromProcessedSpat(ProcessedSpat spat) {
+            return new MetadataProperties(
+                spat.getOdeReceivedAt(),
+                spat.getUtcTimeStamp(),
+                spat.getRevision(),
+                spat.getOriginIp(),
+                spat.getAsn1(),
+                spat.getValidationMessages()
+            );
+        }
+    }
+
+    private void nullMetadataProperties(ProcessedSpat spat) {
+        spat.setOdeReceivedAt(null);
         spat.setUtcTimeStamp(null);
         spat.setRevision(0);
-        spat.setOdeReceivedAt(null);
+        spat.setOriginIp(null);
+        spat.setAsn1(null);
+        spat.setValidationMessages(null);
+    }
 
-        int hash = spat.hashCode();
-        
-        spat.setUtcTimeStamp(utcTimeStamp);
-        spat.setRevision(revision);
-        spat.setOdeReceivedAt(odeReceivedAt);
-
-        return hash;
+    private void restoreMetadataProperties(ProcessedSpat spat, MetadataProperties metadata) {
+        spat.setOdeReceivedAt(metadata.odeReceivedAt);
+        spat.setUtcTimeStamp(metadata.utcTimeStamp);
+        spat.setRevision(metadata.revision);
+        spat.setOriginIp(metadata.originIp);
+        spat.setAsn1(metadata.asn1);
+        spat.setValidationMessages(metadata.validationMessages);
     }
 
     private SpatMessageCountProgressionEvent createEvent(ProcessedSpat previousState, ProcessedSpat thisState) {
