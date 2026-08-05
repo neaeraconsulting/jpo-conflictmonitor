@@ -17,21 +17,21 @@ public class MapTimestampExtractor implements TimestampExtractor {
     @Override
     public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
         if (record.value() instanceof ProcessedMap<?> processedMap) {
-            return getMapReceivedAtTimestamp(processedMap);
+            return getMapReceivedAtTimestamp(processedMap, partitionTime);
         }
         return partitionTime;
     }
 
-    public static <TGeom> long  getMapReceivedAtTimestamp(ProcessedMap<TGeom> processedMap) {
+    private static <TGeom> long  getMapReceivedAtTimestamp(ProcessedMap<TGeom> processedMap, long partitionTime) {
         try {
             if (processedMap.getProperties() == null || processedMap.getProperties().getOdeReceivedAt() == null) {
                 log.error("MAP is missing OdeReceivedAt property {}", processedMap);
-                return -1;
+                return partitionTime;
             }
             return processedMap.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
         } catch (Exception e) {
             log.error("Error extracting timestamp from MAP", e);
-            return -1;
+            return partitionTime;
         }
     }
 }
