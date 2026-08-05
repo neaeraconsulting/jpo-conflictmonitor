@@ -26,7 +26,10 @@ public class BsmTimestampExtractor implements TimestampExtractor {
     @Override
     public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
         if (record.value() instanceof ProcessedBsm<?> processedBsm) {
-            return getBsmTimestamp(processedBsm);
+            long timestamp = getBsmTimestamp(processedBsm);
+            if (timestamp != -1) {
+                return timestamp;
+            }
         }
         return partitionTime;
     }
