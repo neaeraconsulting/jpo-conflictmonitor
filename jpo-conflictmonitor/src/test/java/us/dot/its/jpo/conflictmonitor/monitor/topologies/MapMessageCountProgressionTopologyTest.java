@@ -82,13 +82,82 @@ public class MapMessageCountProgressionTopologyTest {
     public void testDifferentContentSameRevisionProducesEvent() throws IOException {
         var map1 = loadSampleMap();
         var map2 = loadSampleMap();
-        final double[] coord = map2.getMapFeatureCollection().getFeatures()[0].getGeometry().getCoordinates()[0];
-        final double[] newCoord = new double[]{coord[0] + 0.001, coord[1] + 0.001};
-        map2.getMapFeatureCollection().getFeatures()[0].getGeometry().getCoordinates()[0] = newCoord;
+        changeCoordinate(map2);
         testTopology(map1, map2, true);
     }
 
+    @Test
+    public void testDifferentContentRevisionIncrementedByOneProducesNoEvent() throws IOException {
+        var map1 = loadSampleMap();
+        var map2 = loadSampleMap();
+        changeCoordinate(map2);
+        var props2 = map2.getProperties();
+        props2.setRevision(props2.getRevision() + 1);
+        testTopology(map1, map2, false);
+    }
+
+    @Test
+    public void testDifferentContentMsgIssueRevisionIncrementedByOneProducesNoEvent() throws IOException {
+        var map1 = loadSampleMap();
+        var map2 = loadSampleMap();
+        changeCoordinate(map2);
+        var props2 = map2.getProperties();
+        props2.setMsgIssueRevision(props2.getMsgIssueRevision() + 1);
+        testTopology(map1, map2, false);
+    }
+
+    @Test
+    public void testDifferentContentBothRevisionsIncrementedByOneProducesNoEvent() throws IOException {
+        var map1 = loadSampleMap();
+        var map2 = loadSampleMap();
+        changeCoordinate(map2);
+        var props2 = map2.getProperties();
+        props2.setRevision(props2.getRevision() + 1);
+        props2.setMsgIssueRevision(props2.getMsgIssueRevision() + 1);
+        testTopology(map1, map2, false);
+    }
+
+    @Test
+    public void testDifferentContentRevisionIncrementedByTwoProducesEvent() throws IOException {
+        var map1 = loadSampleMap();
+        var map2 = loadSampleMap();
+        changeCoordinate(map2);
+        var props2 = map2.getProperties();
+        props2.setRevision(props2.getRevision() + 2);
+        testTopology(map1, map2, true);
+    }
+
+    @Test
+    public void testDifferentContentRevisionIncrementedByOneWithRolloverProducesNoEvent() throws IOException {
+        var map1 = loadSampleMap();
+        var map2 = loadSampleMap();
+        changeCoordinate(map2);
+        map1.getProperties().setRevision(127);
+        map2.getProperties().setRevision(0);
+        testTopology(map1, map2, false);
+    }
+
+    // max timestamp offset 1500ms
+    @Test
+    public void testSameContentDifferentRevisionTimestampOffsetGreaterThanMaxProducesNoEvent() throws IOException {
+        var map1 = loadSampleMap();
+        var map2 = loadSampleMap();
+        var props2 = map2.getProperties();
+        props2.setRevision(props2.getRevision() + 1);
+        testTopology(map1, map2, false, 2000L);
+    }
+
+    private void changeCoordinate(ProcessedMap<LineString> map) {
+        final double[] coord = map.getMapFeatureCollection().getFeatures()[0].getGeometry().getCoordinates()[0];
+        final double[] newCoord = new double[]{coord[0] + 0.001, coord[1] + 0.001};
+        map.getMapFeatureCollection().getFeatures()[0].getGeometry().getCoordinates()[0] = newCoord;
+    }
+
     private void testTopology(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2, boolean expectEvent) {
+        testTopology(map1, map2, expectEvent, 1000L);
+    }
+
+    private void testTopology(ProcessedMap<LineString> map1, ProcessedMap<LineString> map2, boolean expectEvent, long map2OffsetMs) {
         Topology topology = createTopology();
         try (TopologyTestDriver driver = new TopologyTestDriver(topology);
              Serde<RsuIntersectionKey> keySerde
@@ -107,7 +176,7 @@ public class MapMessageCountProgressionTopologyTest {
 
             final Instant startTime = Instant.ofEpochMilli(1674356320000L);
             final Instant map1Time = startTime.plusMillis(1000L);
-            final Instant map2Time = startTime.plusMillis(2000L);
+            final Instant map2Time = map1Time.plusMillis(map2OffsetMs);
             final Instant map8Time = startTime.plusMillis(8000L);
 
 

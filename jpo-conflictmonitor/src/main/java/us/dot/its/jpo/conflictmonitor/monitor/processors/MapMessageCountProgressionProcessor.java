@@ -125,31 +125,65 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
                                 - previousState.getProperties().getOdeReceivedAt().toInstant().toEpochMilli();
                         log.debug("timeDifference: {}, bufferTime: {}", timeDifference, parameters.getBufferTimeMs());
 
-                        int previousRevision = previousState.getProperties().getRevision();
-                        int currentRevision = thisState.getProperties().getRevision();
-                        int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
-                        int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
+                        // Don't compare if the time difference is not in the ballpark of what it should be for MAPs
+                        // (nominally 1Hz), otherwise there may be missing MAPs so the increment would not be known.
+                        final long minDifferenceMs = 500L;
+                        final long maxDifferenceMs = 1500L;
+                        if (timeDifference >= minDifferenceMs && timeDifference <= maxDifferenceMs) {
+                            int previousRevision = previousState.getProperties().getRevision();
+                            int currentRevision = thisState.getProperties().getRevision();
+                            int previousMsgIssueRevision = previousState.getProperties().getMsgIssueRevision();
+                            int currentMsgIssueRevision = thisState.getProperties().getMsgIssueRevision();
 
-                        boolean isEqual = testEquality(previousState, thisState);
-                        boolean contentsChanged = !isEqual;
+                            boolean isEqual = testEquality(previousState, thisState);
+                            boolean contentsChanged = !isEqual;
 
-                        boolean revisionChanged = previousRevision != currentRevision;
-                        boolean msgIssueRevisionChanged = previousMsgIssueRevision != currentMsgIssueRevision;
-                        boolean anyRevisionChanged = revisionChanged || msgIssueRevisionChanged;
+                            int revisionChange = Math.floorMod(currentRevision - previousRevision, 128);
+                            boolean revisionChanged = revisionChange != 0;
+                            boolean revisionIncrementedByOne = revisionChange == 1;
 
-                        log.debug("revisionChanged: {}, msgIssueRevisionChanged: {}, anyRevisionChanged: {}, contentsChanged: {}",
-                                revisionChanged, msgIssueRevisionChanged, anyRevisionChanged, contentsChanged);
+                            int msgIssueRevisionChange = Math.floorMod(currentMsgIssueRevision - previousMsgIssueRevision, 128);
+                            boolean msgIssueRevisionChanged = msgIssueRevisionChange != 0;
+                            boolean msgIssueRevisionIncrementedByOne = msgIssueRevisionChange == 1;
 
-                        if ((anyRevisionChanged && !contentsChanged)
-                              || (!anyRevisionChanged && contentsChanged)) {
-                            // Revision changed, but contents didn't change,
-                            // or contents changed, but revision didn't.
-                            // Issue an event in this case, this is a problem.
-                            log.debug("producing event");
-                            MapMessageCountProgressionEvent event = createEvent(previousState, thisState, revisionChanged, msgIssueRevisionChanged);
-                            context().forward(new Record<>(key, event, state.timestamp()));
+                            boolean anyRevisionChanged = revisionChanged || msgIssueRevisionChanged;
+                            // A counter that changed at all must have changed by exactly +1 (mod 128);
+                            // anything else (skipped a count, went backwards, etc.) is anomalous
+                            // regardless of the other counter.
+                            boolean anyRevisionChangedByWrongAmount =
+                                    (revisionChanged && !revisionIncrementedByOne)
+                                            || (msgIssueRevisionChanged && !msgIssueRevisionIncrementedByOne);
+
+                            log.debug("revisionChanged: {}, msgIssueRevisionChanged: {}, anyRevisionChanged: {}, " +
+                                            "anyRevisionChangedByWrongAmount: {}, contentsChanged: {}",
+                                    revisionChanged, msgIssueRevisionChanged, anyRevisionChanged,
+                                    anyRevisionChangedByWrongAmount, contentsChanged);
+
+                            if ((anyRevisionChanged && !contentsChanged)
+                                  || (!anyRevisionChanged && contentsChanged)
+                                  || anyRevisionChangedByWrongAmount) {
+                                // Revision changed, but contents didn't change,
+                                // or contents changed, but revision didn't,
+                                // or a revision changed by other than +1.
+                                // Issue an event in this case, this is a problem.
+                                log.debug("producing event");
+                                boolean reportRevision;
+                                if (revisionChanged && !revisionIncrementedByOne) {
+                                    reportRevision = true;
+                                } else if (msgIssueRevisionChanged && !msgIssueRevisionIncrementedByOne) {
+                                    reportRevision = false;
+                                } else {
+                                    reportRevision = revisionChanged;
+                                }
+                                MapMessageCountProgressionEvent event = createEvent(previousState, thisState, reportRevision);
+                                context().forward(new Record<>(key, event, state.timestamp()));
+                            } else {
+                                log.debug("no event produced");
+                            }
                         } else {
-                            log.debug("no event produced");
+                            log.warn("MAP time difference {} ms is out of the normal range of {} - {} ms, " +
+                                            "not checking message count increment",
+                                    timeDifference, minDifferenceMs, maxDifferenceMs);
                         }
                     }
                     previousState = thisState;
@@ -233,11 +267,11 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
         map.getProperties().setMapSource(metadata.source);
     }
 
-    private MapMessageCountProgressionEvent createEvent(ProcessedMap<LineString> previousState, ProcessedMap<LineString> thisState, boolean revisionChanged, boolean msgIssueRevisionChanged) {
+    private MapMessageCountProgressionEvent createEvent(ProcessedMap<LineString> previousState, ProcessedMap<LineString> thisState, boolean reportRevision) {
         MapMessageCountProgressionEvent event = new MapMessageCountProgressionEvent();
         event.setMessageType("MAP");
 
-        if (revisionChanged) {
+        if (reportRevision) {
             event.setMessageCountA(previousState.getProperties().getRevision());
             event.setMessageCountB(thisState.getProperties().getRevision());
         } else {
