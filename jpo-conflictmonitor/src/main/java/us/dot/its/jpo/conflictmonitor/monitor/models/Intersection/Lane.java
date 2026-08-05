@@ -52,6 +52,11 @@ public class Lane {
     private int region;
 
     /**
+     * Boolean indicating if this lane is a crosswalk. Set to true for a crosswalk lane.
+     */
+    private boolean crosswalk;
+
+    /**
      * Creates a Lane object from the Geojson features of the ProcessedMap message
      * @param feature
      * @param referencePoint
@@ -91,6 +96,14 @@ public class Lane {
         else{
             lane.setIngress(false);
             lanePoints = lanePoints.reverse();
+        }
+
+        MapProperties props = (MapProperties) feature.getProperties();
+        if(props!= null && props.getLaneType() != null && props.getLaneType().getCrosswalk() != null){
+            lane.crosswalk = true;
+        }
+        else{
+            lane.crosswalk = false;
         }
 
 
@@ -171,6 +184,14 @@ public class Lane {
 
     public void setRegion(int region) {
         this.region = region;
+    }
+
+    public boolean isCrosswalk() {
+        return crosswalk;
+    }
+
+    public void setCrosswalk(boolean crosswalk) {
+        this.crosswalk = crosswalk;
     }
 
     /**
