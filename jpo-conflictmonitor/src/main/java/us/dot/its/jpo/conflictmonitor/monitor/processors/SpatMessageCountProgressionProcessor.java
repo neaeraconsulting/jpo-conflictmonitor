@@ -122,8 +122,7 @@ public class SpatMessageCountProgressionProcessor extends ContextualProcessor<Rs
                             boolean isEqual = testEquality(previousState, thisState);
                             boolean contentsChanged = !isEqual;
                             boolean revisionChanged = previousRevision != currentRevision;
-                            int revisionChange =
-                                    ((currentRevision + 1) % 128) - ((previousRevision + 1) % 128);
+                            int revisionChange = Math.floorMod(currentRevision - previousRevision, 128);
                             boolean revisionIncremented = revisionChange == 1;
 
                             if ((revisionChanged && !contentsChanged)

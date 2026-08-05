@@ -132,8 +132,7 @@ public class BsmMessageCountProgressionProcessor<Point> extends ContextualProces
 
                             boolean contentsChanged = !testEquality(previousState, thisState);
                             boolean countChanged = previousMessageCount != currentMessageCount;
-                            int countChange =
-                                    ((currentMessageCount + 1) % 128) - ((previousMessageCount + 1) % 128);
+                            int countChange = Math.floorMod(currentMessageCount - previousMessageCount, 128);
                             boolean countIncremented = countChange == 1;
 
                             if ((countChanged && !contentsChanged)
