@@ -50,7 +50,7 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
             return partitionTime;
         }
 
-        logger.warn("Failed to extract timestamp, using clock time and partition time is invalid, using clock time");
+        logger.warn("Failed to extract timestamp and partition time is invalid, using clock time");
         return Instant.now().toEpochMilli();
      }
 
