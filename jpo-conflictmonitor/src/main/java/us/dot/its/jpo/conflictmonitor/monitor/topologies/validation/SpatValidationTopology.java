@@ -147,19 +147,21 @@ public class SpatValidationTopology
 
 
         // Save the timestamp of the latest message for each key in a state store to be queried by the zero-check task
-        processedSpatStream.process(() ->
-                        new SpatZeroRateChecker(
-                                parameters.getRollingPeriodSeconds(),
-                                parameters.getOutputIntervalSeconds(),
-                                parameters.getInputTopicName(),
-                                LATEST_TIMESTAMP_STORE
-                        ), LATEST_TIMESTAMP_STORE)
-                .to(parameters.getBroadcastRateTopicName(),
-                        Produced.with(
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                JsonSerdes.SpatBroadcastRateEvent(),
-                                new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>()
-                        ));
+        // Disable zero rate checker because we have other methods to verify if messages are interrupted and it
+        // generates to many events that obscure the more interesting events.
+//        processedSpatStream.process(() ->
+//                        new SpatZeroRateChecker(
+//                                parameters.getRollingPeriodSeconds(),
+//                                parameters.getOutputIntervalSeconds(),
+//                                parameters.getInputTopicName(),
+//                                LATEST_TIMESTAMP_STORE
+//                        ), LATEST_TIMESTAMP_STORE)
+//                .to(parameters.getBroadcastRateTopicName(),
+//                        Produced.with(
+//                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+//                                JsonSerdes.SpatBroadcastRateEvent(),
+//                                new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>()
+//                        ));
 
         // Perform count for Broadcast Rate analysis
         KStream<Windowed<RsuIntersectionKey>, Long> countStream =
