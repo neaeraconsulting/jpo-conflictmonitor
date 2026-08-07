@@ -15,9 +15,6 @@ import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 /**
  * Timestamp Extractor for Broadcast Rate monitoring for Processed Map, Spat, and RTCM messages.
- * 
- * <p>Uses the ODE Received time to get an accurate rate count in case the 
- * timestamp fields embedded in the messages are missing.
  */
 public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
     
@@ -47,23 +44,43 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
                 return timestamp;
             }
         }
-       
-        logger.warn("Failed to extract timestamp, using clock time");
-        // Partition time is invalid, return current clock time
+
+        if (partitionTime >= 0) {
+            logger.warn("Failed to extract timestamp, using partition time");
+            return partitionTime;
+        }
+
+        logger.warn("Failed to extract timestamp, using clock time and partition time is invalid, using clock time");
         return Instant.now().toEpochMilli();
      }
 
+    /**
+     * For ProcessedSpat, prefer to use the utcTimeStamp derived from the SPAT MinuteOfYear and DSecond timestamps,
+     * which are required to be present by CTI-4501, falling back to the ODE Received-At time if those aren't available.
+     * @param spat The processed spat
+     * @return the extracted timestamp
+     */
     public static long extractTimestamp(ProcessedSpat spat) {
-        try{
-            ZonedDateTime zdt = ZonedDateTime.parse(spat.getOdeReceivedAt(), DateTimeFormatter.ISO_DATE_TIME);
-            long timestamp =  zdt.toInstant().toEpochMilli();
-            return timestamp;
+        try {
+            ZonedDateTime zdt = spat.getUtcTimeStamp();
+            if (zdt != null) {
+                return zdt.toInstant().toEpochMilli();
+            }
+            // Fall back to ode received-at if the real timestamp isn't available
+            ZonedDateTime receivedAt = ZonedDateTime.parse(spat.getOdeReceivedAt(), DateTimeFormatter.ISO_DATE_TIME);
+            return receivedAt.toInstant().toEpochMilli();
         } catch (Exception e){
             logger.error("Timestamp Parsing Failed", e);
             return -1;
         }
     }
 
+    /**
+     * For ProcessedMap, out of necessity uses the ODE Received time because MAPs don't have a well-defined timestamp
+     * field.
+     * @param map the processed map
+     * @return the extracted timestmap
+     */
     public static long extractTimestamp(ProcessedMap map) {
         try{
             ZonedDateTime zdt = map.getProperties().getOdeReceivedAt();
@@ -75,6 +92,11 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
         }
     }
 
+    /**
+     * For ProcessedRTCM prefer to use the utc timestamp extracted from the RTCM message payload
+     * @param rtcm The processed RTCM
+     * @return the extracted timestamp
+     */
     public static long extractTimestamp(ProcessedRTCM rtcm) {
         try{
             Long utcTime = rtcm.getProperties().getUtcTime();
