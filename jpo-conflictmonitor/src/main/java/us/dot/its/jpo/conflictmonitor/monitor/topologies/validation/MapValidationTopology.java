@@ -154,7 +154,7 @@ public class MapValidationTopology
 
         // Save the timestamp of the latest message for each key in a state store to be queried by the zero-check task
         // Disable zero rate checker because we have other methods to verify if messages are interrupted and it
-        // generates to many events that obscure the more interesting events.
+        // generates too many events that obscure the more interesting events.
 //        processedMapStream.process(() ->
 //                        new MapZeroRateChecker(
 //                            parameters.getRollingPeriodSeconds(),

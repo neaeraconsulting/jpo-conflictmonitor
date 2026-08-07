@@ -112,7 +112,7 @@ public class RtcmValidationTopology
         }
 
         // Disable zero rate checker because we have other methods to verify if messages are interrupted and it
-        // generates to many events that obscure the more interesting events.
+        // generates too many events that obscure the more interesting events.
 //        processedRtcmStream.process(() -> new RtcmZeroRateChecker(
 //                parameters.getRollingPeriodSeconds(),
 //                parameters.getOutputIntervalSeconds(),
