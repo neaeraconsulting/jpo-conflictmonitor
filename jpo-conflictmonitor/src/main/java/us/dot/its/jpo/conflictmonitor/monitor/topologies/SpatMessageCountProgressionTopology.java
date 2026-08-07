@@ -46,7 +46,8 @@ public class SpatMessageCountProgressionTopology
 
         final String processedSpatStateStore = parameters.getProcessedSpatStateStoreName();
         final String latestSpatStateStore = parameters.getLatestSpatStateStoreName();
-        final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
+        final Duration retentionTime = Duration.ofMillis(
+                (parameters.getBufferTimeMs() + parameters.getBufferGracePeriodMs()) * 2L);
 
         builder.addStateStore(
                 Stores.versionedKeyValueStoreBuilder(
