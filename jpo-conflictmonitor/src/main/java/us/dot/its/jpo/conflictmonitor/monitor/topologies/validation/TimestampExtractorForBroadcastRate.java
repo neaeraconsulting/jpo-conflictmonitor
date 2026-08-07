@@ -79,7 +79,7 @@ public class TimestampExtractorForBroadcastRate implements TimestampExtractor {
      * For ProcessedMap, out of necessity uses the ODE Received time because MAPs don't have a well-defined timestamp
      * field.
      * @param map the processed map
-     * @return the extracted timestmap
+     * @return the extracted timestamp
      */
     public static long extractTimestamp(ProcessedMap map) {
         try{

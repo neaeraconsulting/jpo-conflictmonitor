@@ -8,7 +8,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.ProcessedMap;
 /**
  * Timestamp extractor for {@link ProcessedMap} messages.
  * Uses the ODE "Received At" time because the "minute of year" timestamp in MAPs is optional
- * and its behavior is net well defined.  It is often the time when the MAP was first
+ * and its behavior is not well defined.  It is often the time when the MAP was first
  * created, and does not contain any information about what the current year is.
  */
 @Slf4j
