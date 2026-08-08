@@ -7,7 +7,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
-import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.processor.api.ContextualProcessor;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +30,8 @@ import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.ValidationConstants.CTI_4501_V2_SPAT_VALIDATION_ALGORITHM;
 
@@ -91,14 +96,6 @@ public class SpatValidationTopologyCti4501V2
     public Topology buildTopology() {
         var builder = new StreamsBuilder();
 
-        // Create state store for zero count
-        var zeroCountStoreBuilder =
-                Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(LATEST_TIMESTAMP_STORE),
-                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                        Serdes.Long());
-
-        builder.addStateStore(zeroCountStoreBuilder);
-
         KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream = builder
                 .stream(parameters.getInputTopicName(),
                         Consumed.with(
@@ -146,82 +143,128 @@ public class SpatValidationTopologyCti4501V2
                     );
         }
 
-        // Broadcast Rate Criterion in CTI-4501 v2 draft:
+        // Broadcast Rate Criteria in CTI-4501 v2 draft:
         // - SPAT messages broadcast every 100 ms +/- 25 ms
         // - Any 10 messages broadcast within 1 s +/- 25 ms
-        // Planned addendum: Conformant if 90% of message pairs and groups of 10 messages
+        // - Planned addendum not in the draft: Conformant if 90% of message pairs and groups of 10 messages
         // meet the criteria over 1 hour, and no gaps greater than 300 ms between pairs.
 
-        // Perform count for Broadcast Rate analysis
-        KStream<Windowed<RsuIntersectionKey>, Long> countStream =
+        // Use a tumbling window to sort out-of-order spats by timestamp
+        KStream<RsuIntersectionKey, Long> sortedSpatTimestamps =
                 processedSpatStream
-                        .mapValues((value) -> 1)    // Map the value to the constant int 1 (key remains the same)
+                        // Map the values to the timestamp
+                        .process(() -> new ContextualProcessor<RsuIntersectionKey, ProcessedSpat, RsuIntersectionKey, Long>() {
+                            @Override
+                            public void process(Record<RsuIntersectionKey, ProcessedSpat> record) {
+                                context().forward(new Record<>(record.key(), record.timestamp(), record.timestamp()));
+                            }
+                        })
                         .groupByKey(
-                                Grouped.with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(), Serdes.Integer())
+                                Grouped.with(
+                                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                                        Serdes.Long())
                         )
                         .windowedBy(
-                                // Hopping window
+                                // Tumbling window
                                 TimeWindows
                                         .ofSizeAndGrace(
-                                                Duration.ofSeconds(parameters.getRollingPeriodSeconds()),
-                                                Duration.ofMillis(parameters.getGracePeriodMilliseconds()))
-                                        .advanceBy(Duration.ofSeconds(parameters.getOutputIntervalSeconds()))
+                                                Duration.ofSeconds(parameters.getV2BroadcastRateBufferSizeSeconds()),
+                                                Duration.ofMillis(parameters.getV2BroadcastRateBufferGracePeriodMs()))
                         )
-                        .count(
-                                Materialized.<RsuIntersectionKey, Long, WindowStore<Bytes, byte[]>>as("spat-counts")
+                        .aggregate(
+                                TimestampBuffer::new,
+                                (key, timestamp, aggregate) -> {
+                                    aggregate.add(timestamp);
+                                    return aggregate;
+                                },
+                                Materialized.<RsuIntersectionKey, TimestampBuffer, WindowStore<Bytes, byte[]>>as("spat-buffer")
                                         .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
-                                        .withValueSerde(Serdes.Long())
+                                        .withValueSerde(JsonSerdes.TimestampBuffer())
                         )
                         .suppress(
                                 Suppressed.untilWindowCloses(BufferConfig.unbounded())
                         )
-                        .toStream();
+                        .toStream()
+                        .map((windowedKey, buffer) -> {
+                            // sort the buffered timestamps
+                            Collections.sort(buffer);
 
-        if (parameters.isDebug()) {
-            countStream = countStream.peek((windowedKey, value) -> {
-                logger.info("SPAT Count {} {}", windowedKey, value);
-            });
-        }
+                            // Change the windowed key back to a normal key
+                            return KeyValue.pair(windowedKey.key(), buffer);
+                        })
+                        .flatMapValues(buffer -> {
+                            // Unwrap buffered timestamps, now in order
+                            return buffer;
+                        });
 
-        KStream<RsuIntersectionKey, SpatBroadcastRateEvent> eventStream = countStream
-                .filter((windowedKey, value) -> {
-                    if (value != null) {
-                        long counts = value.longValue();
-                        return (counts < parameters.getLowerBound() || counts > parameters.getUpperBound());
-                    }
-                    return false;
-                })
-                .map((windowedKey, counts) -> {
-                    // Generate an event
-                    SpatBroadcastRateEvent event = new SpatBroadcastRateEvent();
-                    event.setSource(windowedKey.key().toString());
-                    event.setIntersectionID(windowedKey.key().getIntersectionId());
-                    event.setRoadRegulatorID(-1);
-                    event.setTopicName(parameters.getInputTopicName());
-                    ProcessingTimePeriod timePeriod = new ProcessingTimePeriod();
 
-                    // Grab the timestamps from the time window
-                    timePeriod.setBeginTimestamp(windowedKey.window().startTime().toEpochMilli());
-                    timePeriod.setEndTimestamp(windowedKey.window().endTime().toEpochMilli());
-                    event.setTimePeriod(timePeriod);
-                    event.setNumberOfMessages(counts != null ? counts.intValue() : -1);
+        // Table holds the 10 most recent spats for each intersection
+        KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable =
+            sortedSpatTimestamps
+                .groupByKey(
+                    Grouped.with(
+                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                            Serdes.Long())
+                )
+                .aggregate(
+                        TimestampBoundedQueue::new,
+                        (key, timestamp, aggregate) -> {
+                            aggregate.add(timestamp);
+                            return aggregate;
+                        },
+                        Materialized.<RsuIntersectionKey, TimestampBoundedQueue, KeyValueStore<Bytes, byte[]>>as("spat-criterion-store")
+                                .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
+                                .withValueSerde(JsonSerdes.TimestampBoundedQueue())
+                );
 
-                    // Change the windowed key back to a normal key
-                    return KeyValue.pair(windowedKey.key(), event);
+        // Check the broadcast rate criteria
+        // for each pair and each group of 10 consecutive spats
+        timestampAggTable
+                .toStream()
+                .map((key, agg) -> {
+                    var event = new SpatBroadcastRateEvent();
                 });
 
-        if (parameters.isDebug()) {
-            eventStream = eventStream.peek((key, event) -> {
-                logger.info("SPAT Broadcast Rate {}, {}", key, event);
-            });
-        }
 
-        eventStream.to(parameters.getBroadcastRateTopicName(),
-                Produced.with(
-                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                        JsonSerdes.SpatBroadcastRateEvent(),
-                        new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>())
-        );
+//        KStream<RsuIntersectionKey, SpatBroadcastRateEvent> eventStream = countStream
+//                .filter((windowedKey, value) -> {
+//                    if (value != null) {
+//                        long counts = value.longValue();
+//                        return (counts < parameters.getLowerBound() || counts > parameters.getUpperBound());
+//                    }
+//                    return false;
+//                })
+//                .map((windowedKey, counts) -> {
+//                    // Generate an event
+//                    SpatBroadcastRateEvent event = new SpatBroadcastRateEvent();
+//                    event.setSource(windowedKey.key().toString());
+//                    event.setIntersectionID(windowedKey.key().getIntersectionId());
+//                    event.setRoadRegulatorID(-1);
+//                    event.setTopicName(parameters.getInputTopicName());
+//                    ProcessingTimePeriod timePeriod = new ProcessingTimePeriod();
+//
+//                    // Grab the timestamps from the time window
+//                    timePeriod.setBeginTimestamp(windowedKey.window().startTime().toEpochMilli());
+//                    timePeriod.setEndTimestamp(windowedKey.window().endTime().toEpochMilli());
+//                    event.setTimePeriod(timePeriod);
+//                    event.setNumberOfMessages(counts != null ? counts.intValue() : -1);
+//
+//                    // Change the windowed key back to a normal key
+//                    return KeyValue.pair(windowedKey.key(), event);
+//                });
+//
+//        if (parameters.isDebug()) {
+//            eventStream = eventStream.peek((key, event) -> {
+//                logger.info("SPAT Broadcast Rate {}, {}", key, event);
+//            });
+//        }
+//
+//        eventStream.to(parameters.getBroadcastRateTopicName(),
+//                Produced.with(
+//                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+//                        JsonSerdes.SpatBroadcastRateEvent(),
+//                        new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>())
+//        );
 
         return builder.build(streamsProperties);
     }
