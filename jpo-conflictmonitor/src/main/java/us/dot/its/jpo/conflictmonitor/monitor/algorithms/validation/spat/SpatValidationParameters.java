@@ -11,6 +11,7 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.config.ConfigUti
 
 import lombok.Data;
 import lombok.Generated;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.conflictmonitor.monitor.models.IntersectionRegion;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
@@ -51,34 +52,61 @@ public class SpatValidationParameters {
     // Window parameters
     @ConfigData(key = "spat.validation.rollingPeriodSeconds", 
         units = SECONDS, 
-        description = "The aggregation window size", 
+        description = "The aggregation window size for V1 Broadcast Rate",
         updateType = DEFAULT)
     int rollingPeriodSeconds;
 
     @ConfigData(key = "spat.validation.outputIntervalSeconds", 
         units = SECONDS, 
-        description = "The window hop", 
+        description = "The window hop for V1 Broadcast Rate",
         updateType = DEFAULT)
     int outputIntervalSeconds;
 
     @ConfigData(key = "spat.validation.gracePeriodMilliseconds", 
         units = MILLISECONDS, 
-        description = "Window grace period", 
+        description = "Window grace period for V1 Broadcast Rate",
         updateType = DEFAULT)
     int gracePeriodMilliseconds;
 
     // Exclusive min and max to send broadcast rateq events
     @ConfigData(key = "spat.validation.lowerBound", 
         units = PER_PERIOD, 
-        description = "Exclusive minimum counts per period", 
+        description = "Exclusive minimum counts per period for V1 Broadcast Rate",
         updateType = INTERSECTION)
     int lowerBound;
 
     @ConfigData(key = "spat.validation.upperBound", 
         units = PER_PERIOD, 
-        description = "Exclusive maximum counts per period", 
+        description = "Exclusive maximum counts per period for V1 Broadcast Rate",
         updateType = INTERSECTION)
     int upperBound;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-buffer-size-seconds")
+    int v2BroadcastRateBufferSizeSeconds;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-buffer-grace-period-ms")
+    int v2BroadcastRateBufferGracePeriodMs;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-lower-bound-pair-separation-ms")
+    int v2BroadcastRateLowerBoundPairSeparationMs;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-pair-separation-ms")
+    int v2BroadcastRateUpperBoundPairSeparationMs;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-lower-bound-duration-per-10-messages-ms")
+    int v2BroadcastRateLowerBoundDurationPer10MessagesMs;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-duration-per-10-messages-ms")
+    int v2BroadcastRateUpperBoundDurationPer10MessagesMs;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-conformance-percent-per-hour")
+    int v2BroadcastRateConformancePercentPerHour;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-max-outlier-pair-separation-ms")
+    int v2BroadcastRateMaxOutlierPairSeparationMs;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-timestamp-type")
+    TimestampType v2BroadcastRateTimestampType;
 
     // Whether to log diagnostic information for debugging
     @ConfigData(key = "spat.validation.debug", 

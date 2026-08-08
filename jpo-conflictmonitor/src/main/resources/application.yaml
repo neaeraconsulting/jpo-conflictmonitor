@@ -515,6 +515,15 @@ spat.validation:
   upperBound: 110
   debug: false
   aggregateMinimumDataEvents: ${ENABLE_AGGREGATE_SPAT_MINIMUM_DATA_EVENTS:false}
+  v2-broadcast-rate-buffer-size-seconds: 10
+  v2-broadcast-rate-buffer-grace-period-ms: 1000
+  v2-broadcast-rate-lower-bound-pair-separation-ms: 75
+  v2-broadcast-rate-upper-bound-pair-separation-ms: 125
+  v2-broadcast-rate-lower-bound-duration-per-10-messages-ms: 975
+  v2-broadcast-rate-upper-bound-duration-per-10-messages-ms: 1025
+  v2-broadcast-rate-conformance-percent-per-hour: 90
+  v2-broadcast-rate-max-outlier-pair-separation-ms: 300
+  v2-broadcast-rate-timestamp-type: EMBEDDED_IN_MESSAGE
 
 
 # Intersection Reference Alignment Notification
