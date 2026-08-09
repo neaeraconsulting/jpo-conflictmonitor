@@ -11,7 +11,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.EvictingQueue;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 @JsonSerialize(using = TimestampBoundedQueue.SpatBoundedQueueSerializer.class)
 @JsonDeserialize(using = TimestampBoundedQueue.SpatBoundedQueueDeserializer.class)

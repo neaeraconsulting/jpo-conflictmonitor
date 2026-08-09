@@ -504,7 +504,8 @@ spat.time.change.details:
 
 # SPAT Validation
 spat.validation:
-  algorithm: defaultSpatValidationAlgorithm
+  #algorithm: defaultSpatValidationAlgorithm
+  algorithm: cti4501V2SpatValidationAlgorithm
   inputTopicName: topic.ProcessedSpat
   broadcastRateTopicName: topic.CmSpatBroadcastRateEvents
   minimumDataTopicName: topic.CmSpatMinimumDataEvents

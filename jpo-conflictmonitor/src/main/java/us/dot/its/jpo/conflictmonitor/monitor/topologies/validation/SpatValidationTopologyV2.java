@@ -43,11 +43,11 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.Valid
  * <p>Produces {@link SpatBroadcastRateEvent}s and {@link SpatMinimumDataEvent}s
  */
 @Component(CTI_4501_V2_SPAT_VALIDATION_ALGORITHM)
-public class SpatValidationTopologyCti4501V2
+public class SpatValidationTopologyV2
         extends BaseValidationTopology<SpatValidationParameters>
         implements SpatValidationStreamsAlgorithm {
 
-    private static final Logger logger = LoggerFactory.getLogger(SpatValidationTopologyCti4501V2.class);
+    private static final Logger logger = LoggerFactory.getLogger(SpatValidationTopologyV2.class);
 
     @Override
     protected Logger getLogger() {
