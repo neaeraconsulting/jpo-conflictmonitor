@@ -516,8 +516,8 @@ spat.validation:
   upperBound: 110
   debug: false
   aggregateMinimumDataEvents: ${ENABLE_AGGREGATE_SPAT_MINIMUM_DATA_EVENTS:false}
-  v2-broadcast-rate-buffer-size-seconds: 10
-  v2-broadcast-rate-buffer-grace-period-ms: 1000
+  v2-broadcast-rate-buffer-size-seconds: 5
+  v2-broadcast-rate-buffer-grace-period-ms: 500
   v2-broadcast-rate-lower-bound-pair-separation-ms: 75
   v2-broadcast-rate-upper-bound-pair-separation-ms: 125
   v2-broadcast-rate-lower-bound-duration-per-10-messages-ms: 975

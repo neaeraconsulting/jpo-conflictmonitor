@@ -1,5 +1,6 @@
 package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
 
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
@@ -27,6 +28,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
+import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
+import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.geojsonconverter.standards.SpatStandard;
 
 import java.time.Duration;
@@ -218,19 +221,19 @@ public class SpatValidationTopologyV2
 
         // Check the broadcast rate criteria
         // for each pair and each group of 10 consecutive spats
-        KStream<RsuIntersectionKey, SpatBroadcastRateEvent> eventStream =
-        timestampAggTable
+        KStream<RsuIntersectionKey, EventOrNonEvent> eventStream =
+            timestampAggTable
                 .toStream()
-                .flatMap((key, agg) -> {
-                    var events = new ArrayList<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>>();
+                .map((key, agg) -> {
                     Optional<long[]> pairOpt = agg.pair();
+                    SpatBroadcastRateEvent pairEvent = null;
+                    SpatBroadcastRateEvent durationEvent = null;
                     if (pairOpt.isPresent()) {
                         long[] pair = pairOpt.get();
                         long diff = pair[1] - pair[0];
                         if (diff < parameters.getV2BroadcastRateLowerBoundPairSeparationMs()
                             || diff > parameters.getV2BroadcastRateUpperBoundPairSeparationMs()) {
-                            var event = getEvent(key, pair[0], pair[1], 2);
-                            events.add(new KeyValue<>(key, event));
+                            pairEvent = getEvent(key, pair[0], pair[1], 2);
                         }
                     }
                     Optional<long[]> allOpt = agg.all();
@@ -241,19 +244,47 @@ public class SpatValidationTopologyV2
                         long diff = last - first;
                         if (diff < parameters.getV2BroadcastRateLowerBoundDurationPer10MessagesMs()
                             || diff > parameters.getV2BroadcastRateUpperBoundDurationPer10MessagesMs()) {
-                            var event = getEvent(key, first, last, agg.numberOfMessagesForDuration());
-                            events.add(new KeyValue<>(key, event));
+                            durationEvent = getEvent(key, first, last, agg.numberOfMessagesForDuration());
                         }
                     }
-                    return events;
+                    long latest = agg.latest().get();
+                    return new KeyValue<>(key, new EventOrNonEvent(latest, pairEvent, durationEvent));
                 });
 
-        eventStream.to(parameters.getBroadcastRateTopicName(),
-                Produced.with(
+        eventStream
+                .filter((key, value) -> {
+                    // Filer out non-events, only send actual events to the output topic
+                    return value != null && (value.durationEvent != null || value.pairEvent() != null);
+                })
+                .flatMapValues(value -> {
+                    var events = new ArrayList<SpatBroadcastRateEvent>();
+                    if (value.pairEvent() != null) {
+                        events.add(value.pairEvent());
+                    }
+                    if (value.durationEvent() != null) {
+                        events.add(value.durationEvent());
+                    }
+                    return events;
+                })
+                .to(parameters.getBroadcastRateTopicName(),
+                    Produced.with(
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
                         JsonSerdes.SpatBroadcastRateEvent(),
                         new IntersectionIdPartitioner<>())
         );
+
+        // Do assessments over a longer time period for pass/fail with 90% tolerance
+        // Event stream includes events and non-events, to keep stream time moving along in the absence of events
+//        eventStream
+//                .groupByKey(
+//                        Grouped.with(
+//                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+//                                EventOrNonEvent.serde())
+//                )
+//                .windowedBy(
+//                        TimeWindows.ofSizeAndGrace(Duration.ofSeconds(), Duration.ofSeconds())
+//                )
+
 
         return builder.build(streamsProperties);
     }
@@ -272,5 +303,14 @@ public class SpatValidationTopologyV2
         period.setEndTimestamp(last);
         event.setTimePeriod(period);
         return event;
+    }
+
+    private record EventOrNonEvent(
+            long timestamp,
+            SpatBroadcastRateEvent pairEvent,
+            SpatBroadcastRateEvent durationEvent){
+        public static Serde<EventOrNonEvent> serde() {
+            return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(EventOrNonEvent.class));
+        }
     }
 }

@@ -63,17 +63,29 @@ public class TimestampBoundedQueue {
     }
 
     /**
+     * Get last added timestamp
+     * @return last added timestamp
+     */
+    public Optional<Long> latest() {
+        final int size = size();
+        if (size < 1)  return Optional.empty();
+        List<Long> list = toList();
+        return Optional.of(list.get(size - 1));
+    }
+
+    /**
      * Get the most recently added pair of timestamps
      * @return two timestamps or empty if there aren't two timestamps in the queue
      */
     public Optional<long[]> pair() {
-        if (size() < 2) {
+        final int size = size();
+        if (size < 2) {
             return Optional.empty();
         }
         List<Long> list = toList();
         long[] pair = new long[2];
-        pair[0] = list.get(0);
-        pair[1] = list.get(1);
+        pair[0] = list.get(size - 2);
+        pair[1] = list.get(size - 1);
         return Optional.of(pair);
     }
 
@@ -97,7 +109,8 @@ public class TimestampBoundedQueue {
         @Override
         public TimestampBoundedQueue deserialize(JsonParser parser, DeserializationContext context) throws IOException, JacksonException {
            var typeRef = new TypeReference<List<Long>>() {};
-            return parser.readValueAs(typeRef);
+            List<Long> list = parser.readValueAs(typeRef);
+            return new TimestampBoundedQueue(list);
         }
     }
 
