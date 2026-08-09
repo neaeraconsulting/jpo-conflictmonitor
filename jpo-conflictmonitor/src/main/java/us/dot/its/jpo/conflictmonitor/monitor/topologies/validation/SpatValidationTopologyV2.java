@@ -21,6 +21,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.Sp
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
@@ -33,6 +34,7 @@ import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.geojsonconverter.standards.SpatStandard;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
@@ -275,16 +277,54 @@ public class SpatValidationTopologyV2
 
         // Do assessments over a longer time period for pass/fail with 90% tolerance
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
-//        eventStream
-//                .groupByKey(
-//                        Grouped.with(
-//                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-//                                EventOrNonEvent.serde())
-//                )
-//                .windowedBy(
-//                        TimeWindows.ofSizeAndGrace(Duration.ofSeconds(), Duration.ofSeconds())
-//                )
-
+        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream =
+            eventStream
+                .groupByKey(
+                        Grouped.with(
+                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                                EventOrNonEvent.serde())
+                )
+                .windowedBy(
+                        TimeWindows.ofSizeAndGrace(
+                                Duration.ofSeconds(parameters.getV2BroadcastRateAssessmentWindowDurationSeconds()),
+                                Duration.ofSeconds(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs()))
+                )
+                .aggregate(
+                        SpatBroadcastRateAssessment::new,
+                        (key, events, assessment) -> {
+                            assessment.setNumberOfSpats(assessment.getNumberOfSpats() + 1);
+                            if (events.pairEvent() != null) {
+                                assessment.setNumberOfPairViolations(assessment.getNumberOfPairViolations() + 1);
+                                var timePeriod = events.pairEvent().getTimePeriod();
+                                long first = timePeriod.getBeginTimestamp();
+                                long second = timePeriod.getEndTimestamp();
+                                long diff = second - first;
+                                if (diff > assessment.getMaxPairSeparationMs()) {
+                                    assessment.setMaxPairSeparationMs((int)diff);
+                                }
+                            }
+                            if (events.durationEvent() != null) {
+                                assessment.setNumberOfDurationViolations(assessment.getNumberOfDurationViolations() + 1);
+                            }
+                            return assessment;
+                        },
+                        Materialized.<RsuIntersectionKey, SpatBroadcastRateAssessment, WindowStore<Bytes, byte[]>>as("spat-buffer")
+                                .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
+                                .withValueSerde(JsonSerdes.SpatBroadcastRateAssessment())
+                )
+                .suppress(
+                        Suppressed.untilWindowCloses(BufferConfig.unbounded())
+                )
+                .toStream()
+                .map((windowedKey, assessment) -> {
+                    RsuIntersectionKey key = windowedKey.key();
+                    assessment.setIntersectionID(key.getIntersectionId());
+                    assessment.setRoadRegulatorID(key.getRegion());
+                    assessment.setMaxAllowedPairSeparationMs(parameters.getV2BroadcastRateMaxOutlierPairSeparationMs());
+                    assessment.setPercentToPass(parameters.getV2BroadcastRateConformancePercent());
+                    assessment.setAssessmentGeneratedAt(Instant.now().toEpochMilli());
+                    return new KeyValue<>(key, assessment);
+                });
 
         return builder.build(streamsProperties);
     }

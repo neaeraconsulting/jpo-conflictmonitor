@@ -21,6 +21,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassage
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassageAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAggregator;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
@@ -672,5 +673,9 @@ public class JsonSerdes {
 
     public static Serde<TimestampBoundedQueue> TimestampBoundedQueue() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(TimestampBoundedQueue.class));
+    }
+
+    public static Serde<SpatBroadcastRateAssessment> SpatBroadcastRateAssessment() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SpatBroadcastRateAssessment.class));
     }
 }

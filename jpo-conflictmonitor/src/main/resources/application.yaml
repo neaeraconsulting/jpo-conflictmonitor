@@ -522,9 +522,11 @@ spat.validation:
   v2-broadcast-rate-upper-bound-pair-separation-ms: 125
   v2-broadcast-rate-lower-bound-duration-per-10-messages-ms: 975
   v2-broadcast-rate-upper-bound-duration-per-10-messages-ms: 1025
-  v2-broadcast-rate-conformance-percent-per-hour: 90
+  v2-broadcast-rate-conformance-percent: 90
   v2-broadcast-rate-max-outlier-pair-separation-ms: 300
-  v2-broadcast-rate-timestamp-type: EMBEDDED_IN_MESSAGE
+  v2-broadcast-rate-assessment-window-duration-seconds: 3600
+  v2-broadcast-rate-assessment-window-grace-period-ms: 500
+
 
 
 # Intersection Reference Alignment Notification

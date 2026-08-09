@@ -99,14 +99,17 @@ public class SpatValidationParameters {
     @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-duration-per-10-messages-ms")
     int v2BroadcastRateUpperBoundDurationPer10MessagesMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-conformance-percent-per-hour")
-    int v2BroadcastRateConformancePercentPerHour;
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-conformance-percent")
+    int v2BroadcastRateConformancePercent;
 
     @ConfigData(key = "spat.validation.v2-broadcast-rate-max-outlier-pair-separation-ms")
     int v2BroadcastRateMaxOutlierPairSeparationMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-timestamp-type")
-    TimestampType v2BroadcastRateTimestampType;
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-duration-seconds")
+    int v2BroadcastRateAssessmentWindowDurationSeconds;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-grace-period-ms")
+    int v2BroadcastRateAssessmentWindowGracePeriodMs;
 
     // Whether to log diagnostic information for debugging
     @ConfigData(key = "spat.validation.debug", 
