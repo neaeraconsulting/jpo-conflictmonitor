@@ -8,7 +8,6 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
-import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
@@ -28,10 +27,12 @@ import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
+import us.dot.its.jpo.geojsonconverter.standards.SpatStandard;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.Optional;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.ValidationConstants.CTI_4501_V2_SPAT_VALIDATION_ALGORITHM;
 
@@ -52,8 +53,6 @@ public class SpatValidationTopologyCti4501V2
     protected Logger getLogger() {
         return logger;
     }
-
-    private static final String LATEST_TIMESTAMP_STORE = "latest-timestamp-store";
 
     SpatTimestampDeltaStreamsAlgorithm timestampDeltaAlgorithm;
     SpatMinimumDataAggregationStreamsAlgorithm minimumDataAggregationAlgorithm;
@@ -219,55 +218,59 @@ public class SpatValidationTopologyCti4501V2
 
         // Check the broadcast rate criteria
         // for each pair and each group of 10 consecutive spats
+        KStream<RsuIntersectionKey, SpatBroadcastRateEvent> eventStream =
         timestampAggTable
                 .toStream()
-                .map((key, agg) -> {
-                    var event = new SpatBroadcastRateEvent();
+                .flatMap((key, agg) -> {
+                    var events = new ArrayList<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>>();
+                    Optional<long[]> pairOpt = agg.pair();
+                    if (pairOpt.isPresent()) {
+                        long[] pair = pairOpt.get();
+                        long diff = pair[1] - pair[0];
+                        if (diff < parameters.getV2BroadcastRateLowerBoundPairSeparationMs()
+                            || diff > parameters.getV2BroadcastRateUpperBoundPairSeparationMs()) {
+                            var event = getEvent(key, pair[0], pair[1], 2);
+                            events.add(new KeyValue<>(key, event));
+                        }
+                    }
+                    Optional<long[]> allOpt = agg.all();
+                    if (allOpt.isPresent()) {
+                        long[] all = allOpt.get();
+                        long first = all[0];
+                        long last = all[all.length - 1];
+                        long diff = last - first;
+                        if (diff < parameters.getV2BroadcastRateLowerBoundDurationPer10MessagesMs()
+                            || diff > parameters.getV2BroadcastRateUpperBoundDurationPer10MessagesMs()) {
+                            var event = getEvent(key, first, last, agg.numberOfMessagesForDuration());
+                            events.add(new KeyValue<>(key, event));
+                        }
+                    }
+                    return events;
                 });
 
-
-//        KStream<RsuIntersectionKey, SpatBroadcastRateEvent> eventStream = countStream
-//                .filter((windowedKey, value) -> {
-//                    if (value != null) {
-//                        long counts = value.longValue();
-//                        return (counts < parameters.getLowerBound() || counts > parameters.getUpperBound());
-//                    }
-//                    return false;
-//                })
-//                .map((windowedKey, counts) -> {
-//                    // Generate an event
-//                    SpatBroadcastRateEvent event = new SpatBroadcastRateEvent();
-//                    event.setSource(windowedKey.key().toString());
-//                    event.setIntersectionID(windowedKey.key().getIntersectionId());
-//                    event.setRoadRegulatorID(-1);
-//                    event.setTopicName(parameters.getInputTopicName());
-//                    ProcessingTimePeriod timePeriod = new ProcessingTimePeriod();
-//
-//                    // Grab the timestamps from the time window
-//                    timePeriod.setBeginTimestamp(windowedKey.window().startTime().toEpochMilli());
-//                    timePeriod.setEndTimestamp(windowedKey.window().endTime().toEpochMilli());
-//                    event.setTimePeriod(timePeriod);
-//                    event.setNumberOfMessages(counts != null ? counts.intValue() : -1);
-//
-//                    // Change the windowed key back to a normal key
-//                    return KeyValue.pair(windowedKey.key(), event);
-//                });
-//
-//        if (parameters.isDebug()) {
-//            eventStream = eventStream.peek((key, event) -> {
-//                logger.info("SPAT Broadcast Rate {}, {}", key, event);
-//            });
-//        }
-//
-//        eventStream.to(parameters.getBroadcastRateTopicName(),
-//                Produced.with(
-//                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-//                        JsonSerdes.SpatBroadcastRateEvent(),
-//                        new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>())
-//        );
+        eventStream.to(parameters.getBroadcastRateTopicName(),
+                Produced.with(
+                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                        JsonSerdes.SpatBroadcastRateEvent(),
+                        new IntersectionIdPartitioner<>())
+        );
 
         return builder.build(streamsProperties);
     }
 
-
+    private SpatBroadcastRateEvent getEvent(RsuIntersectionKey key, long first, long last, int numberOfMessages) {
+        var event = new SpatBroadcastRateEvent();
+        event.setIntersectionID(key.getIntersectionId());
+        event.setRoadRegulatorID(key.getRegion());
+        event.setSource(key.getRsuId());
+        event.setTopicName(parameters.getInputTopicName());
+        event.setStandard(SpatStandard.CTI4501_V2_DRAFT);
+        // Expect this is 10
+        event.setNumberOfMessages(numberOfMessages);
+        var period = new ProcessingTimePeriod();
+        period.setBeginTimestamp(first);
+        period.setEndTimestamp(last);
+        event.setTimePeriod(period);
+        return event;
+    }
 }

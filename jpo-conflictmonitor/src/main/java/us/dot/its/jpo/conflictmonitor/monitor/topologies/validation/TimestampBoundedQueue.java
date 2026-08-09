@@ -19,7 +19,17 @@ public class TimestampBoundedQueue {
 
     private final EvictingQueue<Long> queue;
 
-    public static final int MAX_SIZE = 10;
+    /**
+     * Number of messages to measure the total duration of.
+     */
+    public static final int MAX_NUM_MESSAGES_FOR_DURATION = 10;
+
+    /**
+     * Max size of the queue is 1 more than the number of messages to measure
+     * the duration of, since the duration of the final message ends with receipt
+     * of the next message whose duration is not counted.
+     */
+    public static final int MAX_SIZE = MAX_NUM_MESSAGES_FOR_DURATION + 1;
 
     public TimestampBoundedQueue() {
         queue = EvictingQueue.create(MAX_SIZE);
@@ -37,6 +47,12 @@ public class TimestampBoundedQueue {
 
     public int size() {
         return queue.size();
+    }
+
+    public int numberOfMessagesForDuration() {
+        int size = queue.size();
+        if (size == 0) return 0;
+        return queue.size() - 1;
     }
 
     public List<Long> toList() {
