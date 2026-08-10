@@ -322,6 +322,11 @@ public class SpatValidationTopologyV2
                     RsuIntersectionKey key = windowedKey.key();
                     assessment.setIntersectionID(key.getIntersectionId());
                     assessment.setRoadRegulatorID(key.getRegion());
+                    assessment.setSource(key.toString());
+                    var timePeriod = new ProcessingTimePeriod();
+                    timePeriod.setBeginTimestamp(windowedKey.window().start());
+                    timePeriod.setEndTimestamp(windowedKey.window().end());
+                    assessment.setTimePeriod(timePeriod);
                     assessment.setMaxAllowedPairSeparationMs(parameters.getV2BroadcastRateMaxOutlierPairSeparationMs());
                     assessment.setPercentToPass(parameters.getV2BroadcastRateConformancePercent());
                     assessment.setAssessmentGeneratedAt(Instant.now().toEpochMilli());

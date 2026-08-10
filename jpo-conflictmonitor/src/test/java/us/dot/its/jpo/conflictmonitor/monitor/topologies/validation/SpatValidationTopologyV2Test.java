@@ -22,6 +22,7 @@ import org.mockito.Mockito;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.testutils.TopologyTestUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
@@ -29,11 +30,7 @@ import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 import us.dot.its.jpo.geojsonconverter.standards.SpatStandard;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 public class SpatValidationTopologyV2Test {
 
@@ -55,9 +52,17 @@ public class SpatValidationTopologyV2Test {
     // assessment window, shortened for test
     final int v2AssessmentWindowDuration = 5;
     final ChronoUnit v2AssessmentWindowDurationUnits = ChronoUnit.SECONDS;
+    final int v2AssessmentWindowGracePeriodMs = 500;
+
+    // Pass/fail thresholds (production defaults).
+    final int v2ConformancePercent = 90;
+    final int v2MaxOutlierPairSeparationMs = 300;
 
     // Seconds needed to close the first buffer window, plus margin.
     final int totalSecondsPastFirstWindow = v2BufferSizeSeconds + (v2BufferGracePeriodMs / 1000) + 1;
+
+    // Seconds needed to close the first assessment window, plus a buffer window and margin.
+    final int totalSecondsPastFirstAssessmentWindow = v2AssessmentWindowDuration + v2BufferSizeSeconds + 1;
 
     // Start time on a buffer-window boundary.
     final Instant startTime = Instant.ofEpochMilli(1674356320000L);
@@ -216,6 +221,57 @@ public class SpatValidationTopologyV2Test {
         assertThat(distinctPeriods, hasSize(violations.size()));
     }
 
+    @Test
+    public void testConformantRate_producesPassNotification() {
+        var instants = instantsWithPeriod(100, totalSecondsPastFirstAssessmentWindow);
+        var notifications = pipeAndCollectNotifications(instants);
+
+        assertThat(notifications, hasSize(1));
+        var notification = notifications.getFirst().value;
+
+        assertThat(notification.isPass(), equalTo(true));
+        assertThat(notification.getNotificationHeading(), equalTo("SPaT Broadcast Rate Assessment: Pass"));
+        assertThat(notification.getNotificationText(), notNullValue());
+        assertThat(notification.getIntersectionID(), equalTo(intersectionId));
+        assertThat(notification.getRoadRegulatorID(), equalTo(region));
+
+        var assessment = notification.getAssessment();
+        assertThat(assessment, notNullValue());
+        assertThat(assessment.getNumberOfSpats(), greaterThan(0));
+        assertThat(assessment.getNumberOfPairViolations(), equalTo(0));
+        assertThat(assessment.getNumberOfDurationViolations(), equalTo(0));
+        assertThat(assessment.getMaxPairSeparationMs(), equalTo(0));
+        assertThat(assessment.getSource(), containsString(rsuId));
+        assertThat(assessment.getTimePeriod().periodMillis(), equalTo(v2AssessmentWindowDuration * 1000L));
+    }
+
+    @Test
+    public void testNonConformantRate_producesFailNotification() {
+        var instants = instantsWithPeriod(200, totalSecondsPastFirstAssessmentWindow);
+        var notifications = pipeAndCollectNotifications(instants);
+
+        assertThat(notifications, hasSize(1));
+        var notification = notifications.getFirst().value;
+
+        assertThat(notification.isPass(), equalTo(false));
+        assertThat(notification.getNotificationHeading(), equalTo("SPaT Broadcast Rate Assessment: Fail"));
+        assertThat(notification.getIntersectionID(), equalTo(intersectionId));
+        assertThat(notification.getRoadRegulatorID(), equalTo(region));
+
+        var assessment = notification.getAssessment();
+        assertThat(assessment, notNullValue());
+        assertThat(assessment.getNumberOfSpats(), greaterThan(0));
+        assertThat(assessment.getNumberOfPairViolations(), greaterThan(0));
+        assertThat(assessment.getNumberOfDurationViolations(), greaterThan(0));
+        assertThat(assessment.getPercentPairViolations(), greaterThan((double)(100 - v2ConformancePercent)));
+        assertThat(assessment.getPercentDurationViolations(), greaterThan((double)(100 - v2ConformancePercent)));
+
+        // Every violating pair is exactly 200ms, under the 300ms outlier limit, so the failure
+        // is attributable to the violation percentages rather than the outlier criterion.
+        assertThat(assessment.getMaxPairSeparationMs(), equalTo(200));
+        assertThat(assessment.getMaxAllowedPairSeparationMs(), equalTo(v2MaxOutlierPairSeparationMs));
+    }
+
     // --- helpers ---
 
     private List<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>> pipeAndCollectEvents(List<Instant> pipeOrder) {
@@ -240,6 +296,32 @@ public class SpatValidationTopologyV2Test {
             }
 
             return broadcastRateTopic.readKeyValuesToList();
+        }
+    }
+
+    private List<KeyValue<RsuIntersectionKey, SpatBroadcastRateNotification>> pipeAndCollectNotifications(
+            List<Instant> pipeOrder) {
+        var streamsConfig = createStreamsConfig();
+        Topology topology = createTopology();
+
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, streamsConfig);
+             Serde<RsuIntersectionKey> rsuIntersectionKeySerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey();
+             Serde<ProcessedSpat> processedSpatSerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat();
+             Serde<SpatBroadcastRateNotification> notificationSerde = JsonSerdes.SpatBroadcastRateNotification()) {
+
+            var inputTopic = driver.createInputTopic(inputTopicName,
+                    rsuIntersectionKeySerde.serializer(), processedSpatSerde.serializer());
+            var notificationTopic = driver.createOutputTopic(broadcastRateNotificationTopicName,
+                    rsuIntersectionKeySerde.deserializer(), notificationSerde.deserializer());
+
+            final RsuIntersectionKey key = new RsuIntersectionKey(rsuId, intersectionId, region);
+            for (var instant : pipeOrder) {
+                inputTopic.pipeInput(key, createSpat(instant), instant);
+            }
+
+            return notificationTopic.readKeyValuesToList();
         }
     }
 
@@ -340,6 +422,9 @@ public class SpatValidationTopologyV2Test {
         parameters.setV2BroadcastRateUpperBoundDurationPer10MessagesMs(v2UpperBoundDurationPer10MessagesMs);
         parameters.setV2BroadcastRateAssessmentWindowDuration(v2AssessmentWindowDuration);
         parameters.setV2BroadcastRateAssessmentWindowDurationUnits(v2AssessmentWindowDurationUnits);
+        parameters.setV2BroadcastRateAssessmentWindowGracePeriodMs(v2AssessmentWindowGracePeriodMs);
+        parameters.setV2BroadcastRateConformancePercent(v2ConformancePercent);
+        parameters.setV2BroadcastRateMaxOutlierPairSeparationMs(v2MaxOutlierPairSeparationMs);
         return parameters;
     }
 

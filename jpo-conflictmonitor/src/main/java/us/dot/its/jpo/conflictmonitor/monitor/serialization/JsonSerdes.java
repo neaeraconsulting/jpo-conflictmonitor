@@ -370,14 +370,14 @@ public class JsonSerdes {
     public static Serde<SpatBroadcastRateNotification> SpatBroadcastRateNotification() {
         return Serdes.serdeFrom(
             new JsonSerializer<SpatBroadcastRateNotification>(),
-            new GenericJsonDeserializer<SpatBroadcastRateNotification>(SpatBroadcastRateNotification.class)
+            new JsonDeserializer<>(SpatBroadcastRateNotification.class)
         );
     }
 
     public static Serde<MapBroadcastRateNotification> MapBroadcastRateNotification() {
         return Serdes.serdeFrom(
             new JsonSerializer<MapBroadcastRateNotification>(),
-            new GenericJsonDeserializer<MapBroadcastRateNotification>(MapBroadcastRateNotification.class)
+            new JsonDeserializer<>(MapBroadcastRateNotification.class)
         );
     }
 
