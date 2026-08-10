@@ -3,8 +3,7 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_ra
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.Getter;
-import lombok.Setter;
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.BroadcastRateEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.BroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.Notification;
 
 /**
@@ -15,7 +14,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.Notification;
  *
  * @param <T> the type of BroadcastRateEvent associated with this notification
  */
-public abstract class BroadcastRateNotification<T extends BroadcastRateEvent> extends Notification {
+public abstract class BroadcastRateNotification<T extends BroadcastRateAssessment> extends Notification {
 
     /**
      * Constructs a BroadcastRateNotification with the specified notification type.
@@ -27,7 +26,19 @@ public abstract class BroadcastRateNotification<T extends BroadcastRateEvent> ex
     }
 
     /** The broadcast rate event associated with this notification. */
-    @Getter @Setter private T event;
+    @Getter private T assessment;
+
+    @Getter private boolean pass;
+
+    public void setAssessment(T assessment) {
+        if (assessment != null) {
+            this.assessment = assessment;
+            this.setIntersectionID(assessment.getIntersectionID());
+            this.setRoadRegulatorID(assessment.getRoadRegulatorID());
+            this.pass = assessment.isPass();
+            this.key = getUniqueId();
+        }
+    }
     
     /**
      * Returns a unique identifier for this notification, based on type, source, intersection ID,
@@ -38,11 +49,10 @@ public abstract class BroadcastRateNotification<T extends BroadcastRateEvent> ex
     @Override
     @JsonIgnore
     public String getUniqueId() {
-        return String.format("%s_%s_%s_%s_%s", 
-            this.getNotificationType(), 
-            event.getSource(), 
-            event.getIntersectionID(), 
-            event.getTimePeriod() != null ? event.getTimePeriod().periodMillis() : 0L,
-            event.getNumberOfMessages());
+        return String.format("%s_%s_%s_%s",
+            this.getNotificationType(),
+                assessment.getSource(),
+                assessment.getIntersectionID(),
+                assessment.getTimePeriod() != null ? assessment.getTimePeriod().periodMillis() : 0L);
     }
 }

@@ -11,12 +11,13 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.config.ConfigUti
 
 import lombok.Data;
 import lombok.Generated;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.conflictmonitor.monitor.models.IntersectionRegion;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigData;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.ConfigDataClass;
 
+
+import java.time.temporal.ChronoUnit;
 
 import static us.dot.its.jpo.conflictmonitor.monitor.models.config.UpdateType.*;
 
@@ -40,6 +41,11 @@ public class SpatValidationParameters {
         description = "Output topic for Broadcast Rate events", 
         updateType = READ_ONLY)
     String broadcastRateTopicName;
+
+    @ConfigData(key = "spat.validation.broadcast-rate-notification-topic-name",
+         description = "Output topic for Broadcast Rate notifications",
+         updateType = READ_ONLY)
+    String broadcastRateNotificationTopicName;
 
     /**
      * Output topc for 'Minimum Data' events
@@ -81,34 +87,67 @@ public class SpatValidationParameters {
         updateType = INTERSECTION)
     int upperBound;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-buffer-size-seconds")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-buffer-size-seconds",
+            units = SECONDS,
+            description = "Broadcast rate buffer size for V2 Broadcast Rate algorithm",
+            updateType = READ_ONLY)
     int v2BroadcastRateBufferSizeSeconds;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-buffer-grace-period-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-buffer-grace-period-ms",
+            units = MILLISECONDS,
+            description = "Broadcast rate buffer grace period for V2 Broadcast Rate algorithm",
+            updateType = READ_ONLY)
     int v2BroadcastRateBufferGracePeriodMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-lower-bound-pair-separation-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-lower-bound-pair-separation-ms",
+        units = MILLISECONDS,
+        description = "Broadcast rate lower bound pair separation for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateLowerBoundPairSeparationMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-pair-separation-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-pair-separation-ms",
+        units = MILLISECONDS,
+        description = "Broadcast rate upper bound pair separation for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateUpperBoundPairSeparationMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-lower-bound-duration-per-10-messages-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-lower-bound-duration-per-10-messages-ms",
+        units = MILLISECONDS,
+        description = "Broadcast rate lower bound duration per 10 messages for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateLowerBoundDurationPer10MessagesMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-duration-per-10-messages-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-upper-bound-duration-per-10-messages-ms",
+        units = MILLISECONDS,
+        description = "Broadcast rate upper bound duration per 10 messages for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateUpperBoundDurationPer10MessagesMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-conformance-percent")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-conformance-percent",
+        description = "Broadcast rate conformance percent for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateConformancePercent;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-max-outlier-pair-separation-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-max-outlier-pair-separation-ms",
+        units = MILLISECONDS,
+        description = "Broadcast rate max outlier pair separation for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateMaxOutlierPairSeparationMs;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-duration-seconds")
-    int v2BroadcastRateAssessmentWindowDurationSeconds;
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-duration",
+        description = "Broadcast rate assessment window duration for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
+    int v2BroadcastRateAssessmentWindowDuration;
 
-    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-grace-period-ms")
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-duration-units",
+        description = "Broadcast rate assessment window duration units",
+        updateType = READ_ONLY)
+    ChronoUnit v2BroadcastRateAssessmentWindowDurationUnits;
+
+    @ConfigData(key = "spat.validation.v2-broadcast-rate-assessment-window-grace-period-ms",
+        units = MILLISECONDS,
+        description = "Broadcast rate assessment window grace period for V2 Broadcast Rate algorithm",
+        updateType = READ_ONLY)
     int v2BroadcastRateAssessmentWindowGracePeriodMs;
 
     // Whether to log diagnostic information for debugging

@@ -25,6 +25,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
@@ -286,8 +287,9 @@ public class SpatValidationTopologyV2
                 )
                 .windowedBy(
                         TimeWindows.ofSizeAndGrace(
-                                Duration.ofSeconds(parameters.getV2BroadcastRateAssessmentWindowDurationSeconds()),
-                                Duration.ofSeconds(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs()))
+                                Duration.of(parameters.getV2BroadcastRateAssessmentWindowDuration(),
+                                        parameters.getV2BroadcastRateAssessmentWindowDurationUnits()),
+                                Duration.ofMillis(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs()))
                 )
                 .aggregate(
                         SpatBroadcastRateAssessment::new,
@@ -325,6 +327,24 @@ public class SpatValidationTopologyV2
                     assessment.setAssessmentGeneratedAt(Instant.now().toEpochMilli());
                     return new KeyValue<>(key, assessment);
                 });
+
+        // Send notifications for the assessments
+        // Always sends notifications regardless if the assessment passes or fails, so clients
+        // can always see the assessment statistics.
+        assessmentStream
+                .mapValues(assessment -> {
+                    var notification = new SpatBroadcastRateNotification();
+                    notification.setAssessment(assessment);
+                    notification.setNotificationText("SPaT Broadcast Rate Notification, with periodic broadcast rate assessment report");
+                    notification.setNotificationHeading(
+                            "SPaT Broadcast Rate Assessment: " + (notification.isPass() ? "Pass" : "Fail"));
+                    return notification;
+                })
+                .to(parameters.getBroadcastRateNotificationTopicName(),
+                        Produced.with(
+                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                                JsonSerdes.SpatBroadcastRateNotification(),
+                                new IntersectionIdPartitioner<>()));
 
         return builder.build(streamsProperties);
     }

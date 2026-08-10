@@ -508,6 +508,7 @@ spat.validation:
   algorithm: cti4501V2SpatValidationAlgorithm
   inputTopicName: topic.ProcessedSpat
   broadcastRateTopicName: topic.CmSpatBroadcastRateEvents
+  broadcastRateNotificationTopicName: topic.CmSpatBroadcastRateNotifications
   minimumDataTopicName: topic.CmSpatMinimumDataEvents
   rollingPeriodSeconds: 10
   outputIntervalSeconds: 5
@@ -524,7 +525,8 @@ spat.validation:
   v2-broadcast-rate-upper-bound-duration-per-10-messages-ms: 1025
   v2-broadcast-rate-conformance-percent: 90
   v2-broadcast-rate-max-outlier-pair-separation-ms: 300
-  v2-broadcast-rate-assessment-window-duration-seconds: 3600
+  v2-broadcast-rate-assessment-window-duration: 1
+  v2-broadcast-rate-assessment-window-duration-units: HOURS
   v2-broadcast-rate-assessment-window-grace-period-ms: 500
 
 

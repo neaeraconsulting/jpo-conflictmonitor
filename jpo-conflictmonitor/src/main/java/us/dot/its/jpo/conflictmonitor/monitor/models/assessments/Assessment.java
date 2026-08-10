@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -26,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(value = LaneDirectionOfTravelAssessment.class, name = "LaneDirectionOfTravel"),
         @JsonSubTypes.Type(value = StopLinePassageAssessment.class, name = "StopLinePassage"),
         @JsonSubTypes.Type(value = StopLineStopAssessment.class, name = "StopLineStop"),
+        @JsonSubTypes.Type(value = SpatBroadcastRateAssessment.class, name = "SpatBroadcastRate")
 })
 @Getter
 @Setter
