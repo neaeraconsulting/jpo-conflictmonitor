@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +39,7 @@ public class SpatValidationTopologyV2Test {
 
     final String inputTopicName = "topic.ProcessedSpat";
     final String broadcastRateTopicName = "topic.CmSpatBroadcastRateEvents";
+    final String broadcastRateNotificationTopicName = "topic.CmSpatBroadcastRateNotification";
     final String minimumDataTopicName = "topic.CmSpatMinimumDataEvents";
 
     // v2 broadcast-rate bounds (production defaults).
@@ -49,6 +51,10 @@ public class SpatValidationTopologyV2Test {
     // Sort-buffer window/grace, shortened for fewer messages per test.
     final int v2BufferSizeSeconds = 1;
     final int v2BufferGracePeriodMs = 200;
+
+    // assessment window, shortened for test
+    final int v2AssessmentWindowDuration = 5;
+    final ChronoUnit v2AssessmentWindowDurationUnits = ChronoUnit.SECONDS;
 
     // Seconds needed to close the first buffer window, plus margin.
     final int totalSecondsPastFirstWindow = v2BufferSizeSeconds + (v2BufferGracePeriodMs / 1000) + 1;
@@ -324,6 +330,7 @@ public class SpatValidationTopologyV2Test {
         var parameters = new SpatValidationParameters();
         parameters.setInputTopicName(inputTopicName);
         parameters.setBroadcastRateTopicName(broadcastRateTopicName);
+        parameters.setBroadcastRateNotificationTopicName(broadcastRateNotificationTopicName);
         parameters.setMinimumDataTopicName(minimumDataTopicName);
         parameters.setV2BroadcastRateBufferSizeSeconds(v2BufferSizeSeconds);
         parameters.setV2BroadcastRateBufferGracePeriodMs(v2BufferGracePeriodMs);
@@ -331,6 +338,8 @@ public class SpatValidationTopologyV2Test {
         parameters.setV2BroadcastRateUpperBoundPairSeparationMs(v2UpperBoundPairSeparationMs);
         parameters.setV2BroadcastRateLowerBoundDurationPer10MessagesMs(v2LowerBoundDurationPer10MessagesMs);
         parameters.setV2BroadcastRateUpperBoundDurationPer10MessagesMs(v2UpperBoundDurationPer10MessagesMs);
+        parameters.setV2BroadcastRateAssessmentWindowDuration(v2AssessmentWindowDuration);
+        parameters.setV2BroadcastRateAssessmentWindowDurationUnits(v2AssessmentWindowDurationUnits);
         return parameters;
     }
 

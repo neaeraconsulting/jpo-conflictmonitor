@@ -310,7 +310,7 @@ public class SpatValidationTopologyV2
                             }
                             return assessment;
                         },
-                        Materialized.<RsuIntersectionKey, SpatBroadcastRateAssessment, WindowStore<Bytes, byte[]>>as("spat-buffer")
+                        Materialized.<RsuIntersectionKey, SpatBroadcastRateAssessment, WindowStore<Bytes, byte[]>>as("spat-assessment-buffer")
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.SpatBroadcastRateAssessment())
                 )
