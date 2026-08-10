@@ -311,6 +311,15 @@ kafka.topics:
     - name: topic.CmDynamicLaneActivationMetrics
       cleanupPolicy: delete
       retentionMs: 300000
+    - name: topic.CmSpatBroadcastRateNotification
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmMapBroadcastRateNotification
+      cleanupPolicy: delete
+      retentionMs: 300000
+    - name: topic.CmRtcmBroadcastRateNotification
+      cleanupPolicy: delete
+      retentionMs: 300000
 
 
 # Connection of Travel
@@ -508,7 +517,7 @@ spat.validation:
   algorithm: cti4501V2SpatValidationAlgorithm
   inputTopicName: topic.ProcessedSpat
   broadcastRateTopicName: topic.CmSpatBroadcastRateEvents
-  broadcastRateNotificationTopicName: topic.CmSpatBroadcastRateNotifications
+  broadcastRateNotificationTopicName: topic.CmSpatBroadcastRateNotification
   minimumDataTopicName: topic.CmSpatMinimumDataEvents
   rollingPeriodSeconds: 10
   outputIntervalSeconds: 5
