@@ -166,7 +166,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     private EventOrNonEvent toEventOrNonEvent(RsuIntersectionKey key, TimestampBoundedQueue agg) {
         SpatBroadcastRateEvent pairEvent = extractPairEvent(key, agg);
         SpatBroadcastRateEvent durationEvent = extractDurationEvent(key, agg);
-        long latest = agg.latest().get();
+        long latest = agg.latest().orElse(0L);
         return new EventOrNonEvent(latest, pairEvent, durationEvent);
     }
 
