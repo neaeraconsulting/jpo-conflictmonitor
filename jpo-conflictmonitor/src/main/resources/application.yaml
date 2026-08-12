@@ -312,14 +312,11 @@ kafka.topics:
       cleanupPolicy: delete
       retentionMs: 300000
     - name: topic.CmSpatBroadcastRateNotification
-      cleanupPolicy: delete
-      retentionMs: 300000
+      cleanupPolicy: compact
     - name: topic.CmMapBroadcastRateNotification
-      cleanupPolicy: delete
-      retentionMs: 300000
+      cleanupPolicy: compact
     - name: topic.CmRtcmBroadcastRateNotification
-      cleanupPolicy: delete
-      retentionMs: 300000
+      cleanupPolicy: compact
 
 
 # Connection of Travel
