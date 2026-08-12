@@ -107,7 +107,7 @@ public class TimestampBoundedQueue {
 
     public static class SpatBoundedQueueDeserializer extends JsonDeserializer<TimestampBoundedQueue> {
         @Override
-        public TimestampBoundedQueue deserialize(JsonParser parser, DeserializationContext context) throws IOException, JacksonException {
+        public TimestampBoundedQueue deserialize(JsonParser parser, DeserializationContext context) throws IOException {
            var typeRef = new TypeReference<List<Long>>() {};
             List<Long> list = parser.readValueAs(typeRef);
             return new TimestampBoundedQueue(list);

@@ -217,7 +217,7 @@ public class SpatValidationTopologyV2Test {
         var distinctPeriods = violations.stream()
                 .map(event -> List.of(event.getTimePeriod().getBeginTimestamp(), event.getTimePeriod().getEndTimestamp()))
                 .distinct()
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(distinctPeriods, hasSize(violations.size()));
     }

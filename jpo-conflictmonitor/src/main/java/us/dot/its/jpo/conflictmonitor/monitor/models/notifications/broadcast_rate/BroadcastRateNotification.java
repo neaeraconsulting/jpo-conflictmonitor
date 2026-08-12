@@ -2,6 +2,7 @@ package us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_ra
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.BroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.Notification;
@@ -14,6 +15,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.Notification;
  *
  * @param <T> the type of BroadcastRateEvent associated with this notification
  */
+@EqualsAndHashCode(callSuper=true)
 public abstract class BroadcastRateNotification<T extends BroadcastRateAssessment> extends Notification {
 
     /**

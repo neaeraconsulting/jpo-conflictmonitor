@@ -13,7 +13,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod
 @Generated
 public abstract class BroadcastRateAssessment extends Assessment {
 
-    public BroadcastRateAssessment(String assessmentType) {
+    protected BroadcastRateAssessment(String assessmentType) {
         super(assessmentType);
     }
 
