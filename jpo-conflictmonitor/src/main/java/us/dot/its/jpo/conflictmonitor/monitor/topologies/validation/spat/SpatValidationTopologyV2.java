@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
+package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.spat;
 
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -15,18 +15,14 @@ import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampBoundedQueue;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampBuffer;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
@@ -49,9 +45,7 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.Valid
  * <p>Produces {@link SpatBroadcastRateEvent}s and {@link SpatMinimumDataEvent}s
  */
 @Component(CTI_4501_V2_SPAT_VALIDATION_ALGORITHM)
-public class SpatValidationTopologyV2
-        extends BaseValidationTopology<SpatValidationParameters>
-        implements SpatValidationStreamsAlgorithm {
+public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
 
     private static final Logger logger = LoggerFactory.getLogger(SpatValidationTopologyV2.class);
 
@@ -60,93 +54,10 @@ public class SpatValidationTopologyV2
         return logger;
     }
 
-    SpatTimestampDeltaStreamsAlgorithm timestampDeltaAlgorithm;
-    SpatMinimumDataAggregationStreamsAlgorithm minimumDataAggregationAlgorithm;
-
-    @Override
-    public SpatTimestampDeltaAlgorithm getTimestampDeltaAlgorithm() {
-        return timestampDeltaAlgorithm;
-    }
-
-    @Override
-    public void setTimestampDeltaAlgorithm(SpatTimestampDeltaAlgorithm timestampDeltaAlgorithm) {
-        // Enforce the algorithm being a Streams algorithm
-        if (timestampDeltaAlgorithm instanceof SpatTimestampDeltaStreamsAlgorithm timestampDeltaStreamsAlgorithm) {
-            this.timestampDeltaAlgorithm = timestampDeltaStreamsAlgorithm;
-        } else {
-            throw new IllegalArgumentException("Algorithm is not an instance of SpatTimestampDeltaStreamsAlgorithm");
-        }
-    }
-
-    @Override
-    public void setMinimumDataAggregationAlgorithm(SpatMinimumDataAggregationAlgorithm minimumDataAggregationAlgorithm) {
-        // Enforce the algorithm being a Streams algorithm
-        if (minimumDataAggregationAlgorithm instanceof SpatMinimumDataAggregationStreamsAlgorithm minimumDataAggregationStreamsAlgorithm) {
-            this.minimumDataAggregationAlgorithm = minimumDataAggregationStreamsAlgorithm;
-        } else {
-            throw new IllegalArgumentException("Algorithm is not an instance of SpatMinimumDataAggregationStreamsAlgorithm");
-        }
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-
-        if (timestampDeltaAlgorithm == null) {
-            throw new IllegalStateException("SpatTimestampDeltaAlgorithm is not set");
-        }
-    }
-
     @Override
     public Topology buildTopology() {
         var builder = new StreamsBuilder();
-
-        KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream = builder
-                .stream(parameters.getInputTopicName(),
-                        Consumed.with(
-                                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat())
-                                .withTimestampExtractor(new TimestampExtractorForBroadcastRate())
-                );
-
-        // timestamp delta plugin after reading processed SPATs
-        timestampDeltaAlgorithm.buildTopology(builder, processedSpatStream);
-
-
-        // Extract validation info for Minimum Data events
-        var minimumDataEventStream = processedSpatStream
-                .filter((key, value) -> value != null && !value.isCti4501Conformant())
-                .map((key, value) -> {
-                    var minDataEvent = new SpatMinimumDataEvent();
-                    var valMsgList = value.getValidationMessages();
-                    var timestamp = TimestampExtractorForBroadcastRate.extractTimestamp(value);
-                    populateMinDataEvent(key, minDataEvent, valMsgList, parameters.getRollingPeriodSeconds(),
-                            timestamp);
-
-                    return KeyValue.pair(key, minDataEvent);
-                })
-                .peek((key, value) -> {
-                    if (parameters.isDebug()) {
-                        logger.info("SpatMinimumDataEvent {}", key);
-                    }
-                });
-
-
-        // If aggregation is enabled, don't send individual events to the topic
-        // This is a read-only flag, so the subtopology for the unchosen option is not constructed at all
-        if (parameters.isAggregateMinimumDataEvents()) {
-            // Aggregate
-            minimumDataAggregationAlgorithm.buildTopology(builder, minimumDataEventStream);
-        } else {
-            // Dont' aggregate
-            minimumDataEventStream
-                    .to(parameters.getMinimumDataTopicName(),
-                            Produced.with(
-                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                    JsonSerdes.SpatMinimumDataEvent(),
-                                    new IntersectionIdPartitioner<>())
-                    );
-        }
+        KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream = buildMinimumDataSubtopology(builder);
 
         // Broadcast Rate Criteria in CTI-4501 v2 draft:
         // - SPAT messages broadcast every 100 ms +/- 25 ms

@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
+package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.spat;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
@@ -7,7 +7,6 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
-import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,8 +15,6 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
@@ -37,8 +34,7 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.Valid
  */
 @Component(DEFAULT_SPAT_VALIDATION_ALGORITHM)
 public class SpatValidationTopology
-        extends BaseValidationTopology<SpatValidationParameters>
-        implements SpatValidationStreamsAlgorithm {
+        extends BaseSpatValidationTopology {
 
     private static final Logger logger = LoggerFactory.getLogger(SpatValidationTopology.class);
 
@@ -90,78 +86,7 @@ public class SpatValidationTopology
     public Topology buildTopology() {
         var builder = new StreamsBuilder();
 
-        // Create state store for zero count
-        var zeroCountStoreBuilder =
-                Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(LATEST_TIMESTAMP_STORE),
-                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                        Serdes.Long());
-
-        builder.addStateStore(zeroCountStoreBuilder);
-
-        KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream = builder
-                .stream(parameters.getInputTopicName(),
-                        Consumed.with(
-                                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                        us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat())
-                                .withTimestampExtractor(new TimestampExtractorForBroadcastRate())
-                );
-
-        // timestamp delta plugin after reading processed SPATs
-        timestampDeltaAlgorithm.buildTopology(builder, processedSpatStream);
-
-
-        // Extract validation info for Minimum Data events
-        var minimumDataEventStream = processedSpatStream
-                .filter((key, value) -> value != null && !value.isCti4501Conformant())
-                .map((key, value) -> {
-                    var minDataEvent = new SpatMinimumDataEvent();
-                    var valMsgList = value.getValidationMessages();
-                    var timestamp = TimestampExtractorForBroadcastRate.extractTimestamp(value);
-                    populateMinDataEvent(key, minDataEvent, valMsgList, parameters.getRollingPeriodSeconds(),
-                            timestamp);
-
-                    return KeyValue.pair(key, minDataEvent);
-                })
-                .peek((key, value) -> {
-                    if (parameters.isDebug()) {
-                        logger.info("SpatMinimumDataEvent {}", key);
-                    }
-                });
-
-
-        // If aggregation is enabled, don't send individual events to the topic
-        // This is a read-only flag, so the subtopology for the unchosen option is not constructed at all
-        if (parameters.isAggregateMinimumDataEvents()) {
-            // Aggregate
-            minimumDataAggregationAlgorithm.buildTopology(builder, minimumDataEventStream);
-        } else {
-            // Dont' aggregate
-            minimumDataEventStream
-                    .to(parameters.getMinimumDataTopicName(),
-                            Produced.with(
-                                    us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                    JsonSerdes.SpatMinimumDataEvent(),
-                                    new IntersectionIdPartitioner<>())
-                    );
-        }
-
-
-        // Save the timestamp of the latest message for each key in a state store to be queried by the zero-check task
-        // Disable zero rate checker because we have other methods to verify if messages are interrupted and it
-        // generates too many events that obscure the more interesting events.
-//        processedSpatStream.process(() ->
-//                        new SpatZeroRateChecker(
-//                                parameters.getRollingPeriodSeconds(),
-//                                parameters.getOutputIntervalSeconds(),
-//                                parameters.getInputTopicName(),
-//                                LATEST_TIMESTAMP_STORE
-//                        ), LATEST_TIMESTAMP_STORE)
-//                .to(parameters.getBroadcastRateTopicName(),
-//                        Produced.with(
-//                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-//                                JsonSerdes.SpatBroadcastRateEvent(),
-//                                new IntersectionIdPartitioner<RsuIntersectionKey, SpatBroadcastRateEvent>()
-//                        ));
+        KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream = buildMinimumDataSubtopology(builder);
 
         // Perform count for Broadcast Rate analysis
         KStream<Windowed<RsuIntersectionKey>, Long> countStream =
@@ -197,7 +122,7 @@ public class SpatValidationTopology
         KStream<RsuIntersectionKey, SpatBroadcastRateEvent> eventStream = countStream
                 .filter((windowedKey, value) -> {
                     if (value != null) {
-                        long counts = value.longValue();
+                        long counts = value;
                         return (counts < parameters.getLowerBound() || counts > parameters.getUpperBound());
                     }
                     return false;
