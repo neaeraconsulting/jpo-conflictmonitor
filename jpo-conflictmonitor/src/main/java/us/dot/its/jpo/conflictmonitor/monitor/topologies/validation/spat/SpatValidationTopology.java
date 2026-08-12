@@ -11,10 +11,6 @@ import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.spat.SpatMinimumDataAggregationStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.SpatMinimumDataEvent;
@@ -41,45 +37,6 @@ public class SpatValidationTopology
     @Override
     protected Logger getLogger() {
         return logger;
-    }
-
-    private static final String LATEST_TIMESTAMP_STORE = "latest-timestamp-store";
-
-    SpatTimestampDeltaStreamsAlgorithm timestampDeltaAlgorithm;
-    SpatMinimumDataAggregationStreamsAlgorithm minimumDataAggregationAlgorithm;
-
-    @Override
-    public SpatTimestampDeltaAlgorithm getTimestampDeltaAlgorithm() {
-        return timestampDeltaAlgorithm;
-    }
-
-    @Override
-    public void setTimestampDeltaAlgorithm(SpatTimestampDeltaAlgorithm timestampDeltaAlgorithm) {
-        // Enforce the algorithm being a Streams algorithm
-        if (timestampDeltaAlgorithm instanceof SpatTimestampDeltaStreamsAlgorithm timestampDeltaStreamsAlgorithm) {
-            this.timestampDeltaAlgorithm = timestampDeltaStreamsAlgorithm;
-        } else {
-            throw new IllegalArgumentException("Algorithm is not an instance of SpatTimestampDeltaStreamsAlgorithm");
-        }
-    }
-
-    @Override
-    public void setMinimumDataAggregationAlgorithm(SpatMinimumDataAggregationAlgorithm minimumDataAggregationAlgorithm) {
-        // Enforce the algorithm being a Streams algorithm
-        if (minimumDataAggregationAlgorithm instanceof SpatMinimumDataAggregationStreamsAlgorithm minimumDataAggregationStreamsAlgorithm) {
-            this.minimumDataAggregationAlgorithm = minimumDataAggregationStreamsAlgorithm;
-        } else {
-            throw new IllegalArgumentException("Algorithm is not an instance of SpatMinimumDataAggregationStreamsAlgorithm");
-        }
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-
-        if (timestampDeltaAlgorithm == null) {
-            throw new IllegalStateException("SpatTimestampDeltaAlgorithm is not set");
-        }
     }
 
     @Override

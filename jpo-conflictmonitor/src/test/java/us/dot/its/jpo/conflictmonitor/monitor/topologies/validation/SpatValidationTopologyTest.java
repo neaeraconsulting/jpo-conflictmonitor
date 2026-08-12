@@ -74,7 +74,7 @@ public class SpatValidationTopologyTest {
     final int region = 10;
 
     @Test
-    public void testMapValidationTopology() {
+    public void testSpatValidationTopology() {
 
         var streamsConfig = createStreamsConfig();
         Topology topology = createTopology();

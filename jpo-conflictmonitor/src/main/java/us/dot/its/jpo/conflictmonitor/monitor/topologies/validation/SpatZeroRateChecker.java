@@ -6,6 +6,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatB
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
 
+@Deprecated
 @Slf4j
 public class SpatZeroRateChecker
     extends BaseZeroRateChecker<ProcessedSpat, SpatBroadcastRateEvent, RsuIntersectionKey> {
