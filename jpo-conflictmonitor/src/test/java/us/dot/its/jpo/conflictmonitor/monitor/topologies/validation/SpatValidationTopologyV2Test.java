@@ -238,7 +238,9 @@ public class SpatValidationTopologyV2Test {
 
         var assessment = notification.getAssessment();
         assertThat(assessment, notNullValue());
-        assertThat(assessment.getNumberOfSpats(), greaterThan(0));
+        // Regression guard: every spat in the window must be counted via the leftJoin, not just
+        // ones with a matching violation event (a KTable-driven count would undercount here).
+        assertThat(assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
         assertThat(assessment.getNumberOfPairViolations(), equalTo(0));
         assertThat(assessment.getNumberOfDurationViolations(), equalTo(0));
         assertThat(assessment.getMaxPairSeparationMs(), equalTo(0));
@@ -261,7 +263,9 @@ public class SpatValidationTopologyV2Test {
 
         var assessment = notification.getAssessment();
         assertThat(assessment, notNullValue());
-        assertThat(assessment.getNumberOfSpats(), greaterThan(0));
+        // Every spat is counted exactly once even when it also carries a violation, i.e. the
+        // leftJoin's placeholder path and its matched-violation path don't double count.
+        assertThat(assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
         assertThat(assessment.getNumberOfPairViolations(), greaterThan(0));
         assertThat(assessment.getNumberOfDurationViolations(), greaterThan(0));
         assertThat(assessment.getPercentPairViolations(), greaterThan((double)(100 - v2ConformancePercent)));
@@ -344,6 +348,14 @@ public class SpatValidationTopologyV2Test {
 
     private List<Instant> instantsWithPeriod(int periodMillis, int totalSeconds) {
         return TopologyTestUtils.getInstants(startTime, periodMillis, totalSeconds);
+    }
+
+    // Count of instants falling in the first assessment window: [startTime, startTime + duration).
+    private long expectedSpatCount(List<Instant> instants) {
+        long windowEndMillis = startTime.toEpochMilli() + v2AssessmentWindowDuration * 1000L;
+        return instants.stream()
+                .filter(i -> i.toEpochMilli() < windowEndMillis)
+                .count();
     }
 
     private List<Instant> instantsWithGaps(int[] gapsMillis) {

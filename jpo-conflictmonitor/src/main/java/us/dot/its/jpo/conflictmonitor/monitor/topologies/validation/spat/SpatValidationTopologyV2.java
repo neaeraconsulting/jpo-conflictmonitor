@@ -10,6 +10,8 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.BuiltInDslStoreSuppliers;
+import org.apache.kafka.streams.state.DslKeyValueParams;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
@@ -68,13 +70,14 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
 
         KStream<RsuIntersectionKey, Long> sortedSpatTimestamps = buildSortedSpatTimestampStream(processedSpatStream);
         KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable = buildTimestampAggTable(sortedSpatTimestamps);
-        KStream<RsuIntersectionKey, EventOrNonEvent> eventStream = buildEventStream(timestampAggTable);
+        KStream<RsuIntersectionKey, TimestampedEvents> eventStream = buildEventStream(timestampAggTable);
 
         publishEvents(eventStream);
 
         // Do assessments over a longer time period for pass/fail with 90% tolerance
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
-        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream = buildAssessmentStream(eventStream);
+        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream
+                = buildAssessmentStream(sortedSpatTimestamps, eventStream);
 
         // Send notifications for the assessments
         // Always sends notifications regardless if the assessment passes or fails, so clients
@@ -121,16 +124,19 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                         Suppressed.untilWindowCloses(BufferConfig.unbounded())
                 )
                 .toStream()
-                .map((windowedKey, buffer) -> {
-                    // sort the buffered timestamps
-                    Collections.sort(buffer);
-
-                    // Change the windowed key back to a normal key
-                    return KeyValue.pair(windowedKey.key(), buffer);
-                })
-                .flatMapValues(buffer -> {
-                    // Unwrap buffered timestamps, now in order
-                    return buffer;
+                .process(() -> new ContextualProcessor<>() {
+                    @Override
+                    public void process(Record<Windowed<RsuIntersectionKey>, TimestampBuffer> record) {
+                        TimestampBuffer buffer = record.value();
+                        // Sort the buffered timestamps
+                        Collections.sort(buffer);
+                        // convert the windowed key to a normal key
+                        RsuIntersectionKey key = record.key().key();
+                        // Unwrap the buffered timestamps
+                        for (Long timestamp : buffer) {
+                            context().forward(new Record<>(key, timestamp, timestamp));
+                        }
+                    }
                 });
     }
 
@@ -156,18 +162,23 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     }
 
     // Check the broadcast rate criteria for each pair and each group of 10 consecutive spats
-    private KStream<RsuIntersectionKey, EventOrNonEvent> buildEventStream(
+    private KStream<RsuIntersectionKey, TimestampedEvents> buildEventStream(
             KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable) {
         return timestampAggTable
                 .toStream()
-                .map((key, agg) -> new KeyValue<>(key, toEventOrNonEvent(key, agg)));
+                .map((key, agg) -> new KeyValue<>(key, toTimestampedEvents(key, agg)))
+                .filter((key, optEvents) -> optEvents.isPresent())
+                .mapValues(Optional::get);
     }
 
-    private EventOrNonEvent toEventOrNonEvent(RsuIntersectionKey key, TimestampBoundedQueue agg) {
+    private Optional<TimestampedEvents> toTimestampedEvents(RsuIntersectionKey key, TimestampBoundedQueue agg) {
         SpatBroadcastRateEvent pairEvent = extractPairEvent(key, agg);
         SpatBroadcastRateEvent durationEvent = extractDurationEvent(key, agg);
         long latest = agg.latest().orElse(0L);
-        return new EventOrNonEvent(latest, pairEvent, durationEvent);
+        if ((pairEvent == null && durationEvent == null) || latest == 0) {
+            return Optional.empty();
+        }
+        return Optional.of(new TimestampedEvents(latest, pairEvent, durationEvent));
     }
 
     private SpatBroadcastRateEvent extractPairEvent(RsuIntersectionKey key, TimestampBoundedQueue agg) {
@@ -200,7 +211,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return null;
     }
 
-    private void publishEvents(KStream<RsuIntersectionKey, EventOrNonEvent> eventStream) {
+    private void publishEvents(KStream<RsuIntersectionKey, TimestampedEvents> eventStream) {
         eventStream
                 // Filter out non-events, only send actual events to the output topic
                 .filter((key, value) -> value != null && (value.durationEvent() != null || value.pairEvent() != null))
@@ -213,7 +224,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 );
     }
 
-    private List<SpatBroadcastRateEvent> toEventList(EventOrNonEvent value) {
+    private List<SpatBroadcastRateEvent> toEventList(TimestampedEvents value) {
         var events = new ArrayList<SpatBroadcastRateEvent>();
         if (value.pairEvent() != null) {
             events.add(value.pairEvent());
@@ -225,12 +236,33 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     }
 
     private KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> buildAssessmentStream(
-            KStream<RsuIntersectionKey, EventOrNonEvent> eventStream) {
-        return eventStream
+            KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
+            KStream<RsuIntersectionKey, TimestampedEvents> eventStream) {
+        return sortedSpatTimestamps
+                .leftJoin(eventStream,
+                        (timestamp, events) -> {
+                            if (events != null) {
+                                return events;
+                            } else {
+                                // no events, return placeholder for spat count
+                                return new TimestampedEvents(timestamp, null, null);
+                            }
+                        },
+                        JoinWindows.ofTimeDifferenceAndGrace(
+                                Duration.ZERO,
+                                Duration.ofMillis(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs())),
+                        StreamJoined
+                                .with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                                    Serdes.Long(),
+                                    TimestampedEvents.serde())
+                                .withStoreName("spat-assessment-join-store")
+                                .withLoggingDisabled()
+
+                        )
                 .groupByKey(
                         Grouped.with(
                                 us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                                EventOrNonEvent.serde())
+                                TimestampedEvents.serde())
                 )
                 .windowedBy(
                         TimeWindows.ofSizeAndGrace(
@@ -252,7 +284,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 .map((windowedKey, assessment) -> new KeyValue<>(windowedKey.key(), finalizeAssessment(windowedKey, assessment)));
     }
 
-    private SpatBroadcastRateAssessment updateAssessment(EventOrNonEvent events, SpatBroadcastRateAssessment assessment) {
+    private SpatBroadcastRateAssessment updateAssessment(TimestampedEvents events, SpatBroadcastRateAssessment assessment) {
         assessment.setNumberOfSpats(assessment.getNumberOfSpats() + 1);
         if (events.pairEvent() != null) {
             assessment.setNumberOfPairViolations(assessment.getNumberOfPairViolations() + 1);
@@ -321,12 +353,12 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return event;
     }
 
-    private record EventOrNonEvent(
+    private record TimestampedEvents(
             long timestamp,
             SpatBroadcastRateEvent pairEvent,
             SpatBroadcastRateEvent durationEvent){
-        public static Serde<EventOrNonEvent> serde() {
-            return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(EventOrNonEvent.class));
+        public static Serde<TimestampedEvents> serde() {
+            return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(TimestampedEvents.class));
         }
     }
 }
