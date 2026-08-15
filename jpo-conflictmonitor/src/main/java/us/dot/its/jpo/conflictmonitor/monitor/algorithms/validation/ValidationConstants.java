@@ -8,7 +8,7 @@ public final class ValidationConstants {
     public static final String DEFAULT_RTCM_VALIDATION_ALGORITHM = "defaultRtcmValidationAlgorithm";
 
     // CTI-4501 V2 and J3258 algorithms implement new Broadcast Rate standards
-    public static final String CTI_4501_V2_MAP_VALIDATION_ALGORITHM = "cti45001V2MapValidationAlgorithm";
+    public static final String CTI_4501_V2_MAP_VALIDATION_ALGORITHM = "cti4501V2MapValidationAlgorithm";
     public static final String CTI_4501_V2_SPAT_VALIDATION_ALGORITHM = "cti4501V2SpatValidationAlgorithm";
     public static final String J3258_RTCM_VALIDATION_ALGORITHM = "j3258RtcmValidationAlgorithm";
 
