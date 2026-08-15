@@ -8,8 +8,8 @@
 		</encoder>
 	</appender>
 
-	<!-- Suppress useless error message on Windows -->
-	<logger name="org.apache.kafka.streams.processor.internals.StateDirectory" level="OFF"/>
+	<!-- uncomment to suppress useless error message on Windows -->
+<!--	<logger name="org.apache.kafka.streams.processor.internals.StateDirectory" level="OFF"/>-->
 
 	<logger name="org.apache.kafka.streams.processor.internals.RecordCollectorImpl" level="ERROR"/>
 	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="ERROR"/>
