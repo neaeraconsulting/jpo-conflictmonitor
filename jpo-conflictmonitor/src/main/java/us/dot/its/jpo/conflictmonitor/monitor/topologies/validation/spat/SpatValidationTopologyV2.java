@@ -130,6 +130,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                         ProcessedSpat spat = record.value();
                         if (spat == null || spat.getUtcTimeStamp() == null) {
                             getLogger().info("Missing embedded SPAT timestamp, dropping spat for key {}", record.key());
+                            return;
                         }
                         long timestamp = spat.getUtcTimeStamp().toInstant().toEpochMilli();
                         context().forward(new Record<>(record.key(), timestamp, timestamp));
