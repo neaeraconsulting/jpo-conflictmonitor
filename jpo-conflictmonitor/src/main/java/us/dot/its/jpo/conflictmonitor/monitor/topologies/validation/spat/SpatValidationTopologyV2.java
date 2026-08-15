@@ -155,8 +155,6 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     private KStream<RsuIntersectionKey, Long> buildSortedSpatTimestampStream(
             KStream<RsuIntersectionKey, Long> unsortedSpatTimestamps,
             String bufferStoreName) {
-        // Short (seconds-scale) buffer, doesn't need to survive a restart. In-memory avoids
-        // RocksDB checkpoint/fsync overhead on every record.
         Duration windowSize = Duration.ofSeconds(parameters.getV2BroadcastRateBufferSizeSeconds());
         Duration gracePeriod = Duration.ofMillis(parameters.getV2BroadcastRateBufferGracePeriodMs());
         return unsortedSpatTimestamps
@@ -206,8 +204,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
 
 
 
-    // Table holds the 10 most recent spats for each intersection.
-    // Small, short-lived state, doesn't need to survive a restart, so in-memory.
+    // Table holds the 10 most recent spats for each intersection
     private KTable<RsuIntersectionKey, TimestampBoundedQueue> buildTimestampAggTable(
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
             String durationBufferStoreName) {
@@ -313,9 +310,6 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
             KStream<RsuIntersectionKey, TimestampedEvents> eventStream,
             TimestampType timestampType, String assessmentJoinStoreName, String assessmentBufferStoreName) {
-        // Join window is just the grace period (time difference of zero), so this store's
-        // required retention/window size is tiny. Short-lived, doesn't need to survive a
-        // restart, so in-memory.
         Duration joinGracePeriod = Duration.ofMillis(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs());
         return sortedSpatTimestamps
                 .leftJoin(eventStream,
