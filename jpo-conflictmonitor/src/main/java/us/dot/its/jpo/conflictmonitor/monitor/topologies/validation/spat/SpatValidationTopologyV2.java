@@ -127,7 +127,12 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 .process(() -> new ContextualProcessor<RsuIntersectionKey, ProcessedSpat, RsuIntersectionKey, Long>() {
                     @Override
                     public void process(Record<RsuIntersectionKey, ProcessedSpat> record) {
-                        context().forward(new Record<>(record.key(), record.timestamp(), record.timestamp()));
+                        ProcessedSpat spat = record.value();
+                        if (spat == null || spat.getUtcTimeStamp() == null) {
+                            getLogger().info("Missing embedded SPAT timestamp, dropping spat for key {}", record.key());
+                        }
+                        long timestamp = spat.getUtcTimeStamp().toInstant().toEpochMilli();
+                        context().forward(new Record<>(record.key(), timestamp, timestamp));
                     }
                 });
     }
