@@ -186,6 +186,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                                                 windowSize.plus(gracePeriod), windowSize, false))
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.TimestampBuffer())
+                                .withCachingDisabled()
                                 .withLoggingDisabled()
                 )
                 .suppress(
@@ -232,6 +233,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                                         Stores.inMemoryKeyValueStore(durationBufferStoreName))
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.TimestampBoundedQueue())
+                                .withCachingDisabled()
                                 .withLoggingDisabled()
                 );
     }
@@ -353,6 +355,8 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                         Materialized.<RsuIntersectionKey, SpatBroadcastRateAssessment, WindowStore<Bytes, byte[]>>as(assessmentBufferStoreName)
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.SpatBroadcastRateAssessment())
+                                .withCachingDisabled()
+                                .withLoggingDisabled()
                 )
                 .suppress(
                         Suppressed.untilWindowCloses(BufferConfig.unbounded())
