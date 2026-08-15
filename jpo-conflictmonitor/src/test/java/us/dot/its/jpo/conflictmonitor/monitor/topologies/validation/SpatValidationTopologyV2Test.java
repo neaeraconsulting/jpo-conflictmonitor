@@ -2,6 +2,7 @@ package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -20,6 +21,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.spat.SpatTimestampDeltaStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatValidationParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
@@ -209,17 +211,20 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testPairCheck_singleViolationPerOccurrence() {
-        // Regression test: each violating pair must be reported once, not duplicated/dropped.
+        // Regression test: each violating pair must be reported once per timestamp type, not
+        // duplicated/dropped. Checked per type since the embedded and odeReceivedAt streams both
+        // report violations independently (and, in this test, at identical periods).
         var instants = instantsWithPeriod(200, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
-        var violations = pairEvents(events);
 
-        var distinctPeriods = violations.stream()
-                .map(event -> List.of(event.getTimePeriod().getBeginTimestamp(), event.getTimePeriod().getEndTimestamp()))
-                .distinct()
-                .toList();
-
-        assertThat(distinctPeriods, hasSize(violations.size()));
+        for (var type : TimestampType.values()) {
+            var violations = pairEvents(events, type);
+            var distinctPeriods = violations.stream()
+                    .map(event -> List.of(event.getTimePeriod().getBeginTimestamp(), event.getTimePeriod().getEndTimestamp()))
+                    .distinct()
+                    .toList();
+            assertThat(type.toString(), distinctPeriods, hasSize(violations.size()));
+        }
     }
 
     @Test
@@ -227,25 +232,31 @@ public class SpatValidationTopologyV2Test {
         var instants = instantsWithPeriod(100, totalSecondsPastFirstAssessmentWindow);
         var notifications = pipeAndCollectNotifications(instants);
 
-        assertThat(notifications, hasSize(1));
-        var notification = notifications.getFirst().value;
+        // One notification per timestamp type: embedded-in-message and odeReceivedAt each
+        // produce their own independent assessment/notification.
+        assertThat(notifications, hasSize(2));
 
-        assertThat(notification.isPass(), equalTo(true));
-        assertThat(notification.getNotificationHeading(), equalTo("SPaT Broadcast Rate Assessment: Pass"));
-        assertThat(notification.getNotificationText(), notNullValue());
-        assertThat(notification.getIntersectionID(), equalTo(intersectionId));
-        assertThat(notification.getRoadRegulatorID(), equalTo(region));
+        for (var type : TimestampType.values()) {
+            var notification = notificationOfType(notifications, type);
 
-        var assessment = notification.getAssessment();
-        assertThat(assessment, notNullValue());
-        // Regression guard: every spat in the window must be counted via the leftJoin, not just
-        // ones with a matching violation event (a KTable-driven count would undercount here).
-        assertThat(assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
-        assertThat(assessment.getNumberOfPairViolations(), equalTo(0));
-        assertThat(assessment.getNumberOfDurationViolations(), equalTo(0));
-        assertThat(assessment.getMaxPairSeparationMs(), equalTo(0));
-        assertThat(assessment.getSource(), containsString(rsuId));
-        assertThat(assessment.getTimePeriod().periodMillis(), equalTo(v2AssessmentWindowDuration * 1000L));
+            assertThat(type.toString(), notification.isPass(), equalTo(true));
+            assertThat(type.toString(), notification.getNotificationHeading(), equalTo("SPaT Broadcast Rate Assessment: Pass"));
+            assertThat(type.toString(), notification.getNotificationText(), notNullValue());
+            assertThat(type.toString(), notification.getIntersectionID(), equalTo(intersectionId));
+            assertThat(type.toString(), notification.getRoadRegulatorID(), equalTo(region));
+
+            var assessment = notification.getAssessment();
+            assertThat(type.toString(), assessment, notNullValue());
+            assertThat(type.toString(), assessment.getTimestampType(), equalTo(type));
+            // Regression guard: every spat in the window must be counted via the leftJoin, not just
+            // ones with a matching violation event (a KTable-driven count would undercount here).
+            assertThat(type.toString(), assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
+            assertThat(type.toString(), assessment.getNumberOfPairViolations(), equalTo(0));
+            assertThat(type.toString(), assessment.getNumberOfDurationViolations(), equalTo(0));
+            assertThat(type.toString(), assessment.getMaxPairSeparationMs(), equalTo(0));
+            assertThat(type.toString(), assessment.getSource(), containsString(rsuId));
+            assertThat(type.toString(), assessment.getTimePeriod().periodMillis(), equalTo(v2AssessmentWindowDuration * 1000L));
+        }
     }
 
     @Test
@@ -253,28 +264,167 @@ public class SpatValidationTopologyV2Test {
         var instants = instantsWithPeriod(200, totalSecondsPastFirstAssessmentWindow);
         var notifications = pipeAndCollectNotifications(instants);
 
-        assertThat(notifications, hasSize(1));
-        var notification = notifications.getFirst().value;
+        // One notification per timestamp type: embedded-in-message and odeReceivedAt each
+        // produce their own independent assessment/notification.
+        assertThat(notifications, hasSize(2));
 
-        assertThat(notification.isPass(), equalTo(false));
-        assertThat(notification.getNotificationHeading(), equalTo("SPaT Broadcast Rate Assessment: Fail"));
-        assertThat(notification.getIntersectionID(), equalTo(intersectionId));
-        assertThat(notification.getRoadRegulatorID(), equalTo(region));
+        for (var type : TimestampType.values()) {
+            var notification = notificationOfType(notifications, type);
 
-        var assessment = notification.getAssessment();
-        assertThat(assessment, notNullValue());
-        // Every spat is counted exactly once even when it also carries a violation, i.e. the
-        // leftJoin's placeholder path and its matched-violation path don't double count.
-        assertThat(assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
-        assertThat(assessment.getNumberOfPairViolations(), greaterThan(0));
-        assertThat(assessment.getNumberOfDurationViolations(), greaterThan(0));
-        assertThat(assessment.getPercentPairViolations(), greaterThan((double)(100 - v2ConformancePercent)));
-        assertThat(assessment.getPercentDurationViolations(), greaterThan((double)(100 - v2ConformancePercent)));
+            assertThat(type.toString(), notification.isPass(), equalTo(false));
+            assertThat(type.toString(), notification.getNotificationHeading(), equalTo("SPaT Broadcast Rate Assessment: Fail"));
+            assertThat(type.toString(), notification.getIntersectionID(), equalTo(intersectionId));
+            assertThat(type.toString(), notification.getRoadRegulatorID(), equalTo(region));
 
-        // Every violating pair is exactly 200ms, under the 300ms outlier limit, so the failure
-        // is attributable to the violation percentages rather than the outlier criterion.
-        assertThat(assessment.getMaxPairSeparationMs(), equalTo(200));
-        assertThat(assessment.getMaxAllowedPairSeparationMs(), equalTo(v2MaxOutlierPairSeparationMs));
+            var assessment = notification.getAssessment();
+            assertThat(type.toString(), assessment, notNullValue());
+            assertThat(type.toString(), assessment.getTimestampType(), equalTo(type));
+            // Every spat is counted exactly once even when it also carries a violation, i.e. the
+            // leftJoin's placeholder path and its matched-violation path don't double count.
+            assertThat(type.toString(), assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
+            assertThat(type.toString(), assessment.getNumberOfPairViolations(), greaterThan(0));
+            assertThat(type.toString(), assessment.getNumberOfDurationViolations(), greaterThan(0));
+            assertThat(type.toString(), assessment.getPercentPairViolations(), greaterThan((double)(100 - v2ConformancePercent)));
+            assertThat(type.toString(), assessment.getPercentDurationViolations(), greaterThan((double)(100 - v2ConformancePercent)));
+
+            // Every violating pair is exactly 200ms, under the 300ms outlier limit, so the failure
+            // is attributable to the violation percentages rather than the outlier criterion.
+            assertThat(type.toString(), assessment.getMaxPairSeparationMs(), equalTo(200));
+            assertThat(type.toString(), assessment.getMaxAllowedPairSeparationMs(), equalTo(v2MaxOutlierPairSeparationMs));
+        }
+    }
+
+    // --- odeReceivedAt-specific tests ---
+    // These verify that the second timestamp-processing pipeline (driven by ProcessedSpat's
+    // odeReceivedAt field) evaluates independently from the embedded-message-timestamp pipeline,
+    // by giving each pipeline a different, divergent sequence of timestamps for the same spats.
+
+    @Test
+    public void testOdeReceivedAtPairViolation_onlyTagsOdeReceivedAtType() {
+        // Embedded timestamps conformant (100ms); odeReceivedAt timestamps too slow (200ms).
+        var pairs = divergentInstantPairs(100, 200, totalSecondsPastFirstWindow);
+        var events = pipeAndCollectDivergentEvents(pairs);
+
+        assertThat(pairEvents(events, TimestampType.EMBEDDED_IN_MESSAGE), empty());
+        var violations = pairEvents(events, TimestampType.ODE_RECEIVED_AT);
+        assertThat(violations, hasSize(greaterThan(0)));
+        assertThat(violations.get(0).getTimePeriod().periodMillis(), equalTo(200L));
+    }
+
+    @Test
+    public void testEmbeddedPairViolation_onlyTagsEmbeddedType() {
+        // Embedded timestamps too slow (200ms); odeReceivedAt timestamps conformant (100ms).
+        var pairs = divergentInstantPairs(200, 100, totalSecondsPastFirstWindow);
+        var events = pipeAndCollectDivergentEvents(pairs);
+
+        assertThat(pairEvents(events, TimestampType.ODE_RECEIVED_AT), empty());
+        var violations = pairEvents(events, TimestampType.EMBEDDED_IN_MESSAGE);
+        assertThat(violations, hasSize(greaterThan(0)));
+        assertThat(violations.get(0).getTimePeriod().periodMillis(), equalTo(200L));
+    }
+
+    @Test
+    public void testOdeReceivedAtDurationViolation_onlyTagsOdeReceivedAtType() {
+        // Embedded timestamps conformant (100ms); odeReceivedAt timestamps slightly slow (103ms),
+        // which only trips the 10-message duration criterion, not the pair-separation one.
+        var pairs = divergentInstantPairs(100, 103, totalSecondsPastFirstWindow);
+        var events = pipeAndCollectDivergentEvents(pairs);
+
+        assertThat(pairEvents(events, TimestampType.EMBEDDED_IN_MESSAGE), empty());
+        assertThat(pairEvents(events, TimestampType.ODE_RECEIVED_AT), empty());
+        assertThat(durationEvents(events, TimestampType.EMBEDDED_IN_MESSAGE), empty());
+        assertThat(durationEvents(events, TimestampType.ODE_RECEIVED_AT), hasSize(greaterThan(0)));
+    }
+
+    @Test
+    public void testOdeReceivedAtEventFieldsPopulatedCorrectly() {
+        var pairs = divergentInstantPairs(100, 200, totalSecondsPastFirstWindow);
+        var events = pipeAndCollectDivergentEvents(pairs);
+        var violation = pairEvents(events, TimestampType.ODE_RECEIVED_AT).get(0);
+
+        assertThat(violation.getIntersectionID(), equalTo(intersectionId));
+        assertThat(violation.getRoadRegulatorID(), equalTo(region));
+        assertThat(violation.getSource(), equalTo(rsuId));
+        assertThat(violation.getTopicName(), equalTo(inputTopicName));
+        assertThat(violation.getStandard(), equalTo(SpatStandard.CTI4501_V2_DRAFT));
+        assertThat(violation.getTimestampType(), equalTo(TimestampType.ODE_RECEIVED_AT));
+        assertThat(violation.getNumberOfMessages(), equalTo(2));
+        assertThat(violation.getTimePeriod(), notNullValue());
+        assertThat(violation.getTimePeriod().periodMillis(), equalTo(200L));
+    }
+
+    @Test
+    public void testOdeReceivedAtOutOfOrderArrival_sortedIndependentlyOfEmbeddedOrder() {
+        // Embedded timestamps arrive strictly in order (conformant); odeReceivedAt timestamps are
+        // locally out of order (adjacent pairs swapped) but conformant once sorted. Verifies the
+        // odeReceivedAt buffer sorts on its own values rather than relying on embedded ordering.
+        var embeddedInstants = instantsWithPeriod(100, totalSecondsPastFirstWindow);
+        var odeReceivedAtInstants = withAdjacentPairsSwapped(embeddedInstants);
+
+        var pairs = new ArrayList<Instant[]>();
+        for (int i = 0; i < embeddedInstants.size(); i++) {
+            pairs.add(new Instant[] {embeddedInstants.get(i), odeReceivedAtInstants.get(i)});
+        }
+
+        var events = pipeAndCollectDivergentEvents(pairs);
+        assertThat(events, empty());
+    }
+
+    @Test
+    public void testOdeReceivedAtMalformedTimestamp_isDroppedWithoutCrashingPipeline() {
+        // A malformed odeReceivedAt must be logged and dropped rather than thrown, and must not
+        // affect the embedded-timestamp pipeline, which doesn't depend on odeReceivedAt at all.
+        var streamsConfig = createStreamsConfig();
+        Topology topology = createTopology();
+
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, streamsConfig);
+             Serde<RsuIntersectionKey> rsuIntersectionKeySerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey();
+             Serde<ProcessedSpat> processedSpatSerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat();
+             Serde<SpatBroadcastRateEvent> spatBroadcastRateEventSerde = JsonSerdes.SpatBroadcastRateEvent()) {
+
+            var inputTopic = driver.createInputTopic(inputTopicName,
+                    rsuIntersectionKeySerde.serializer(), processedSpatSerde.serializer());
+            var broadcastRateTopic = driver.createOutputTopic(broadcastRateTopicName,
+                    rsuIntersectionKeySerde.deserializer(), spatBroadcastRateEventSerde.deserializer());
+
+            final RsuIntersectionKey key = new RsuIntersectionKey(rsuId, intersectionId, region);
+            var instants = instantsWithPeriod(100, totalSecondsPastFirstWindow);
+            for (int i = 0; i < instants.size(); i++) {
+                var instant = instants.get(i);
+                var spat = createSpat(instant);
+                if (i == instants.size() / 2) {
+                    spat.setOdeReceivedAt("not-a-timestamp");
+                }
+                inputTopic.pipeInput(key, spat, instant);
+            }
+
+            var events = broadcastRateTopic.readKeyValuesToList();
+            assertThat(pairEvents(events, TimestampType.EMBEDDED_IN_MESSAGE), empty());
+        }
+    }
+
+    @Test
+    public void testOdeReceivedAtAssessment_independentPassFailPerType() {
+        // Embedded timestamps conformant; odeReceivedAt timestamps too slow. The two notification
+        // types must diverge independently rather than sharing a pass/fail outcome. (odeReceivedAt's
+        // stream time can outpace embedded's and close more than one assessment window, so this
+        // checks the earliest window of each type rather than an exact total count.)
+        var pairs = divergentInstantPairs(100, 200, totalSecondsPastFirstAssessmentWindow);
+        var notifications = pipeAndCollectDivergentNotifications(pairs);
+
+        assertThat(notifications, hasSize(greaterThanOrEqualTo(2)));
+
+        var embeddedNotification = notificationOfType(notifications, TimestampType.EMBEDDED_IN_MESSAGE);
+        assertThat(embeddedNotification.isPass(), equalTo(true));
+        assertThat(embeddedNotification.getAssessment().getTimestampType(), equalTo(TimestampType.EMBEDDED_IN_MESSAGE));
+        assertThat(embeddedNotification.getAssessment().getNumberOfPairViolations(), equalTo(0));
+
+        var odeReceivedAtNotification = notificationOfType(notifications, TimestampType.ODE_RECEIVED_AT);
+        assertThat(odeReceivedAtNotification.isPass(), equalTo(false));
+        assertThat(odeReceivedAtNotification.getAssessment().getTimestampType(), equalTo(TimestampType.ODE_RECEIVED_AT));
+        assertThat(odeReceivedAtNotification.getAssessment().getNumberOfPairViolations(), greaterThan(0));
     }
 
     // --- helpers ---
@@ -330,6 +480,63 @@ public class SpatValidationTopologyV2Test {
         }
     }
 
+    // Pipes spats whose embedded timestamp and odeReceivedAt diverge, per divergentInstantPairs.
+    private List<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>> pipeAndCollectDivergentEvents(
+            List<Instant[]> instantPairs) {
+        var streamsConfig = createStreamsConfig();
+        Topology topology = createTopology();
+
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, streamsConfig);
+             Serde<RsuIntersectionKey> rsuIntersectionKeySerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey();
+             Serde<ProcessedSpat> processedSpatSerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat();
+             Serde<SpatBroadcastRateEvent> spatBroadcastRateEventSerde = JsonSerdes.SpatBroadcastRateEvent()) {
+
+            var inputTopic = driver.createInputTopic(inputTopicName,
+                    rsuIntersectionKeySerde.serializer(), processedSpatSerde.serializer());
+            var broadcastRateTopic = driver.createOutputTopic(broadcastRateTopicName,
+                    rsuIntersectionKeySerde.deserializer(), spatBroadcastRateEventSerde.deserializer());
+
+            final RsuIntersectionKey key = new RsuIntersectionKey(rsuId, intersectionId, region);
+            for (var pair : instantPairs) {
+                Instant embedded = pair[0];
+                Instant odeReceivedAt = pair[1];
+                inputTopic.pipeInput(key, createSpat(embedded, odeReceivedAt), embedded);
+            }
+
+            return broadcastRateTopic.readKeyValuesToList();
+        }
+    }
+
+    private List<KeyValue<RsuIntersectionKey, SpatBroadcastRateNotification>> pipeAndCollectDivergentNotifications(
+            List<Instant[]> instantPairs) {
+        var streamsConfig = createStreamsConfig();
+        Topology topology = createTopology();
+
+        try (TopologyTestDriver driver = new TopologyTestDriver(topology, streamsConfig);
+             Serde<RsuIntersectionKey> rsuIntersectionKeySerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey();
+             Serde<ProcessedSpat> processedSpatSerde
+                     = us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedSpat();
+             Serde<SpatBroadcastRateNotification> notificationSerde = JsonSerdes.SpatBroadcastRateNotification()) {
+
+            var inputTopic = driver.createInputTopic(inputTopicName,
+                    rsuIntersectionKeySerde.serializer(), processedSpatSerde.serializer());
+            var notificationTopic = driver.createOutputTopic(broadcastRateNotificationTopicName,
+                    rsuIntersectionKeySerde.deserializer(), notificationSerde.deserializer());
+
+            final RsuIntersectionKey key = new RsuIntersectionKey(rsuId, intersectionId, region);
+            for (var pair : instantPairs) {
+                Instant embedded = pair[0];
+                Instant odeReceivedAt = pair[1];
+                inputTopic.pipeInput(key, createSpat(embedded, odeReceivedAt), embedded);
+            }
+
+            return notificationTopic.readKeyValuesToList();
+        }
+    }
+
     private static List<SpatBroadcastRateEvent> filterByNumberOfMessages(
             List<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>> events, int numberOfMessages) {
         return events.stream()
@@ -346,8 +553,52 @@ public class SpatValidationTopologyV2Test {
         return filterByNumberOfMessages(events, TimestampBoundedQueue.MAX_NUM_MESSAGES_FOR_DURATION);
     }
 
+    private static List<SpatBroadcastRateEvent> pairEvents(
+            List<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>> events, TimestampType type) {
+        return filterByType(pairEvents(events), type);
+    }
+
+    private static List<SpatBroadcastRateEvent> durationEvents(
+            List<KeyValue<RsuIntersectionKey, SpatBroadcastRateEvent>> events, TimestampType type) {
+        return filterByType(durationEvents(events), type);
+    }
+
+    private static List<SpatBroadcastRateEvent> filterByType(List<SpatBroadcastRateEvent> events, TimestampType type) {
+        return events.stream()
+                .filter(event -> event.getTimestampType() == type)
+                .collect(Collectors.toList());
+    }
+
+    // Picks the earliest-window notification of the given type (there may be more than one if
+    // multiple assessment windows closed, e.g. when embedded and odeReceivedAt periods diverge
+    // enough that one pipeline's stream time outpaces the other's).
+    private static SpatBroadcastRateNotification notificationOfType(
+            List<KeyValue<RsuIntersectionKey, SpatBroadcastRateNotification>> notifications, TimestampType type) {
+        return notifications.stream()
+                .map(kv -> kv.value)
+                .filter(notification -> notification.getAssessment().getTimestampType() == type)
+                .min(Comparator.comparingLong(n -> n.getAssessment().getTimePeriod().getBeginTimestamp()))
+                .orElseThrow(() -> new AssertionError("No notification found for type " + type));
+    }
+
     private List<Instant> instantsWithPeriod(int periodMillis, int totalSeconds) {
         return TopologyTestUtils.getInstants(startTime, periodMillis, totalSeconds);
+    }
+
+    // Pairs of {embeddedTimestamp, odeReceivedAt} instants, one per spat, each advancing at its
+    // own period from startTime. Count is sized off the faster (smaller-period) sequence so both
+    // sequences span at least totalSeconds, regardless of which one is faster.
+    private List<Instant[]> divergentInstantPairs(int embeddedPeriodMillis, int odeReceivedAtPeriodMillis, int totalSeconds) {
+        int fastestPeriodMillis = Math.min(embeddedPeriodMillis, odeReceivedAtPeriodMillis);
+        int count = (totalSeconds * 1000 / fastestPeriodMillis) + 5;
+        var pairs = new ArrayList<Instant[]>();
+        for (int i = 0; i <= count; i++) {
+            pairs.add(new Instant[] {
+                    startTime.plusMillis((long) i * embeddedPeriodMillis),
+                    startTime.plusMillis((long) i * odeReceivedAtPeriodMillis)
+            });
+        }
+        return pairs;
     }
 
     // Count of instants falling in the first assessment window: [startTime, startTime + duration).
@@ -442,9 +693,13 @@ public class SpatValidationTopologyV2Test {
     }
 
     private ProcessedSpat createSpat(Instant timestamp) {
+        return createSpat(timestamp, timestamp);
+    }
+
+    private ProcessedSpat createSpat(Instant embeddedTimestamp, Instant odeReceivedAt) {
         var spat = new ProcessedSpat();
-        spat.setUtcTimeStamp(timestamp.atZone(ZoneOffset.UTC));
-        spat.setOdeReceivedAt(timestamp.atZone(ZoneOffset.UTC).format(DateTimeFormatter.ISO_DATE_TIME));
+        spat.setUtcTimeStamp(embeddedTimestamp.atZone(ZoneOffset.UTC));
+        spat.setOdeReceivedAt(odeReceivedAt.atZone(ZoneOffset.UTC).format(DateTimeFormatter.ISO_DATE_TIME));
         spat.setCti4501Conformant(true);
         return spat;
     }

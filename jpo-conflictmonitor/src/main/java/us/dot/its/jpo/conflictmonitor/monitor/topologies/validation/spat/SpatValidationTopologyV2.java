@@ -67,39 +67,45 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         // - Planned addendum not in the draft: Conformant if 90% of message pairs and groups of 10 messages
         // meet the criteria over 1 hour, and no gaps greater than 300 ms between pairs.
 
+        // Sort timestmaps
         KStream<RsuIntersectionKey, Long> unsortedSpatTimestamps
                 = processedSpatStreamToTimestampStream(processedSpatStream);
         KStream<RsuIntersectionKey, Long> sortedSpatTimestamps
                 = buildSortedSpatTimestampStream(unsortedSpatTimestamps, "spat-timestamp-buffer");
+        // Sort odeReceivedAt
         KStream<RsuIntersectionKey, Long> unsortedOdeReceivedAtTimestamps
                 = processedSpatStreamToOdeReceivedAtStream(processedSpatStream);
         KStream<RsuIntersectionKey, Long> sortedOdeReceivedAtTimestamps
                 = buildSortedSpatTimestampStream(unsortedOdeReceivedAtTimestamps, "spat-received-at-buffer");
+
+        // Aggregate timestamps
         KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable
                 = buildTimestampAggTable(sortedSpatTimestamps, "spat-timestamp-agg-buffer");
+
+        // Aggregate odeReceivedAt
         KTable<RsuIntersectionKey, TimestampBoundedQueue> odeReceivedAtAggTable
                 = buildTimestampAggTable(sortedOdeReceivedAtTimestamps, "spat-ode-received-at-agg-buffer");
+
+        // Produce events for both types of timestamp
         KStream<RsuIntersectionKey, TimestampedEvents> timestampEventStream
                 = buildEventStream(timestampAggTable, TimestampType.EMBEDDED_IN_MESSAGE);
         KStream<RsuIntersectionKey, TimestampedEvents> odeReceivedAtEventStream
                 = buildEventStream(odeReceivedAtAggTable, TimestampType.ODE_RECEIVED_AT);
-
         KStream<RsuIntersectionKey, TimestampedEvents> combinedEventStream
                 = timestampEventStream.merge(odeReceivedAtEventStream);
         publishEvents(combinedEventStream);
 
+        // Do assessments for both types of timestamps
         // Do assessments over a longer time period for pass/fail with 90% tolerance
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream
                 = buildAssessmentStream(sortedSpatTimestamps, timestampEventStream,
                 TimestampType.EMBEDDED_IN_MESSAGE, "spat-timestamp-assessment-join-store",
                 "spat-timestamp-assessment-buffer-store");
-
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> odeReceivedAtAssessmentStream
                 = buildAssessmentStream(sortedOdeReceivedAtTimestamps, odeReceivedAtEventStream,
                               TimestampType.ODE_RECEIVED_AT, "spat-ode-received-at-join-store",
                 "spat-ode-received-at-assessment-buffer-store");
-
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> combinedAssessmentStream
                 = assessmentStream.merge(odeReceivedAtAssessmentStream);
 
@@ -131,8 +137,14 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
             public void process(Record<RsuIntersectionKey, ProcessedSpat> record) {
                 // Change stream timestamp to use odeReceivedAt
                 String odeReceivedAtStr = record.value().getOdeReceivedAt();
-                Instant odeReceivedAtInstant = Instant.parse(odeReceivedAtStr);
-                long odeReceivedAtTimestamp = odeReceivedAtInstant.toEpochMilli();
+                long odeReceivedAtTimestamp;
+                try {
+                    odeReceivedAtTimestamp = Instant.parse(odeReceivedAtStr).toEpochMilli();
+                } catch (Exception e) {
+                    getLogger().error("Failed to parse odeReceivedAt '{}', dropping spat for key {}",
+                            odeReceivedAtStr, record.key(), e);
+                    return;
+                }
                 context().forward(new Record<>(record.key(), odeReceivedAtTimestamp, odeReceivedAtTimestamp));
             }
         });

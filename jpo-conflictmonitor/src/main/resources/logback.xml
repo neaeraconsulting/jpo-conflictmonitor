@@ -10,7 +10,7 @@
 	<logger name="org.apache.kafka.streams.processor.internals.RecordCollectorImpl" level="ERROR"/>
 	<logger name="us.dot.its.jpo.conflictmonitor.monitor.utils" level="ERROR"/>
 	<logger name="us.dot.its.jpo.conflictmonitor.BoundedMemoryRocksDBConfig" level="ERROR"/>
-	<logger name="us.dot.its.jpo.conflictmonitor" level="ERROR"/>
+	<logger name="us.dot.its.jpo.conflictmonitor" level="INFO"/>
 	<root level="ERROR">
 		<appender-ref ref="STDOUT" />
 	</root>
