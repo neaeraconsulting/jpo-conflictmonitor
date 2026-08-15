@@ -10,8 +10,6 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
 import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.BuiltInDslStoreSuppliers;
-import org.apache.kafka.streams.state.DslKeyValueParams;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
@@ -68,16 +66,29 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         // - Planned addendum not in the draft: Conformant if 90% of message pairs and groups of 10 messages
         // meet the criteria over 1 hour, and no gaps greater than 300 ms between pairs.
 
-        KStream<RsuIntersectionKey, Long> sortedSpatTimestamps = buildSortedSpatTimestampStream(processedSpatStream);
-        KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable = buildTimestampAggTable(sortedSpatTimestamps);
-        KStream<RsuIntersectionKey, TimestampedEvents> eventStream = buildEventStream(timestampAggTable);
+        KStream<RsuIntersectionKey, Long> unsortedSpatTimestamps
+                = processedSpatStreamToTimestampStream(processedSpatStream);
+        KStream<RsuIntersectionKey, Long> sortedSpatTimestamps
+                = buildSortedSpatTimestampStream(unsortedSpatTimestamps, "spat-timestamp-buffer");
+        KStream<RsuIntersectionKey, Long> unsortedOdeReceivedAtTimestamps
+                = processedSpatStreamToOdeReceivedAtStream(processedSpatStream);
+        KStream<RsuIntersectionKey, Long> sortedOdeReceivedAtTimestamps
+                = buildSortedSpatTimestampStream(unsortedOdeReceivedAtTimestamps, "spat-received-at-buffer");
+        KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable
+                = buildTimestampAggTable(sortedSpatTimestamps, "spat-timestamp-agg-buffer");
+        KTable<RsuIntersectionKey, TimestampBoundedQueue> odeReceivedAtAggTable
+                = buildTimestampAggTable(sortedOdeReceivedAtTimestamps, "spat-ode-received-at-agg-buffer");
+        KStream<RsuIntersectionKey, TimestampedEvents> timestampEventStream
+                = buildEventStream(timestampAggTable);
+        KStream<RsuIntersectionKey, TimestampedEvents> odeReceivedAtEventStream
+                = buildEventStream(odeReceivedAtAggTable);
 
-        publishEvents(eventStream);
+        publishEvents(timestampEventStream);
 
         // Do assessments over a longer time period for pass/fail with 90% tolerance
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream
-                = buildAssessmentStream(sortedSpatTimestamps, eventStream);
+                = buildAssessmentStream(sortedSpatTimestamps, timestampEventStream);
 
         // Send notifications for the assessments
         // Always sends notifications regardless if the assessment passes or fails, so clients
@@ -87,8 +98,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return builder.build(streamsProperties);
     }
 
-    // Use a tumbling window to sort out-of-order spats by timestamp
-    private KStream<RsuIntersectionKey, Long> buildSortedSpatTimestampStream(
+    private KStream<RsuIntersectionKey, Long> processedSpatStreamToTimestampStream(
             KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream) {
         return processedSpatStream
                 // Map the values to the timestamp
@@ -97,7 +107,29 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                     public void process(Record<RsuIntersectionKey, ProcessedSpat> record) {
                         context().forward(new Record<>(record.key(), record.timestamp(), record.timestamp()));
                     }
-                })
+                });
+    }
+
+    // Sort by odeReceivedAt
+    private KStream<RsuIntersectionKey, Long>
+    processedSpatStreamToOdeReceivedAtStream(KStream<RsuIntersectionKey, ProcessedSpat> processedSpatStream) {
+        return processedSpatStream.process(() -> new ContextualProcessor<RsuIntersectionKey, ProcessedSpat, RsuIntersectionKey, Long>() {
+            @Override
+            public void process(Record<RsuIntersectionKey, ProcessedSpat> record) {
+                // Change stream timestamp to use odeReceivedAt
+                String odeReceivedAtStr = record.value().getOdeReceivedAt();
+                Instant odeReceivedAtInstant = Instant.parse(odeReceivedAtStr);
+                long odeReceivedAtTimestamp = odeReceivedAtInstant.toEpochMilli();
+                context().forward(new Record<>(record.key(), odeReceivedAtTimestamp, odeReceivedAtTimestamp));
+            }
+        });
+    }
+
+    // Use a tumbling window to sort out-of-order spats by timestamp
+    private KStream<RsuIntersectionKey, Long> buildSortedSpatTimestampStream(
+            KStream<RsuIntersectionKey, Long> unsortedSpatTimestamps,
+            String bufferStoreName) {
+        return unsortedSpatTimestamps
                 .groupByKey(
                         Grouped.with(
                                 us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
@@ -116,7 +148,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                             aggregate.add(timestamp);
                             return aggregate;
                         },
-                        Materialized.<RsuIntersectionKey, TimestampBuffer, WindowStore<Bytes, byte[]>>as("spat-buffer")
+                        Materialized.<RsuIntersectionKey, TimestampBuffer, WindowStore<Bytes, byte[]>>as(bufferStoreName)
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.TimestampBuffer())
                 )
@@ -140,9 +172,14 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 });
     }
 
+
+
+
+
     // Table holds the 10 most recent spats for each intersection
     private KTable<RsuIntersectionKey, TimestampBoundedQueue> buildTimestampAggTable(
-            KStream<RsuIntersectionKey, Long> sortedSpatTimestamps) {
+            KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
+            String durationBufferStoreName) {
         return sortedSpatTimestamps
                 .groupByKey(
                         Grouped.with(
@@ -155,7 +192,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                             aggregate.add(timestamp);
                             return aggregate;
                         },
-                        Materialized.<RsuIntersectionKey, TimestampBoundedQueue, KeyValueStore<Bytes, byte[]>>as("spat-criterion-store")
+                        Materialized.<RsuIntersectionKey, TimestampBoundedQueue, KeyValueStore<Bytes, byte[]>>as(durationBufferStoreName)
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.TimestampBoundedQueue())
                 );
