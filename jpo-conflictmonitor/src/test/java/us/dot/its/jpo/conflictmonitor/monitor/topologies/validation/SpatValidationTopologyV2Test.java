@@ -314,6 +314,28 @@ public class SpatValidationTopologyV2Test {
         }
     }
 
+    @Test
+    public void testAssessmentPercent_countsBoundarySpanningViolationInDenominator() {
+        log.info("testAssessmentPercent_countsBoundarySpanningViolationInDenominator");
+        int totalSeconds = v2AssessmentWindowDuration * 2 + v2BufferSizeSeconds + 1;
+        var instants = new ArrayList<>(instantsWithPeriod(100, totalSeconds));
+        Instant windowBoundary = startTime.plusSeconds(v2AssessmentWindowDuration);
+        instants.remove(windowBoundary);
+        var notifications = pipeAndCollectNotifications(instants);
+
+        var secondWindowNotification = notifications.stream()
+                .map(kv -> kv.value)
+                .filter(n -> n.getAssessment().getTimestampType() == TimestampType.EMBEDDED_IN_MESSAGE)
+                .filter(n -> n.getAssessment().getTimePeriod().getBeginTimestamp() == windowBoundary.toEpochMilli())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No notification found for the second assessment window"));
+
+        var assessment = secondWindowNotification.getAssessment();
+        assertThat(assessment.getNumberOfPairViolations(), equalTo(1));
+        assertThat(assessment.getPercentPairViolations(),
+                equalTo(100.0 * 1 / assessment.getNumberOfSpats()));
+    }
+
     // --- odeReceivedAt-specific tests ---
     // These verify that the second timestamp-processing pipeline (driven by ProcessedSpat's
     // odeReceivedAt field) evaluates independently from the embedded-message-timestamp pipeline,

@@ -36,15 +36,13 @@ public abstract class BroadcastRateAssessment extends Assessment {
     }
 
     public double getPercentPairViolations() {
-        int numberOfPairs = numberOfSpats - 1;
-        if (numberOfPairs <= 0) return 0;
-        return 100.0 * (double)numberOfPairViolations / (double)numberOfPairs;
+        if (numberOfSpats <= 0) return 0;
+        return 100.0 * (double)numberOfPairViolations / (double)numberOfSpats;
     }
 
     public double getPercentDurationViolations() {
-        int numberOfDurations = numberOfSpats - 10;
-        if (numberOfDurations <= 0) return 0;
-        return 100.0 * (double)numberOfDurationViolations / (double)numberOfDurations;
+        if (numberOfSpats <= 0) return 0;
+        return 100.0 * (double)numberOfDurationViolations / (double)numberOfSpats;
     }
 
     public boolean isPass() {
