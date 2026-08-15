@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.BroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.Notification;
 
@@ -51,10 +52,11 @@ public abstract class BroadcastRateNotification<T extends BroadcastRateAssessmen
     @Override
     @JsonIgnore
     public String getUniqueId() {
-        return String.format("%s_%s_%s_%s",
+        return String.format("%s_%s_%s_%s_%s",
             this.getNotificationType(),
                 assessment.getSource(),
                 assessment.getIntersectionID(),
-                assessment.getTimePeriod() != null ? assessment.getTimePeriod().periodMillis() : 0L);
+                assessment.getTimePeriod() != null ? assessment.getTimePeriod().periodMillis() : 0L,
+                assessment.getTimestampType());
     }
 }

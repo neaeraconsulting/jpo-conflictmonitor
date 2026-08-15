@@ -15,6 +15,7 @@ import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
@@ -79,21 +80,31 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         KTable<RsuIntersectionKey, TimestampBoundedQueue> odeReceivedAtAggTable
                 = buildTimestampAggTable(sortedOdeReceivedAtTimestamps, "spat-ode-received-at-agg-buffer");
         KStream<RsuIntersectionKey, TimestampedEvents> timestampEventStream
-                = buildEventStream(timestampAggTable);
+                = buildEventStream(timestampAggTable, TimestampType.EMBEDDED_IN_MESSAGE);
         KStream<RsuIntersectionKey, TimestampedEvents> odeReceivedAtEventStream
-                = buildEventStream(odeReceivedAtAggTable);
+                = buildEventStream(odeReceivedAtAggTable, TimestampType.ODE_RECEIVED_AT);
 
-        publishEvents(timestampEventStream);
+        KStream<RsuIntersectionKey, TimestampedEvents> combinedEventStream
+                = timestampEventStream.merge(odeReceivedAtEventStream);
+        publishEvents(combinedEventStream);
 
         // Do assessments over a longer time period for pass/fail with 90% tolerance
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream
-                = buildAssessmentStream(sortedSpatTimestamps, timestampEventStream);
+                = buildAssessmentStream(sortedSpatTimestamps, timestampEventStream,
+                TimestampType.EMBEDDED_IN_MESSAGE);
+
+        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> odeReceivedAtAssessmentStream
+                = buildAssessmentStream(sortedOdeReceivedAtTimestamps, odeReceivedAtEventStream,
+                              TimestampType.ODE_RECEIVED_AT);
+
+        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> combinedAssessmentStream
+                = assessmentStream.merge(odeReceivedAtAssessmentStream);
 
         // Send notifications for the assessments
         // Always sends notifications regardless if the assessment passes or fails, so clients
         // can always see the assessment statistics.
-        publishNotifications(assessmentStream);
+        publishNotifications(combinedAssessmentStream);
 
         return builder.build(streamsProperties);
     }
@@ -200,17 +211,19 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
 
     // Check the broadcast rate criteria for each pair and each group of 10 consecutive spats
     private KStream<RsuIntersectionKey, TimestampedEvents> buildEventStream(
-            KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable) {
+            KTable<RsuIntersectionKey, TimestampBoundedQueue> timestampAggTable, TimestampType timestampType) {
         return timestampAggTable
                 .toStream()
-                .map((key, agg) -> new KeyValue<>(key, toTimestampedEvents(key, agg)))
+                .map((key, agg)
+                        -> new KeyValue<>(key, toTimestampedEvents(key, agg, timestampType)))
                 .filter((key, optEvents) -> optEvents.isPresent())
                 .mapValues(Optional::get);
     }
 
-    private Optional<TimestampedEvents> toTimestampedEvents(RsuIntersectionKey key, TimestampBoundedQueue agg) {
-        SpatBroadcastRateEvent pairEvent = extractPairEvent(key, agg);
-        SpatBroadcastRateEvent durationEvent = extractDurationEvent(key, agg);
+    private Optional<TimestampedEvents> toTimestampedEvents(RsuIntersectionKey key, TimestampBoundedQueue agg,
+                                                            TimestampType timestampType) {
+        SpatBroadcastRateEvent pairEvent = extractPairEvent(key, agg, timestampType);
+        SpatBroadcastRateEvent durationEvent = extractDurationEvent(key, agg, timestampType);
         long latest = agg.latest().orElse(0L);
         if ((pairEvent == null && durationEvent == null) || latest == 0) {
             return Optional.empty();
@@ -218,7 +231,8 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return Optional.of(new TimestampedEvents(latest, pairEvent, durationEvent));
     }
 
-    private SpatBroadcastRateEvent extractPairEvent(RsuIntersectionKey key, TimestampBoundedQueue agg) {
+    private SpatBroadcastRateEvent extractPairEvent(RsuIntersectionKey key, TimestampBoundedQueue agg,
+                                                    TimestampType timestampType) {
         Optional<long[]> pairOpt = agg.pair();
         if (pairOpt.isEmpty()) {
             return null;
@@ -227,12 +241,13 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         long diff = pair[1] - pair[0];
         if (diff < parameters.getV2BroadcastRateLowerBoundPairSeparationMs()
                 || diff > parameters.getV2BroadcastRateUpperBoundPairSeparationMs()) {
-            return getEvent(key, pair[0], pair[1], 2);
+            return getEvent(key, pair[0], pair[1], 2, timestampType);
         }
         return null;
     }
 
-    private SpatBroadcastRateEvent extractDurationEvent(RsuIntersectionKey key, TimestampBoundedQueue agg) {
+    private SpatBroadcastRateEvent extractDurationEvent(RsuIntersectionKey key, TimestampBoundedQueue agg,
+                                                        TimestampType timestampType) {
         Optional<long[]> allOpt = agg.all();
         if (allOpt.isEmpty()) {
             return null;
@@ -243,7 +258,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         long diff = last - first;
         if (diff < parameters.getV2BroadcastRateLowerBoundDurationPer10MessagesMs()
                 || diff > parameters.getV2BroadcastRateUpperBoundDurationPer10MessagesMs()) {
-            return getEvent(key, first, last, agg.numberOfMessagesForDuration());
+            return getEvent(key, first, last, agg.numberOfMessagesForDuration(), timestampType);
         }
         return null;
     }
@@ -274,17 +289,12 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
 
     private KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> buildAssessmentStream(
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
-            KStream<RsuIntersectionKey, TimestampedEvents> eventStream) {
+            KStream<RsuIntersectionKey, TimestampedEvents> eventStream,
+            TimestampType timestampType) {
         return sortedSpatTimestamps
                 .leftJoin(eventStream,
-                        (timestamp, events) -> {
-                            if (events != null) {
-                                return events;
-                            } else {
-                                // no events, return placeholder for spat count
-                                return new TimestampedEvents(timestamp, null, null);
-                            }
-                        },
+                        (timestamp, events)
+                                -> (events != null) ? events : new TimestampedEvents(timestamp, null, null),
                         JoinWindows.ofTimeDifferenceAndGrace(
                                 Duration.ZERO,
                                 Duration.ofMillis(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs())),
@@ -318,7 +328,9 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                         Suppressed.untilWindowCloses(BufferConfig.unbounded())
                 )
                 .toStream()
-                .map((windowedKey, assessment) -> new KeyValue<>(windowedKey.key(), finalizeAssessment(windowedKey, assessment)));
+                .map((windowedKey, assessment)
+                        -> new KeyValue<>(windowedKey.key(),
+                        finalizeAssessment(windowedKey, assessment, timestampType)));
     }
 
     private SpatBroadcastRateAssessment updateAssessment(TimestampedEvents events, SpatBroadcastRateAssessment assessment) {
@@ -340,11 +352,14 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     }
 
     private SpatBroadcastRateAssessment finalizeAssessment(
-            Windowed<RsuIntersectionKey> windowedKey, SpatBroadcastRateAssessment assessment) {
+            Windowed<RsuIntersectionKey> windowedKey,
+            SpatBroadcastRateAssessment assessment,
+            TimestampType timestampType) {
         RsuIntersectionKey key = windowedKey.key();
         assessment.setIntersectionID(key.getIntersectionId());
         assessment.setRoadRegulatorID(key.getRegion());
         assessment.setSource(key.toString());
+        assessment.setTimestampType(timestampType);
         var timePeriod = new ProcessingTimePeriod();
         timePeriod.setBeginTimestamp(windowedKey.window().start());
         timePeriod.setEndTimestamp(windowedKey.window().end());
@@ -374,13 +389,15 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return notification;
     }
 
-    private SpatBroadcastRateEvent getEvent(RsuIntersectionKey key, long first, long last, int numberOfMessages) {
+    private SpatBroadcastRateEvent getEvent(RsuIntersectionKey key, long first, long last, int numberOfMessages,
+                                            TimestampType timestampType) {
         var event = new SpatBroadcastRateEvent();
         event.setIntersectionID(key.getIntersectionId());
         event.setRoadRegulatorID(key.getRegion());
         event.setSource(key.getRsuId());
         event.setTopicName(parameters.getInputTopicName());
         event.setStandard(SpatStandard.CTI4501_V2_DRAFT);
+        event.setTimestampType(timestampType);
         // Expect this is 10
         event.setNumberOfMessages(numberOfMessages);
         var period = new ProcessingTimePeriod();

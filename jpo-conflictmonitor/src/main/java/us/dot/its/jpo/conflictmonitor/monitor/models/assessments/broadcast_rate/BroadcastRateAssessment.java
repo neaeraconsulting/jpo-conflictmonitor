@@ -4,6 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.Assessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 
@@ -25,6 +26,7 @@ public abstract class BroadcastRateAssessment extends Assessment {
     protected int numberOfSpats;
     private double percentToPass;
     protected int maxAllowedPairSeparationMs;
+    protected TimestampType timestampType;
 
     public void setPercentToPass(double percentToPass) {
         if (percentToPass < 0 || percentToPass > 100.0) {

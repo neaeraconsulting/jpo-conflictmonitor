@@ -4,6 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
+import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
 import us.dot.its.jpo.geojsonconverter.standards.SpatStandard;
 
 @Getter
@@ -18,5 +19,6 @@ public class SpatBroadcastRateEvent
     }
 
     private SpatStandard standard;
+    private TimestampType timestampType;
 
 }
