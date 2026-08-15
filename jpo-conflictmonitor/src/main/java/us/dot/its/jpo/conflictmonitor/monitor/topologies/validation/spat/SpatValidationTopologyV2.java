@@ -11,6 +11,7 @@ import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,6 +155,10 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     private KStream<RsuIntersectionKey, Long> buildSortedSpatTimestampStream(
             KStream<RsuIntersectionKey, Long> unsortedSpatTimestamps,
             String bufferStoreName) {
+        // Short (seconds-scale) buffer, doesn't need to survive a restart. In-memory avoids
+        // RocksDB checkpoint/fsync overhead on every record.
+        Duration windowSize = Duration.ofSeconds(parameters.getV2BroadcastRateBufferSizeSeconds());
+        Duration gracePeriod = Duration.ofMillis(parameters.getV2BroadcastRateBufferGracePeriodMs());
         return unsortedSpatTimestamps
                 .groupByKey(
                         Grouped.with(
@@ -162,10 +167,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 )
                 .windowedBy(
                         // Tumbling window
-                        TimeWindows
-                                .ofSizeAndGrace(
-                                        Duration.ofSeconds(parameters.getV2BroadcastRateBufferSizeSeconds()),
-                                        Duration.ofMillis(parameters.getV2BroadcastRateBufferGracePeriodMs()))
+                        TimeWindows.ofSizeAndGrace(windowSize, gracePeriod)
                 )
                 .aggregate(
                         TimestampBuffer::new,
@@ -173,9 +175,12 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                             aggregate.add(timestamp);
                             return aggregate;
                         },
-                        Materialized.<RsuIntersectionKey, TimestampBuffer, WindowStore<Bytes, byte[]>>as(bufferStoreName)
+                        Materialized.<RsuIntersectionKey, TimestampBuffer>as(
+                                        Stores.inMemoryWindowStore(bufferStoreName,
+                                                windowSize.plus(gracePeriod), windowSize, false))
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.TimestampBuffer())
+                                .withLoggingDisabled()
                 )
                 .suppress(
                         Suppressed.untilWindowCloses(BufferConfig.unbounded())
@@ -201,7 +206,8 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
 
 
 
-    // Table holds the 10 most recent spats for each intersection
+    // Table holds the 10 most recent spats for each intersection.
+    // Small, short-lived state, doesn't need to survive a restart, so in-memory.
     private KTable<RsuIntersectionKey, TimestampBoundedQueue> buildTimestampAggTable(
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
             String durationBufferStoreName) {
@@ -217,9 +223,11 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                             aggregate.add(timestamp);
                             return aggregate;
                         },
-                        Materialized.<RsuIntersectionKey, TimestampBoundedQueue, KeyValueStore<Bytes, byte[]>>as(durationBufferStoreName)
+                        Materialized.<RsuIntersectionKey, TimestampBoundedQueue>as(
+                                        Stores.inMemoryKeyValueStore(durationBufferStoreName))
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.TimestampBoundedQueue())
+                                .withLoggingDisabled()
                 );
     }
 
@@ -305,18 +313,24 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
             KStream<RsuIntersectionKey, TimestampedEvents> eventStream,
             TimestampType timestampType, String assessmentJoinStoreName, String assessmentBufferStoreName) {
+        // Join window is just the grace period (time difference of zero), so this store's
+        // required retention/window size is tiny. Short-lived, doesn't need to survive a
+        // restart, so in-memory.
+        Duration joinGracePeriod = Duration.ofMillis(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs());
         return sortedSpatTimestamps
                 .leftJoin(eventStream,
                         (timestamp, events)
                                 -> (events != null) ? events : new TimestampedEvents(timestamp, null, null),
-                        JoinWindows.ofTimeDifferenceAndGrace(
-                                Duration.ZERO,
-                                Duration.ofMillis(parameters.getV2BroadcastRateAssessmentWindowGracePeriodMs())),
+                        JoinWindows.ofTimeDifferenceAndGrace(Duration.ZERO, joinGracePeriod),
                         StreamJoined
                                 .with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
                                     Serdes.Long(),
                                     TimestampedEvents.serde())
                                 .withStoreName(assessmentJoinStoreName)
+                                .withThisStoreSupplier(Stores.inMemoryWindowStore(
+                                        assessmentJoinStoreName + "-this", joinGracePeriod, Duration.ZERO, true))
+                                .withOtherStoreSupplier(Stores.inMemoryWindowStore(
+                                        assessmentJoinStoreName + "-other", joinGracePeriod, Duration.ZERO, true))
                                 .withLoggingDisabled()
 
                         )

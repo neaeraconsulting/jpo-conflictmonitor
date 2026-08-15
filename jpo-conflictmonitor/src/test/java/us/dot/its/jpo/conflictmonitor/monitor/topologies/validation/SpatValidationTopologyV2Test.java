@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
@@ -35,6 +36,7 @@ import us.dot.its.jpo.geojsonconverter.standards.SpatStandard;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
+@Slf4j
 public class SpatValidationTopologyV2Test {
 
     final String inputTopicName = "topic.ProcessedSpat";
@@ -76,6 +78,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testCorrectRate_noPairSeparationViolations() {
+        log.info("testCorrectRate_noPairSeparationViolations");
         var instants = instantsWithPeriod(100, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         assertThat(pairEvents(events), empty());
@@ -83,6 +86,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testTooSlowRate_producesPairSeparationViolation() {
+        log.info("testTooSlowRate_producesPairSeparationViolation");
         var instants = instantsWithPeriod(200, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         var violations = pairEvents(events);
@@ -92,6 +96,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testTooFastRate_producesPairSeparationViolation() {
+        log.info("testTooFastRate_producesPairSeparationViolation");
         var instants = instantsWithPeriod(50, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         var violations = pairEvents(events);
@@ -101,6 +106,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testPairSeparationAtLowerBoundary_noViolation() {
+        log.info("testPairSeparationAtLowerBoundary_noViolation");
         var instants = instantsWithPeriod(v2LowerBoundPairSeparationMs, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         assertThat(pairEvents(events), empty());
@@ -108,6 +114,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testPairSeparationAtUpperBoundary_noViolation() {
+        log.info("testPairSeparationAtUpperBoundary_noViolation");
         var instants = instantsWithPeriod(v2UpperBoundPairSeparationMs, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         assertThat(pairEvents(events), empty());
@@ -115,6 +122,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testPairSeparationJustOutsideBoundary_violation() {
+        log.info("testPairSeparationJustOutsideBoundary_violation");
         var belowLower = pipeAndCollectEvents(
                 instantsWithPeriod(v2LowerBoundPairSeparationMs - 1, totalSecondsPastFirstWindow));
         assertThat("below lower bound", pairEvents(belowLower), hasSize(greaterThan(0)));
@@ -126,6 +134,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testCorrectRate_noDurationViolations() {
+        log.info("testCorrectRate_noDurationViolations");
         var instants = instantsWithPeriod(100, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         assertThat(durationEvents(events), empty());
@@ -133,6 +142,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testSlightlySlowRate_durationViolationOnly() {
+        log.info("testSlightlySlowRate_durationViolationOnly");
         var instants = instantsWithPeriod(103, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         assertThat(pairEvents(events), empty());
@@ -143,6 +153,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testSlightlyFastRate_durationViolationOnly() {
+        log.info("testSlightlyFastRate_durationViolationOnly");
         var instants = instantsWithPeriod(97, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         assertThat(pairEvents(events), empty());
@@ -153,6 +164,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testDurationAtLowerBoundary_noViolation() {
+        log.info("testDurationAtLowerBoundary_noViolation");
         // Ten gaps summing to exactly 975ms, each within the pair-separation bounds.
         int[] gapsMillis = {98, 98, 98, 98, 98, 97, 97, 97, 97, 97};
         var instants = withNominalTail(instantsWithGaps(gapsMillis), totalSecondsPastFirstWindow);
@@ -162,6 +174,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testDurationAtUpperBoundary_noViolation() {
+        log.info("testDurationAtUpperBoundary_noViolation");
         // Ten gaps summing to exactly 1025ms, each within the pair-separation bounds.
         int[] gapsMillis = {103, 103, 103, 103, 103, 102, 102, 102, 102, 102};
         var instants = withNominalTail(instantsWithGaps(gapsMillis), totalSecondsPastFirstWindow);
@@ -171,6 +184,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOutOfOrderArrivalWithinBufferWindow_sortedBeforeEvaluation() {
+        log.info("testOutOfOrderArrivalWithinBufferWindow_sortedBeforeEvaluation");
         // Mild reordering: swap adjacent messages, keeping each one's own timestamp.
         var instants = instantsWithPeriod(100, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(withAdjacentPairsSwapped(instants));
@@ -179,6 +193,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testTimestampBuffer_sortsOutOfOrderTimestamps() {
+        log.info("testTimestampBuffer_sortsOutOfOrderTimestamps");
         // Strong reordering: reverse the whole first window; unsorted, this would show violations.
         var instants = instantsWithPeriod(100, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(withFirstWindowReversed(instants));
@@ -187,6 +202,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testMessagesSpanningMultipleBufferWindows_noFalsePositiveAtBoundary() {
+        log.info("testMessagesSpanningMultipleBufferWindows_noFalsePositiveAtBoundary");
         int totalSeconds = v2BufferSizeSeconds * 2 + (v2BufferGracePeriodMs / 1000) + 1;
         var instants = instantsWithPeriod(100, totalSeconds);
         var events = pipeAndCollectEvents(instants);
@@ -195,6 +211,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testEventFieldsPopulatedCorrectly() {
+        log.info("testEventFieldsPopulatedCorrectly");
         var instants = instantsWithPeriod(200, totalSecondsPastFirstWindow);
         var events = pipeAndCollectEvents(instants);
         var violation = pairEvents(events).get(0);
@@ -211,6 +228,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testPairCheck_singleViolationPerOccurrence() {
+        log.info("testPairCheck_singleViolationPerOccurrence");
         // Regression test: each violating pair must be reported once per timestamp type, not
         // duplicated/dropped. Checked per type since the embedded and odeReceivedAt streams both
         // report violations independently (and, in this test, at identical periods).
@@ -229,6 +247,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testConformantRate_producesPassNotification() {
+        log.info("testConformantRate_producesPassNotification");
         var instants = instantsWithPeriod(100, totalSecondsPastFirstAssessmentWindow);
         var notifications = pipeAndCollectNotifications(instants);
 
@@ -261,6 +280,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testNonConformantRate_producesFailNotification() {
+        log.info("testNonConformantRate_producesFailNotification");
         var instants = instantsWithPeriod(200, totalSecondsPastFirstAssessmentWindow);
         var notifications = pipeAndCollectNotifications(instants);
 
@@ -301,6 +321,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOdeReceivedAtPairViolation_onlyTagsOdeReceivedAtType() {
+        log.info("testOdeReceivedAtPairViolation_onlyTagsOdeReceivedAtType");
         // Embedded timestamps conformant (100ms); odeReceivedAt timestamps too slow (200ms).
         var pairs = divergentInstantPairs(100, 200, totalSecondsPastFirstWindow);
         var events = pipeAndCollectDivergentEvents(pairs);
@@ -313,6 +334,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testEmbeddedPairViolation_onlyTagsEmbeddedType() {
+        log.info("testEmbeddedPairViolation_onlyTagsEmbeddedType");
         // Embedded timestamps too slow (200ms); odeReceivedAt timestamps conformant (100ms).
         var pairs = divergentInstantPairs(200, 100, totalSecondsPastFirstWindow);
         var events = pipeAndCollectDivergentEvents(pairs);
@@ -325,6 +347,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOdeReceivedAtDurationViolation_onlyTagsOdeReceivedAtType() {
+        log.info("testOdeReceivedAtDurationViolation_onlyTagsOdeReceivedAtType");
         // Embedded timestamps conformant (100ms); odeReceivedAt timestamps slightly slow (103ms),
         // which only trips the 10-message duration criterion, not the pair-separation one.
         var pairs = divergentInstantPairs(100, 103, totalSecondsPastFirstWindow);
@@ -338,6 +361,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOdeReceivedAtEventFieldsPopulatedCorrectly() {
+        log.info("testOdeReceivedAtEventFieldsPopulatedCorrectly");
         var pairs = divergentInstantPairs(100, 200, totalSecondsPastFirstWindow);
         var events = pipeAndCollectDivergentEvents(pairs);
         var violation = pairEvents(events, TimestampType.ODE_RECEIVED_AT).get(0);
@@ -355,6 +379,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOdeReceivedAtOutOfOrderArrival_sortedIndependentlyOfEmbeddedOrder() {
+        log.info("testOdeReceivedAtOutOfOrderArrival_sortedIndependentlyOfEmbeddedOrder");
         // Embedded timestamps arrive strictly in order (conformant); odeReceivedAt timestamps are
         // locally out of order (adjacent pairs swapped) but conformant once sorted. Verifies the
         // odeReceivedAt buffer sorts on its own values rather than relying on embedded ordering.
@@ -372,6 +397,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOdeReceivedAtMalformedTimestamp_isDroppedWithoutCrashingPipeline() {
+        log.info("testOdeReceivedAtMalformedTimestamp_isDroppedWithoutCrashingPipeline");
         // A malformed odeReceivedAt must be logged and dropped rather than thrown, and must not
         // affect the embedded-timestamp pipeline, which doesn't depend on odeReceivedAt at all.
         var streamsConfig = createStreamsConfig();
@@ -407,6 +433,7 @@ public class SpatValidationTopologyV2Test {
 
     @Test
     public void testOdeReceivedAtAssessment_independentPassFailPerType() {
+        log.info("testOdeReceivedAtAssessment_independentPassFailPerType");
         // Embedded timestamps conformant; odeReceivedAt timestamps too slow. The two notification
         // types must diverge independently rather than sharing a pass/fail outcome. (odeReceivedAt's
         // stream time can outpace embedded's and close more than one assessment window, so this
