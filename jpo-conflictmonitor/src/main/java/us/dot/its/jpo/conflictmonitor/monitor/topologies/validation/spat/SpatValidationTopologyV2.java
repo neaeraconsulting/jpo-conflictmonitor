@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.TimestampType;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.RsuIntersectionTimestampTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
@@ -99,15 +100,16 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         // Do assessments for both types of timestamps
         // Do assessments over a longer time period for pass/fail with 90% tolerance
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
-        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream
+        // Notification key includes Timestamp Type so both assessment types are retained in compacted topic
+        KStream<RsuIntersectionTimestampTypeKey, SpatBroadcastRateAssessment> assessmentStream
                 = buildAssessmentStream(sortedSpatTimestamps, timestampEventStream,
                 TimestampType.EMBEDDED_IN_MESSAGE, "spat-timestamp-assessment-join-store",
                 "spat-timestamp-assessment-buffer-store");
-        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> odeReceivedAtAssessmentStream
+        KStream<RsuIntersectionTimestampTypeKey, SpatBroadcastRateAssessment> odeReceivedAtAssessmentStream
                 = buildAssessmentStream(sortedOdeReceivedAtTimestamps, odeReceivedAtEventStream,
                               TimestampType.ODE_RECEIVED_AT, "spat-ode-received-at-join-store",
                 "spat-ode-received-at-assessment-buffer-store");
-        KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> combinedAssessmentStream
+        KStream<RsuIntersectionTimestampTypeKey, SpatBroadcastRateAssessment> combinedAssessmentStream
                 = assessmentStream.merge(odeReceivedAtAssessmentStream);
 
         // Send notifications for the assessments
@@ -306,7 +308,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return events;
     }
 
-    private KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> buildAssessmentStream(
+    private KStream<RsuIntersectionTimestampTypeKey, SpatBroadcastRateAssessment> buildAssessmentStream(
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
             KStream<RsuIntersectionKey, TimestampedEvents> eventStream,
             TimestampType timestampType, String assessmentJoinStoreName, String assessmentBufferStoreName) {
@@ -351,8 +353,13 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 )
                 .toStream()
                 .map((windowedKey, assessment)
-                        -> new KeyValue<>(windowedKey.key(),
-                        finalizeAssessment(windowedKey, assessment, timestampType)));
+                        -> {
+                    var intersectionKey = windowedKey.key();
+                    var intersectionTimestampTypeKey
+                            = new RsuIntersectionTimestampTypeKey(intersectionKey, timestampType);
+                    return new KeyValue<>(intersectionTimestampTypeKey,
+                        finalizeAssessment(windowedKey, assessment, timestampType));
+                });
     }
 
     private SpatBroadcastRateAssessment updateAssessment(TimestampedEvents events, SpatBroadcastRateAssessment assessment) {
@@ -392,12 +399,12 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         return assessment;
     }
 
-    private void publishNotifications(KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream) {
+    private void publishNotifications(KStream<RsuIntersectionTimestampTypeKey, SpatBroadcastRateAssessment> assessmentStream) {
         assessmentStream
                 .mapValues(this::toNotification)
                 .to(parameters.getBroadcastRateNotificationTopicName(),
                         Produced.with(
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                                JsonSerdes.RsuIntersectionTimestampTypeKey(),
                                 JsonSerdes.SpatBroadcastRateNotification(),
                                 new IntersectionIdPartitioner<>()));
     }
