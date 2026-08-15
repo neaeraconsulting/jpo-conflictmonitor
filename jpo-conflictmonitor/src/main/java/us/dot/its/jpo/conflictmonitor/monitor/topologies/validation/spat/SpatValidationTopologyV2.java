@@ -92,11 +92,13 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
         // Event stream includes events and non-events, to keep stream time moving along in the absence of events
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> assessmentStream
                 = buildAssessmentStream(sortedSpatTimestamps, timestampEventStream,
-                TimestampType.EMBEDDED_IN_MESSAGE);
+                TimestampType.EMBEDDED_IN_MESSAGE, "spat-timestamp-assessment-join-store",
+                "spat-timestamp-assessment-buffer-store");
 
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> odeReceivedAtAssessmentStream
                 = buildAssessmentStream(sortedOdeReceivedAtTimestamps, odeReceivedAtEventStream,
-                              TimestampType.ODE_RECEIVED_AT);
+                              TimestampType.ODE_RECEIVED_AT, "spat-ode-received-at-join-store",
+                "spat-ode-received-at-assessment-buffer-store");
 
         KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> combinedAssessmentStream
                 = assessmentStream.merge(odeReceivedAtAssessmentStream);
@@ -290,7 +292,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     private KStream<RsuIntersectionKey, SpatBroadcastRateAssessment> buildAssessmentStream(
             KStream<RsuIntersectionKey, Long> sortedSpatTimestamps,
             KStream<RsuIntersectionKey, TimestampedEvents> eventStream,
-            TimestampType timestampType) {
+            TimestampType timestampType, String assessmentJoinStoreName, String assessmentBufferStoreName) {
         return sortedSpatTimestamps
                 .leftJoin(eventStream,
                         (timestamp, events)
@@ -302,7 +304,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                                 .with(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
                                     Serdes.Long(),
                                     TimestampedEvents.serde())
-                                .withStoreName("spat-assessment-join-store")
+                                .withStoreName(assessmentJoinStoreName)
                                 .withLoggingDisabled()
 
                         )
@@ -320,7 +322,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
                 .aggregate(
                         SpatBroadcastRateAssessment::new,
                         (key, events, assessment) -> updateAssessment(events, assessment),
-                        Materialized.<RsuIntersectionKey, SpatBroadcastRateAssessment, WindowStore<Bytes, byte[]>>as("spat-assessment-buffer")
+                        Materialized.<RsuIntersectionKey, SpatBroadcastRateAssessment, WindowStore<Bytes, byte[]>>as(assessmentBufferStoreName)
                                 .withKeySerde(us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey())
                                 .withValueSerde(JsonSerdes.SpatBroadcastRateAssessment())
                 )
