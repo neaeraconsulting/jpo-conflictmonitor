@@ -64,8 +64,6 @@ public abstract class BroadcastRateAssessment extends Assessment {
         return isPairComparisonPass() && isDurationComparisonPass();
     }
 
-    public boolean isPass() {
-        return isPairComparisonPass() && isDurationComparisonPass() && isMaxPairSeparationPass();
-    }
+    public abstract boolean isPass();
 
 }

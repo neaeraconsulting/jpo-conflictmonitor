@@ -6,4 +6,8 @@ public class SpatBroadcastRateAssessment extends BroadcastRateAssessment {
         super("SpatBroadcastRate");
     }
 
+    public boolean isPass() {
+        return isPairComparisonPass() && isDurationComparisonPass() && isMaxPairSeparationPass();
+    }
+
 }
