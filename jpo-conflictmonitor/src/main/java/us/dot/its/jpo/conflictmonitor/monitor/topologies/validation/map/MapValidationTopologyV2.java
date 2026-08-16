@@ -318,7 +318,7 @@ public class MapValidationTopologyV2 extends BaseMapValidationTopology {
     }
 
     private MapBroadcastRateAssessment updateAssessment(TimestampedEvents events, MapBroadcastRateAssessment assessment) {
-        assessment.setNumberOfSpats(assessment.getNumberOfSpats() + 1);
+        assessment.setNumberOfMessages(assessment.getNumberOfMessages() + 1);
         if (events.pairEvent() != null) {
             assessment.setNumberOfPairViolations(assessment.getNumberOfPairViolations() + 1);
             var timePeriod = events.pairEvent().getTimePeriod();
@@ -347,7 +347,6 @@ public class MapValidationTopologyV2 extends BaseMapValidationTopology {
         timePeriod.setBeginTimestamp(windowedKey.window().start());
         timePeriod.setEndTimestamp(windowedKey.window().end());
         assessment.setTimePeriod(timePeriod);
-        assessment.setMaxAllowedPairSeparationMs(Integer.MAX_VALUE);
         assessment.setPercentToPass(parameters.getV2BroadcastRateConformancePercent());
         assessment.setAssessmentGeneratedAt(Instant.now().toEpochMilli());
         return assessment;

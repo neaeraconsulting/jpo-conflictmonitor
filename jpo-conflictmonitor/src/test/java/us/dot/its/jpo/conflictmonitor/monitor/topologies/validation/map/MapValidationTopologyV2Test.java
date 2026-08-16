@@ -163,7 +163,7 @@ public class MapValidationTopologyV2Test {
         var assessment = notification.getAssessment();
         assertThat(assessment, notNullValue());
         assertThat(assessment.getTimestampType(), equalTo(TimestampType.ODE_RECEIVED_AT));
-        assertThat(assessment.getNumberOfSpats(), equalTo((int) expectedMapCount(instants)));
+        assertThat(assessment.getNumberOfMessages(), equalTo((int) expectedMapCount(instants)));
         assertThat(assessment.getNumberOfPairViolations(), equalTo(0));
         assertThat(assessment.getNumberOfDurationViolations(), equalTo(0));
         assertThat(assessment.getMaxPairSeparationMs(), equalTo(0));
@@ -187,12 +187,11 @@ public class MapValidationTopologyV2Test {
         var assessment = notification.getAssessment();
         assertThat(assessment, notNullValue());
         assertThat(assessment.getTimestampType(), equalTo(TimestampType.ODE_RECEIVED_AT));
-        assertThat(assessment.getNumberOfSpats(), equalTo((int) expectedMapCount(instants)));
+        assertThat(assessment.getNumberOfMessages(), equalTo((int) expectedMapCount(instants)));
         assertThat(assessment.getNumberOfPairViolations(), greaterThan(0));
         assertThat(assessment.getNumberOfDurationViolations(), greaterThan(0));
         assertThat(assessment.getPercentPairViolations(), greaterThan((double) (100 - v2ConformancePercent)));
         assertThat(assessment.getPercentDurationViolations(), greaterThan((double) (100 - v2ConformancePercent)));
-        assertThat(assessment.getMaxAllowedPairSeparationMs(), equalTo(Integer.MAX_VALUE));
     }
 
     @Test
