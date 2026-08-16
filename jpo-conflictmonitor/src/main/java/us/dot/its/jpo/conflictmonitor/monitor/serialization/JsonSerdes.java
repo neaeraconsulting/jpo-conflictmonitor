@@ -21,6 +21,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassage
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassageAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAggregator;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.MapBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.RsuIntersectionTimestampTypeKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmAggregator;
@@ -678,6 +679,10 @@ public class JsonSerdes {
 
     public static Serde<SpatBroadcastRateAssessment> SpatBroadcastRateAssessment() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SpatBroadcastRateAssessment.class));
+    }
+
+    public static Serde<MapBroadcastRateAssessment> MapBroadcastRateAssessment() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(MapBroadcastRateAssessment.class));
     }
 
     public static Serde<RsuIntersectionTimestampTypeKey> RsuIntersectionTimestampTypeKey() {
