@@ -60,10 +60,6 @@ public abstract class BroadcastRateAssessment extends Assessment {
         return maxPairSeparationMs <= maxAllowedPairSeparationMs;
     }
 
-    public boolean isPassWithoutMaxPairSeparation() {
-        return isPairComparisonPass() && isDurationComparisonPass();
-    }
-
     public abstract boolean isPass();
 
 }

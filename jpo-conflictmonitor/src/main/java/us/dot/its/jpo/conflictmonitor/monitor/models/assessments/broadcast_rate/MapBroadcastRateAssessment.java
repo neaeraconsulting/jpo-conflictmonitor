@@ -7,7 +7,7 @@ public class MapBroadcastRateAssessment extends BroadcastRateAssessment {
 
     @Override
     public boolean isPass() {
-        // Map doesn't have a single max pair separation criterion
+        // MAPs don't have a single max pair separation criterion
         return isPairComparisonPass() && isDurationComparisonPass();
     }
 }
