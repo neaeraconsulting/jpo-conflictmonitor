@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
@@ -19,6 +21,8 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.MapProperties;
 /**
  * The Lane class contains all the geometry needed for performing lane based calculations on CV data near the intersection. 
  */
+@Getter
+@Setter
 public class Lane {
 
     /**
@@ -135,63 +139,6 @@ public class Lane {
 
 
         return laneSegments;
-    }
-
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public LineString getPoints() {
-        return points;
-    }
-
-    public void setPoints(LineString points) {
-        this.points = points;
-    }
-
-    public Boolean getIngress() {
-        return ingress;
-    }
-
-    public void setIngress(Boolean ingress) {
-        this.ingress = ingress;
-    }
-
-    public GeometryFactory getGeometryFactory() {
-        return geometryFactory;
-    }
-
-    public void setGeometryFactory(GeometryFactory geometryFactory) {
-        this.geometryFactory = geometryFactory;
-    }
-
-    public int getLaneWidthCm() {
-        return laneWidthCm;
-    }
-
-    public void setLaneWidthCm(int laneWidthCm) {
-        this.laneWidthCm = laneWidthCm;
-    }
-
-    public int getRegion() {
-        return region;
-    }
-
-    public void setRegion(int region) {
-        this.region = region;
-    }
-
-    public boolean isCrosswalk() {
-        return crosswalk;
-    }
-
-    public void setCrosswalk(boolean crosswalk) {
-        this.crosswalk = crosswalk;
     }
 
     /**
