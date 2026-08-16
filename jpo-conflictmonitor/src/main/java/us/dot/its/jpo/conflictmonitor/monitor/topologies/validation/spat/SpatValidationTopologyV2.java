@@ -10,7 +10,6 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.processor.api.ContextualProcessor;
 import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
@@ -373,7 +372,7 @@ public class SpatValidationTopologyV2 extends BaseSpatValidationTopology {
     }
 
     private SpatBroadcastRateAssessment updateAssessment(TimestampedEvents events, SpatBroadcastRateAssessment assessment) {
-        assessment.setNumberOfSpats(assessment.getNumberOfSpats() + 1);
+        assessment.setNumberOfMessages(assessment.getNumberOfMessages() + 1);
         if (events.pairEvent() != null) {
             assessment.setNumberOfPairViolations(assessment.getNumberOfPairViolations() + 1);
             var timePeriod = events.pairEvent().getTimePeriod();

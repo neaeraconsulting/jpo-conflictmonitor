@@ -269,7 +269,7 @@ public class SpatValidationTopologyV2Test {
             assertThat(type.toString(), assessment.getTimestampType(), equalTo(type));
             // Regression guard: every spat in the window must be counted via the leftJoin, not just
             // ones with a matching violation event (a KTable-driven count would undercount here).
-            assertThat(type.toString(), assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
+            assertThat(type.toString(), assessment.getNumberOfMessages(), equalTo((int) expectedSpatCount(instants)));
             assertThat(type.toString(), assessment.getNumberOfPairViolations(), equalTo(0));
             assertThat(type.toString(), assessment.getNumberOfDurationViolations(), equalTo(0));
             assertThat(type.toString(), assessment.getMaxPairSeparationMs(), equalTo(0));
@@ -301,7 +301,7 @@ public class SpatValidationTopologyV2Test {
             assertThat(type.toString(), assessment.getTimestampType(), equalTo(type));
             // Every spat is counted exactly once even when it also carries a violation, i.e. the
             // leftJoin's placeholder path and its matched-violation path don't double count.
-            assertThat(type.toString(), assessment.getNumberOfSpats(), equalTo((int) expectedSpatCount(instants)));
+            assertThat(type.toString(), assessment.getNumberOfMessages(), equalTo((int) expectedSpatCount(instants)));
             assertThat(type.toString(), assessment.getNumberOfPairViolations(), greaterThan(0));
             assertThat(type.toString(), assessment.getNumberOfDurationViolations(), greaterThan(0));
             assertThat(type.toString(), assessment.getPercentPairViolations(), greaterThan((double)(100 - v2ConformancePercent)));
@@ -333,7 +333,7 @@ public class SpatValidationTopologyV2Test {
         var assessment = secondWindowNotification.getAssessment();
         assertThat(assessment.getNumberOfPairViolations(), equalTo(1));
         assertThat(assessment.getPercentPairViolations(),
-                equalTo(100.0 * 1 / assessment.getNumberOfSpats()));
+                equalTo(100.0 * 1 / assessment.getNumberOfMessages()));
     }
 
     // --- odeReceivedAt-specific tests ---

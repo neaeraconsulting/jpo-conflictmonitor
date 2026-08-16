@@ -23,9 +23,9 @@ public abstract class BroadcastRateAssessment extends Assessment {
     protected int numberOfPairViolations;
     protected int numberOfDurationViolations;
     protected int maxPairSeparationMs;
-    protected int numberOfSpats;
+    protected int numberOfMessages;
     private double percentToPass;
-    protected int maxAllowedPairSeparationMs;
+
     protected TimestampType timestampType;
 
 
@@ -37,13 +37,13 @@ public abstract class BroadcastRateAssessment extends Assessment {
     }
 
     public double getPercentPairViolations() {
-        if (numberOfSpats <= 0) return 0;
-        return 100.0 * (double)numberOfPairViolations / (double)numberOfSpats;
+        if (numberOfMessages <= 0) return 0;
+        return 100.0 * (double)numberOfPairViolations / (double) numberOfMessages;
     }
 
     public double getPercentDurationViolations() {
-        if (numberOfSpats <= 0) return 0;
-        return 100.0 * (double)numberOfDurationViolations / (double)numberOfSpats;
+        if (numberOfMessages <= 0) return 0;
+        return 100.0 * (double)numberOfDurationViolations / (double) numberOfMessages;
     }
 
     public boolean isPairComparisonPass() {
@@ -56,10 +56,10 @@ public abstract class BroadcastRateAssessment extends Assessment {
         return getPercentDurationViolations() <= maxFailPercent;
     }
 
-    public boolean isMaxPairSeparationPass() {
-        return maxPairSeparationMs <= maxAllowedPairSeparationMs;
-    }
 
-    public abstract boolean isPass();
+
+    public boolean isPass() {
+        return isPairComparisonPass() && isDurationComparisonPass();
+    }
 
 }

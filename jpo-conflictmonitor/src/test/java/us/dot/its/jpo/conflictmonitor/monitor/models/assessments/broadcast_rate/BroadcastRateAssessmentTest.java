@@ -8,14 +8,14 @@ import static org.hamcrest.Matchers.*;
 public class BroadcastRateAssessmentTest {
 
     private static SpatBroadcastRateAssessment assessment(
-            int numberOfSpats,
+            int numberOfMessages,
             int numberOfPairViolations,
             int numberOfDurationViolations,
             double percentToPass,
             int maxPairSeparationMs,
             int maxAllowedPairSeparationMs) {
         var assessment = new SpatBroadcastRateAssessment();
-        assessment.setNumberOfSpats(numberOfSpats);
+        assessment.setNumberOfMessages(numberOfMessages);
         assessment.setNumberOfPairViolations(numberOfPairViolations);
         assessment.setNumberOfDurationViolations(numberOfDurationViolations);
         assessment.setPercentToPass(percentToPass);
@@ -43,7 +43,7 @@ public class BroadcastRateAssessmentTest {
     }
 
     @Test
-    public void testIsPairComparisonPass_noSpats() {
+    public void testIsPairComparisonPass_noMessages() {
         var assessment = assessment(0, 0, 0, 90.0, 0, 0);
         assertThat(assessment.isPairComparisonPass(), is(true));
     }
@@ -67,7 +67,7 @@ public class BroadcastRateAssessmentTest {
     }
 
     @Test
-    public void testIsDurationComparisonPass_noSpats() {
+    public void testIsDurationComparisonPass_noMessages() {
         var assessment = assessment(0, 0, 0, 90.0, 0, 0);
         assertThat(assessment.isDurationComparisonPass(), is(true));
     }
@@ -91,51 +91,52 @@ public class BroadcastRateAssessmentTest {
     }
 
     @Test
-    public void testIsPassWithoutMaxPairSeparation_bothPass() {
-        var assessment = assessment(100, 5, 5, 90.0, 2000, 1000);
-        assertThat(assessment.isPassWithoutMaxPairSeparation(), is(true));
+    public void testIsPassWithMaxPairSeparation_allPass() {
+        var assessment = assessment(100, 5, 5, 90.0, 500, 1000);
+        assertThat(assessment.isPassWithMaxPairSeparation(), is(true));
     }
 
     @Test
-    public void testIsPassWithoutMaxPairSeparation_pairFails() {
-        var assessment = assessment(100, 11, 0, 90.0, 0, 1000);
-        assertThat(assessment.isPassWithoutMaxPairSeparation(), is(false));
+    public void testIsPassWithMaxPairSeparation_pairFailsOnly() {
+        var assessment = assessment(100, 11, 0, 90.0, 500, 1000);
+        assertThat(assessment.isPassWithMaxPairSeparation(), is(false));
     }
 
     @Test
-    public void testIsPassWithoutMaxPairSeparation_durationFails() {
-        var assessment = assessment(100, 0, 11, 90.0, 0, 1000);
-        assertThat(assessment.isPassWithoutMaxPairSeparation(), is(false));
+    public void testIsPassWithMaxPairSeparation_durationFailsOnly() {
+        var assessment = assessment(100, 0, 11, 90.0, 500, 1000);
+        assertThat(assessment.isPassWithMaxPairSeparation(), is(false));
     }
 
     @Test
-    public void testIsPassWithoutMaxPairSeparation_ignoresMaxPairSeparation() {
-        var assessment = assessment(100, 0, 0, 90.0, 5000, 1000);
-        assertThat(assessment.isPassWithoutMaxPairSeparation(), is(true));
+    public void testIsPassWithMaxPairSeparation_maxPairSeparationFailsOnly() {
+        var assessment = assessment(100, 0, 0, 90.0, 1001, 1000);
+        assertThat(assessment.isPassWithMaxPairSeparation(), is(false));
     }
 
     @Test
-    public void testIsPass_allPass() {
+    public void testIsPass_bothPass() {
         var assessment = assessment(100, 5, 5, 90.0, 500, 1000);
         assertThat(assessment.isPass(), is(true));
     }
 
     @Test
-    public void testIsPass_pairComparisonFailsOnly() {
+    public void testIsPass_pairFails() {
         var assessment = assessment(100, 11, 0, 90.0, 500, 1000);
         assertThat(assessment.isPass(), is(false));
     }
 
     @Test
-    public void testIsPass_durationComparisonFailsOnly() {
+    public void testIsPass_durationFails() {
         var assessment = assessment(100, 0, 11, 90.0, 500, 1000);
         assertThat(assessment.isPass(), is(false));
     }
 
     @Test
-    public void testIsPass_maxPairSeparationFailsOnly() {
+    public void testIsPass_ignoresMaxPairSeparation() {
         var assessment = assessment(100, 0, 0, 90.0, 1001, 1000);
-        assertThat(assessment.isPass(), is(false));
+        assertThat(assessment.isPass(), is(true));
+        assertThat(assessment.isPassWithMaxPairSeparation(), is(false));
     }
 
     @Test(expected = IllegalArgumentException.class)
