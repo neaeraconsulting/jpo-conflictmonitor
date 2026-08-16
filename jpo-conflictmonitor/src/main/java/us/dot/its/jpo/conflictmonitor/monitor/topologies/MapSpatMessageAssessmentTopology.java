@@ -326,8 +326,14 @@ public class MapSpatMessageAssessmentTopology
 
 
                         if (ingressDisabled || egressDisabled || ingressIsCrosswalk || egressIsCrosswalk) {
-                            log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are revocable and " +
-                                    "disabled. Not including them in Signal State Conflict check", key, ingressId, egressId);
+                            if (ingressDisabled || egressDisabled) {
+                                log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are revocable and " +
+                                        "disabled. Not including them in Signal State Conflict check", key, ingressId, egressId);
+                            }
+                            if (ingressIsCrosswalk || egressIsCrosswalk) {
+                                log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are crosswalks. Not " +
+                                        "including them in Signal State Conflict check", key, ingressId, egressId);
+                            }
                         } else {
                             connections.add(connection);
                         }
