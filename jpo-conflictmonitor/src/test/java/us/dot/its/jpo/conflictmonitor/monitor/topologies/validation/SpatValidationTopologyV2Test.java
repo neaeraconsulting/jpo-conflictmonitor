@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.spat;
+package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -27,8 +27,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.spat.SpatVal
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
-import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampBoundedQueue;
-import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampExtractorForBroadcastRate;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.spat.SpatValidationTopologyV2;
 import us.dot.its.jpo.conflictmonitor.testutils.TopologyTestUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
