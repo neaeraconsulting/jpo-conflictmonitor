@@ -537,6 +537,7 @@ spat.validation:
 
 
 
+
 # Intersection Reference Alignment Notification
 intersection.reference.alignment.notification:
   algorithm: defaultIntersectionReferenceAlignmentNotificationAlgorithm

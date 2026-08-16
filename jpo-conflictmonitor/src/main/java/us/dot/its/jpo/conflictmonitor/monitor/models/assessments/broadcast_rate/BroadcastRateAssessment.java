@@ -28,6 +28,7 @@ public abstract class BroadcastRateAssessment extends Assessment {
     protected int maxAllowedPairSeparationMs;
     protected TimestampType timestampType;
 
+
     public void setPercentToPass(double percentToPass) {
         if (percentToPass < 0 || percentToPass > 100.0) {
             throw new IllegalArgumentException("percent must be between 0 and 100.");
@@ -45,12 +46,26 @@ public abstract class BroadcastRateAssessment extends Assessment {
         return 100.0 * (double)numberOfDurationViolations / (double)numberOfSpats;
     }
 
-    public boolean isPass() {
+    public boolean isPairComparisonPass() {
         double maxFailPercent = 100.0 - percentToPass;
-        if (getPercentPairViolations() > maxFailPercent) return false;
-        if (getPercentDurationViolations() > maxFailPercent) return false;
-        if (maxPairSeparationMs > maxAllowedPairSeparationMs) return false;
-        return true;
+        return getPercentPairViolations() <= maxFailPercent;
+    }
+
+    public boolean isDurationComparisonPass() {
+        double maxFailPercent = 100.0 - percentToPass;
+        return getPercentDurationViolations() <= maxFailPercent;
+    }
+
+    public boolean isMaxPairSeparationPass() {
+        return maxPairSeparationMs <= maxAllowedPairSeparationMs;
+    }
+
+    public boolean isPassWithoutMaxPairSeparation() {
+        return isPairComparisonPass() && isDurationComparisonPass();
+    }
+
+    public boolean isPass() {
+        return isPairComparisonPass() && isDurationComparisonPass() && isMaxPairSeparationPass();
     }
 
 }
