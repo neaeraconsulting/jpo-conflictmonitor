@@ -94,7 +94,7 @@ public class Lane {
         PackedCoordinateSequence.Double sequence = new PackedCoordinateSequence.Double(coordinates);
         LineString lanePoints = new LineString(sequence, lane.getGeometryFactory());
 
-        if(((MapProperties)feature.getProperties()).getIngressPath()){
+        if((feature.getProperties()).getIngressPath()){
             lane.setIngress(true);
         }
         else{
@@ -102,7 +102,7 @@ public class Lane {
             lanePoints = lanePoints.reverse();
         }
 
-        MapProperties props = (MapProperties) feature.getProperties();
+        MapProperties props = feature.getProperties();
         if(props!= null && props.getLaneType() != null && props.getLaneType().getCrosswalk() != null){
             lane.crosswalk = true;
         }
