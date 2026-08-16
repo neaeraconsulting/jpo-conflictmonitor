@@ -171,7 +171,8 @@ public class MapSpatSignalStateConflictEventTopologyTest {
             final String rsuIp = "10.11.81.12";
             final var mapSpatKey = new RsuIntersectionKey(rsuIp, 12109);
 
-            // Load JSON fixtures. This SPaT should represent an all-green or non-conflicting state.
+            // Load JSON fixtures. SPATs to test vehicle movements non-conflicting with active overlapping pedestrian
+            // phases.
             String processedMapJson = ResourceUtils.loadResource(RESOURCE_PATH + "SignalStateConflict_ProcessedMap.json");
             String processedSpatJson = ResourceUtils.loadResource(RESOURCE_PATH + "SignalStateConflict_ProcessedSpat.json");
 
