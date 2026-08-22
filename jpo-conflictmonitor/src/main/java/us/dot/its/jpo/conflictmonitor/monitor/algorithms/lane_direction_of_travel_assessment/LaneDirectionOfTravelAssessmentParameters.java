@@ -58,11 +58,19 @@ public class LaneDirectionOfTravelAssessmentParameters {
         updateType = DEFAULT)
     long lookBackPeriodGraceTimeSeconds;
 
-    @ConfigData(key = "lane.direction.of.travel.assessment.lookBackPeriodGraceTimeToleranceSeconds", 
-        description = "The heading tolerance.", 
+    @ConfigData(key = "lane.direction.of.travel.assessment.headingToleranceDegrees",
+        description = "The heading tolerance for lane segments except for the segment nearest the intersection.",
         units = DEGREES, 
         updateType = INTERSECTION)
-    double headingToleranceDegrees; 
+    double headingToleranceDegrees;
+
+    @ConfigData(key = "lane.direction.of.travel.assessment.headingToleranceFirstSegmentDegrees",
+            description = "The heading tolerance for the lane segment nearest the intersection which needs to be" +
+                    " larger than the tolerance for straightaway segment to account for turning vehicles",
+            units = DEGREES,
+            updateType = INTERSECTION
+    )
+    double headingToleranceFirstSegmentDegrees;
 
     @ConfigData(key = "lane.direction.of.travel.assessment.distanceFromCenterlineToleranceCm", 
         description = "The distance from centerline tolerance.", 
@@ -77,12 +85,16 @@ public class LaneDirectionOfTravelAssessmentParameters {
 
     // Maps for parameters that can be customized per intersection    
     final ConfigMap<Double> headingToleranceDegreesMap = new ConfigMap<>();
+    final ConfigMap<Double> headingToleranceFirstSegmentDegreesMap = new ConfigMap<>();
     final ConfigMap<Double> distanceFromCenterlineToleranceCmMap = new ConfigMap<>();
 
 
     // Intersection-specific parameters
     public double getHeadingToleranceDegrees(IntersectionRegion intersectionKey) {
         return getIntersectionValue(intersectionKey, headingToleranceDegreesMap, headingToleranceDegrees);
+    }
+    public double getHeadingToleranceFirstSegmentDegrees(IntersectionRegion intersectionKey) {
+        return getIntersectionValue(intersectionKey, headingToleranceFirstSegmentDegreesMap, headingToleranceFirstSegmentDegrees);
     }
     public double getDistanceFromCenterlineToleranceCm(IntersectionRegion intersectionKey) {
         return getIntersectionValue(intersectionKey, distanceFromCenterlineToleranceCmMap, distanceFromCenterlineToleranceCm);
