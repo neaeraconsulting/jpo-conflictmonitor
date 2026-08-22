@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
@@ -19,6 +21,8 @@ import us.dot.its.jpo.geojsonconverter.pojos.geojson.map.MapProperties;
 /**
  * The Lane class contains all the geometry needed for performing lane based calculations on CV data near the intersection. 
  */
+@Getter
+@Setter
 public class Lane {
 
     /**
@@ -50,6 +54,11 @@ public class Lane {
      * the region or road regulator ID associated with this lane. This field is no longer used and can be left unused or set to -1.
      */
     private int region;
+
+    /**
+     * Boolean indicating if this lane is a crosswalk. Set to true for a crosswalk lane.
+     */
+    private boolean crosswalk;
 
     /**
      * Creates a Lane object from the Geojson features of the ProcessedMap message
@@ -85,12 +94,20 @@ public class Lane {
         PackedCoordinateSequence.Double sequence = new PackedCoordinateSequence.Double(coordinates);
         LineString lanePoints = new LineString(sequence, lane.getGeometryFactory());
 
-        if(((MapProperties)feature.getProperties()).getIngressPath()){
+        if((feature.getProperties()).getIngressPath()){
             lane.setIngress(true);
         }
         else{
             lane.setIngress(false);
             lanePoints = lanePoints.reverse();
+        }
+
+        MapProperties props = feature.getProperties();
+        if(props!= null && props.getLaneType() != null && props.getLaneType().getCrosswalk() != null){
+            lane.crosswalk = true;
+        }
+        else{
+            lane.crosswalk = false;
         }
 
 
@@ -122,55 +139,6 @@ public class Lane {
 
 
         return laneSegments;
-    }
-
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public LineString getPoints() {
-        return points;
-    }
-
-    public void setPoints(LineString points) {
-        this.points = points;
-    }
-
-    public Boolean getIngress() {
-        return ingress;
-    }
-
-    public void setIngress(Boolean ingress) {
-        this.ingress = ingress;
-    }
-
-    public GeometryFactory getGeometryFactory() {
-        return geometryFactory;
-    }
-
-    public void setGeometryFactory(GeometryFactory geometryFactory) {
-        this.geometryFactory = geometryFactory;
-    }
-
-    public int getLaneWidthCm() {
-        return laneWidthCm;
-    }
-
-    public void setLaneWidthCm(int laneWidthCm) {
-        this.laneWidthCm = laneWidthCm;
-    }
-
-    public int getRegion() {
-        return region;
-    }
-
-    public void setRegion(int region) {
-        this.region = region;
     }
 
     /**
