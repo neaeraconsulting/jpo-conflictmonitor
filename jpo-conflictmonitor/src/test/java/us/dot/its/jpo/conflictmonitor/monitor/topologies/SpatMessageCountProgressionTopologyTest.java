@@ -26,7 +26,7 @@ public class SpatMessageCountProgressionTopologyTest {
 
     private static final String inputTopicName = "topic.ProcessedSpat";
     private static final String eventOutputTopicName = "topic.CmSpatMessageCountProgressionEvents";
-    private static final String processedSpatStateStoreName = "processedMSpatStateStore";
+    private static final String processedSpatStateStoreName = "processedSpatStateStore";
     private static final String latestSpatStateStoreName = "latestSpatStateStore";
     private static final int bufferTimeMs = 500;
     private static final int bufferGracePeriodMs = 50;
