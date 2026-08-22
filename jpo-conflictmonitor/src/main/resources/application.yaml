@@ -349,6 +349,7 @@ lane.direction.of.travel.assessment:
   lookBackPeriodDays: 1
   lookBackPeriodGraceTimeSeconds: 60
   headingToleranceDegrees: 20
+  headingToleranceFirstSegmentDegrees: 45
   distanceFromCenterlineToleranceCm: 100
   minimumNumberOfEvents: 10
 
