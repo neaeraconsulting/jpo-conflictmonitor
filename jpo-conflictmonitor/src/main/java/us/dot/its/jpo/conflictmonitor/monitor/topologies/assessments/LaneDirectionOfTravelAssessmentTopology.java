@@ -136,7 +136,7 @@ public class LaneDirectionOfTravelAssessmentTopology
                 for(LaneDirectionOfTravelAssessmentGroup group: assessment.getLaneDirectionOfTravelAssessmentGroup()){
                     if(group.getSegmentID() == event.getLaneSegmentNumber() && group.getLaneID() == event.getLaneID()){
                         if(group.getOutOfToleranceEvents() + group.getInToleranceEvents() >= parameters.getMinimumNumberOfEvents()){
-                            if(Math.abs(group.getMedianHeading() - group.getExpectedHeading()) > group.getTolerance()){
+                            if (headingViolation(group)) {
                                 LaneDirectionOfTravelNotification notification = new LaneDirectionOfTravelNotification();
                                 notification.setNotificationText("Lane Direction of Travel Assessment Notification. The median heading: "+Math.round(group.getMedianHeading())+" degrees for segment "+group.getSegmentID()+" of lane "+group.getLaneID()+" is not within the allowed tolerance "+group.getTolerance()+" degrees of the expected heading "+Math.round(group.getExpectedHeading())+" degrees.");
                                 notification.setNotificationHeading("Lane Direction of Travel Assessment");
@@ -179,8 +179,16 @@ public class LaneDirectionOfTravelAssessmentTopology
                     JsonSerdes.LaneDirectionOfTravelAssessmentNotification()));
 
         return builder.build(streamsProperties);
-    }    
+    }
 
-
+    /**
+     * Formula to compare actual and expected heading
+     * @param group The assessment group containing the heading values and tolerance
+     * @return true if there is a violation, heading is out of tolerance, false if within tolerance, OK
+     */
+    public static boolean headingViolation(LaneDirectionOfTravelAssessmentGroup group) {
+        final double absDiff = Math.abs(group.getMedianHeading() - group.getExpectedHeading());
+        return Math.min(absDiff, 360.0d - absDiff) > group.getTolerance();
+    }
     
 }
