@@ -321,9 +321,19 @@ public class MapSpatMessageAssessmentTopology
                         boolean egressNotEnabled = !enabledLanes.contains(egressId);
                         boolean ingressDisabled = ingressIsRevocable && ingressNotEnabled;
                         boolean egressDisabled = egressIsRevocable && egressNotEnabled;
-                        if (ingressDisabled || egressDisabled) {
-                            log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are revocable and " +
-                                    "disabled. Not including them in Signal State Conflict check", key, ingressId, egressId);
+                        boolean ingressIsCrosswalk = connection.getIngressLane().isCrosswalk();
+                        boolean egressIsCrosswalk = connection.getEgressLane().isCrosswalk();
+
+
+                        if (ingressDisabled || egressDisabled || ingressIsCrosswalk || egressIsCrosswalk) {
+                            if (ingressDisabled || egressDisabled) {
+                                log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are revocable and " +
+                                        "disabled. Not including them in Signal State Conflict check", key, ingressId, egressId);
+                            }
+                            if (ingressIsCrosswalk || egressIsCrosswalk) {
+                                log.debug("For key: {}, Ingress and/or egress lane ids {} and {} are crosswalks. Not " +
+                                        "including them in Signal State Conflict check", key, ingressId, egressId);
+                            }
                         } else {
                             connections.add(connection);
                         }
