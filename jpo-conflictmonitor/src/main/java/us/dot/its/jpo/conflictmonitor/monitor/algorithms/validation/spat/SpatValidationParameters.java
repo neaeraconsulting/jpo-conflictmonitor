@@ -74,7 +74,7 @@ public class SpatValidationParameters {
         updateType = DEFAULT)
     int gracePeriodMilliseconds;
 
-    // Exclusive min and max to send broadcast rateq events
+    // Exclusive min and max to send broadcast rate events
     @ConfigData(key = "spat.validation.lowerBound", 
         units = PER_PERIOD, 
         description = "Exclusive minimum counts per period for V1 Broadcast Rate",
