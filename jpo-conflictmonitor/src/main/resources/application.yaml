@@ -351,7 +351,7 @@ lane.direction.of.travel.assessment:
   headingToleranceDegrees: 20
   headingToleranceFirstSegmentDegrees: 45
   distanceFromCenterlineToleranceCm: 100
-  minimumNumberOfEvents: 10
+  minimumNumberOfEvents: 1
 
 # MAP/SPAT Message Assessment
 map.spat.message.assessment:
