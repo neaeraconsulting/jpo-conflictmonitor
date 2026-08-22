@@ -98,7 +98,11 @@ public class LaneDirectionOfTravelAssessmentTopology
         KStream<String, EventAssessment> laneDirectionOfTravelEventAssessmentStream = laneDirectionOfTravelAssessments.toStream()
             .map((key, value) -> {
                 // StopLineStopAssessment assessment = value.getStopLineStopAssessment();
-                EventAssessment eventAssessment = value.getEventAssessmentPair(parameters.getHeadingToleranceDegrees(), parameters.getDistanceFromCenterlineToleranceCm(), parameters.getLookBackPeriodDays());
+                EventAssessment eventAssessment = value.getEventAssessmentPair(
+                        parameters.getHeadingToleranceDegrees(),
+                        parameters.getHeadingToleranceFirstSegmentDegrees(),
+                        parameters.getDistanceFromCenterlineToleranceCm(),
+                        parameters.getLookBackPeriodDays());
                 eventAssessment.getAssessment().setSource(key);
                 return KeyValue.pair(key, eventAssessment);
             }
