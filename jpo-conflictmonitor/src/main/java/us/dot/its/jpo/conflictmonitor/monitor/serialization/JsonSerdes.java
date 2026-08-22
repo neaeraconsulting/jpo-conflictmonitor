@@ -21,6 +21,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassage
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLinePassageAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.StopLineStopAggregator;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.RsuIntersectionTimestampTypeKey;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmAggregator;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
@@ -62,6 +64,8 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.Spa
 import us.dot.its.jpo.conflictmonitor.monitor.models.event_state_progression.SpatMovementStateTransition;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.deserialization.GenericJsonDeserializer;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.RsuStationIdRtcmTypeKey;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampBoundedQueue;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampBuffer;
 import us.dot.its.jpo.geojsonconverter.serialization.deserializers.JsonDeserializer;
 import us.dot.its.jpo.geojsonconverter.serialization.serializers.JsonSerializer;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
@@ -367,14 +371,14 @@ public class JsonSerdes {
     public static Serde<SpatBroadcastRateNotification> SpatBroadcastRateNotification() {
         return Serdes.serdeFrom(
             new JsonSerializer<SpatBroadcastRateNotification>(),
-            new GenericJsonDeserializer<SpatBroadcastRateNotification>(SpatBroadcastRateNotification.class)
+            new JsonDeserializer<>(SpatBroadcastRateNotification.class)
         );
     }
 
     public static Serde<MapBroadcastRateNotification> MapBroadcastRateNotification() {
         return Serdes.serdeFrom(
             new JsonSerializer<MapBroadcastRateNotification>(),
-            new GenericJsonDeserializer<MapBroadcastRateNotification>(MapBroadcastRateNotification.class)
+            new JsonDeserializer<>(MapBroadcastRateNotification.class)
         );
     }
 
@@ -662,5 +666,21 @@ public class JsonSerdes {
 
     public static Serde<DynamicLaneActivationMetrics> DynamicLaneActivationMetrics() {
         return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(DynamicLaneActivationMetrics.class));
+    }
+
+    public static Serde<TimestampBuffer> TimestampBuffer() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(TimestampBuffer.class));
+    }
+
+    public static Serde<TimestampBoundedQueue> TimestampBoundedQueue() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(TimestampBoundedQueue.class));
+    }
+
+    public static Serde<SpatBroadcastRateAssessment> SpatBroadcastRateAssessment() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SpatBroadcastRateAssessment.class));
+    }
+
+    public static Serde<RsuIntersectionTimestampTypeKey> RsuIntersectionTimestampTypeKey() {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(RsuIntersectionTimestampTypeKey.class));
     }
 }
