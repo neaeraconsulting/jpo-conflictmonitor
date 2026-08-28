@@ -42,7 +42,10 @@ public class ConflictMonitorPropertiesTest {
 
     @Test
     public void testMapBroadcastRateAlgorithm() {
-        assertThat(properties.getMapValidationAlgorithm(), anyOf(equalTo(DEFAULT_MAP_VALIDATION_ALGORITHM), equalTo(ALTERNATE_MAP_VALIDATION_ALGORITHM)));
+        assertThat(properties.getMapValidationAlgorithm(),
+                anyOf(equalTo(DEFAULT_MAP_VALIDATION_ALGORITHM),
+                        equalTo(CTI_4501_V2_MAP_VALIDATION_ALGORITHM),
+                        equalTo(ALTERNATE_MAP_VALIDATION_ALGORITHM)));
     }
 
     @Test
@@ -56,7 +59,10 @@ public class ConflictMonitorPropertiesTest {
 
     @Test
     public void testSpatBroadcastRateAlgorithm() {
-        assertThat(properties.getSpatValidationAlgorithm(), anyOf(equalTo(DEFAULT_SPAT_VALIDATION_ALGORITHM), equalTo(ALTERNATE_SPAT_VALIDATION_ALGORITHM)));
+        assertThat(properties.getSpatValidationAlgorithm(),
+                anyOf(equalTo(DEFAULT_SPAT_VALIDATION_ALGORITHM),
+                        equalTo(CTI_4501_V2_SPAT_VALIDATION_ALGORITHM),
+                        equalTo(ALTERNATE_SPAT_VALIDATION_ALGORITHM)));
     }
 
     @Test

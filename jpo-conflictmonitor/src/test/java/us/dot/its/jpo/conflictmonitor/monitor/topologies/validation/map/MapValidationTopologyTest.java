@@ -1,4 +1,4 @@
-package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
+package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.map;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -22,6 +22,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMini
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.timestamp_delta.MapTimestampDeltaEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
 import us.dot.its.jpo.conflictmonitor.monitor.topologies.timestamp_delta.MapTimestampDeltaTopology;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampExtractorForBroadcastRate;
 import us.dot.its.jpo.conflictmonitor.testutils.TopologyTestUtils;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.ProcessedValidationMessage;

@@ -40,6 +40,5 @@ public abstract class BroadcastRateEvent extends Event {
      * @return The number of messages processed
      */
     private int numberOfMessages;
-
     
 }
