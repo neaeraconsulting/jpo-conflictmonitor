@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.dot.its.jpo.conflictmonitor.monitor.models.EventAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.LaneDirectionOfTravelEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.CircleMath;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.MathFunctions;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
@@ -55,13 +56,17 @@ public class LaneDirectionOfTravelAggregator {
 
     /**
      * This function joins all of the events used by this aggregator into a LaneDirectionOfTravelAssessment.
-     * @param tolerance The allowable heading tolerance in degrees of vehicles for this assessment
+     * @param defaultHeadingTolerance The allowable heading tolerance in degrees of vehicles for this assessment
+     *        for segments other than the first.
+     * @param headingToleranceFirstSegment The heading tolerance for the first segment (nearest the intersection center)
+     *        of any lane
      * @param distanceTolerance The allowable distance tolerance in meters between the vehicle and the centerline
      * @param lookBackPeriodDays Specifies the number of days worth of data that should be included in the assessment. Events outside of this period are removed from the list and not included in the list. 
      * 
      */
     @JsonIgnore
-    public LaneDirectionOfTravelAssessment getLaneDirectionOfTravelAssessment(double tolerance, double distanceTolerance, long lookBackPeriodDays){
+    public LaneDirectionOfTravelAssessment getLaneDirectionOfTravelAssessment(double defaultHeadingTolerance,
+           double headingToleranceFirstSegment, double distanceTolerance, long lookBackPeriodDays){
 
 
         // Prune Events
@@ -119,7 +124,10 @@ public class LaneDirectionOfTravelAggregator {
 
                 group.setLaneID(entry.getKey());
                 group.setSegmentID(groups.getKey());
-                
+
+                // Choose heading tolerance depending on whether this is the first segment
+                double headingTolerance =
+                        group.getSegmentID() == 1 ? headingToleranceFirstSegment : defaultHeadingTolerance;;
                 
                 int inTolerance = 0;
                 int outOfTolerance = 0;
@@ -127,7 +135,7 @@ public class LaneDirectionOfTravelAggregator {
                 double expectedHeading = 0;
                 for(LaneDirectionOfTravelEvent event: groups.getValue()){
                     expectedHeading = event.getExpectedHeading();
-                    if(Math.abs(event.getMedianVehicleHeading() - expectedHeading) > tolerance){
+                    if(CircleMath.getAngularDistanceDegrees(event.getMedianVehicleHeading(), expectedHeading) > headingTolerance){
                         outOfTolerance +=1;
                     }else{
                         inTolerance +=1;
@@ -140,11 +148,11 @@ public class LaneDirectionOfTravelAggregator {
 
                 group.setInToleranceEvents(inTolerance);
                 group.setOutOfToleranceEvents(outOfTolerance);
-                group.setMedianInToleranceHeading(MathFunctions.getMedian(inToleranceHeadings));
+                group.setMedianInToleranceHeading(MathFunctions.getMedianHeading(inToleranceHeadings));
                 group.setMedianInToleranceCenterlineDistance(MathFunctions.getMedian(inToleranceDistances));
                 group.setMedianCenterlineDistance(MathFunctions.getMedian(distances));
-                group.setMedianHeading(MathFunctions.getMedian(headings));
-                group.setTolerance(tolerance);
+                group.setMedianHeading(MathFunctions.getMedianHeading(headings));
+                group.setTolerance(headingTolerance);
                 group.setExpectedHeading(expectedHeading);
                 group.setDistanceFromCenterlineTolerance(distanceTolerance);
                 assessmentGroups.add(group);
@@ -180,17 +188,19 @@ public class LaneDirectionOfTravelAggregator {
 
     /**
      * This function returns an EventAssessment including a new Assessment, and the most recent event used to generate that Assessment.
-     * @param tolerance The allowable heading tolerance in degrees of vehicles for this assessment
+     * @param defaultHeadingTolerance The allowable heading tolerance in degrees of vehicles for this assessment
      * @param distanceTolerance The allowable distance tolerance in meters between the vehicle and the centerline
      * @param lookBackPeriodDays Specifies the number of days worth of data that should be included in the assessment. Events outside of this period are removed from the list and not included in the list. 
      * @return EventAssessment
      */
     @JsonIgnore
-    public EventAssessment getEventAssessmentPair(double tolerance, double distanceTolerance, long lookBackPeriodDays){
+    public EventAssessment getEventAssessmentPair(double defaultHeadingTolerance,
+           double headingToleranceFirstSegment, double distanceTolerance, long lookBackPeriodDays){
         EventAssessment eventAssessment =  new EventAssessment();
-        eventAssessment.setAssessment(getLaneDirectionOfTravelAssessment(tolerance, distanceTolerance, lookBackPeriodDays));
-        if(this.events.size() >0){
-            eventAssessment.setEvent(this.events.get(this.events.size()-1));
+        eventAssessment.setAssessment(getLaneDirectionOfTravelAssessment(
+                defaultHeadingTolerance, headingToleranceFirstSegment, distanceTolerance, lookBackPeriodDays));
+        if(!this.events.isEmpty()){
+            eventAssessment.setEvent(this.events.getLast());
         }
         return eventAssessment;
     }

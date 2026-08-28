@@ -21,6 +21,17 @@ public class CircleMath {
         return angle % 360;
     }
 
+    // Returns an equivalent angle wrapped into the range (-180, 180] degrees.
+    public static double boundAngleSignedDegrees(double angle){
+        double wrapped = angle % 360;
+        if (wrapped > 180) {
+            wrapped -= 360;
+        } else if (wrapped <= -180) {
+            wrapped += 360;
+        }
+        return wrapped;
+    }
+
     // converts a heading in degrees XY where positive rotation is counter-clockwise and 0 degrees is along the x axis
     // to an identical heading (in degrees) where 0 degrees is due north and positive rotation is to the east.
     public static double headingXYToHeadingFromNorth(double headingXY){
