@@ -5,3 +5,4 @@ jpo-conflictmonitor/bin/**
 .idea/
 *.class
 .claude/
+CLAUDE.md
