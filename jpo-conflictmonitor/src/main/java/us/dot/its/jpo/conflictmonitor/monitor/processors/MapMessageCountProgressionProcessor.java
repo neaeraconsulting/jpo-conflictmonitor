@@ -200,10 +200,7 @@ public class MapMessageCountProgressionProcessor extends ContextualProcessor<Rsu
         if (map1 == null && map2 == null) {
             return true;
         }
-        if (map1 == null) {
-            return false;
-        }
-        if (map2 == null) {
+        if (map1 == null || map2 == null) {
             return false;
         }
 

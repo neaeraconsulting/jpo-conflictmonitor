@@ -308,7 +308,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.5</version>
         <configuration>
-          <enableProcessChecker>all</enableProcessChecker>
+          <enableProcessChecker>ping</enableProcessChecker>
           <shutdown>exit</shutdown>
           <!-- Prevent JDK 21 warnings related to Mockito during tests. -->
           <!-- See:  https://github.com/mockito/mockito/issues/3037 -->
