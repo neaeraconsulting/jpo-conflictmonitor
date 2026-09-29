@@ -112,17 +112,6 @@ public class RtcmValidationTopology
         }
 
 
-        processedRtcmStream.process(() -> new RtcmZeroRateChecker(
-                parameters.getRollingPeriodSeconds(),
-                parameters.getOutputIntervalSeconds(),
-                parameters.getInputTopicName(),
-                LATEST_TIMESTAMP_STORE
-        ), LATEST_TIMESTAMP_STORE)
-                .to(parameters.getBroadcastRateTopicName(),
-                        Produced.with(
-                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuStationIdKey(),
-                                JsonSerdes.RtcmBroadcastRateEvent()
-                        ).withStreamPartitioner(new RsuIdPartitioner<>()));
 
         var countStream =
                 processedRtcmStream

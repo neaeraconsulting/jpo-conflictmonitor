@@ -49,7 +49,8 @@ public class BsmMessageCountProgressionTopology
 
         final String processedBsmStateStore = parameters.getProcessedBsmStateStoreName();
         final String latestBsmStateStore = parameters.getLatestBsmStateStoreName();
-        final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
+        final Duration retentionTime = Duration.ofMillis(
+                (parameters.getBufferTimeMs() * parameters.getBufferGracePeriodMs()) * 2L);
 
         builder.addStateStore(
                 Stores.versionedKeyValueStoreBuilder(
