@@ -29,6 +29,9 @@ public abstract class BroadcastRateAssessment extends Assessment {
     protected TimestampType timestampType;
 
 
+    /**
+     * @param percentToPass percent (per 100) of messages without violations required to pass
+     */
     public void setPercentToPass(double percentToPass) {
         if (percentToPass < 0 || percentToPass > 100.0) {
             throw new IllegalArgumentException("percent must be between 0 and 100.");
@@ -36,21 +39,25 @@ public abstract class BroadcastRateAssessment extends Assessment {
         this.percentToPass = percentToPass;
     }
 
+    /** @return percent (per 100) of messages with pair violations */
     public double getPercentPairViolations() {
         if (numberOfMessages <= 0) return 0;
         return 100.0 * (double)numberOfPairViolations / (double) numberOfMessages;
     }
 
+    /** @return percent (per 100) of messages with duration violations */
     public double getPercentDurationViolations() {
         if (numberOfMessages <= 0) return 0;
         return 100.0 * (double)numberOfDurationViolations / (double) numberOfMessages;
     }
 
+    /** @return true if pair violations are within the allowed percent */
     public boolean isPairComparisonPass() {
         double maxFailPercent = 100.0 - percentToPass;
         return getPercentPairViolations() <= maxFailPercent;
     }
 
+    /** @return true if duration violations are within the allowed percent */
     public boolean isDurationComparisonPass() {
         double maxFailPercent = 100.0 - percentToPass;
         return getPercentDurationViolations() <= maxFailPercent;
@@ -58,6 +65,7 @@ public abstract class BroadcastRateAssessment extends Assessment {
 
 
 
+    /** @return true if both pair and duration comparisons pass */
     public boolean isPass() {
         return isPairComparisonPass() && isDurationComparisonPass();
     }
