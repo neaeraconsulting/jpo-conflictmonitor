@@ -152,24 +152,6 @@ public class MapValidationTopology
 
 
 
-        // Save the timestamp of the latest message for each key in a state store to be queried by the zero-check task
-        // Disable zero rate checker because we have other methods to verify if messages are interrupted and it
-        // generates too many events that obscure the more interesting events.
-//        processedMapStream.process(() ->
-//                        new MapZeroRateChecker(
-//                            parameters.getRollingPeriodSeconds(),
-//                            parameters.getOutputIntervalSeconds(),
-//                            parameters.getInputTopicName(),
-//                            LATEST_TIMESTAMP_STORE
-//                ), LATEST_TIMESTAMP_STORE)
-//                // Emit zero-rate events to the topic
-//                .to(parameters.getBroadcastRateTopicName(),
-//                        Produced.with(
-//                                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-//                                JsonSerdes.MapBroadcastRateEvent(),
-//                                new IntersectionIdPartitioner<RsuIntersectionKey, MapBroadcastRateEvent>())
-//                );
-
 
         // Perform count for Broadcast Rate analysis
         KStream<Windowed<RsuIntersectionKey>, Long> countStream = 
