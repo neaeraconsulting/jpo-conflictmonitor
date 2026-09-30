@@ -1,7 +1,6 @@
-package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation;
+package us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.map;
 
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -9,20 +8,16 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
+import org.apache.kafka.common.utils.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.validation.map.MapMinimumDataAggregationStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.map.MapTimestampDeltaAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.timestamp_delta.map.MapTimestampDeltaStreamsAlgorithm;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationParameters;
-import us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.map.MapValidationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.models.IntersectionRegion;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.ProcessingTimePeriod;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.MapBroadcastRateEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.minimum_data.MapMinimumDataEvent;
 import us.dot.its.jpo.conflictmonitor.monitor.serialization.JsonSerdes;
+import us.dot.its.jpo.conflictmonitor.monitor.topologies.validation.TimestampExtractorForBroadcastRate;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.LineString;
@@ -39,9 +34,7 @@ import static us.dot.its.jpo.conflictmonitor.monitor.algorithms.validation.Valid
  * <p>Produces {@link MapBroadcastRateEvent}s and {@link MapMinimumDataEvent}s
  */
 @Component(DEFAULT_MAP_VALIDATION_ALGORITHM)
-public class MapValidationTopology 
-    extends BaseValidationTopology<MapValidationParameters>
-    implements MapValidationStreamsAlgorithm {
+public class MapValidationTopology extends BaseMapValidationTopology {
 
     private static final Logger logger = LoggerFactory.getLogger(MapValidationTopology.class);
     @Override
@@ -51,48 +44,10 @@ public class MapValidationTopology
 
     private static final String LATEST_TIMESTAMP_STORE = "latest-timestamp-store";
 
-    MapTimestampDeltaStreamsAlgorithm timestampDeltaAlgorithm;
-    MapMinimumDataAggregationStreamsAlgorithm minimumDataAggregationAlgorithm;
-
-    @Override
-    public MapTimestampDeltaAlgorithm getTimestampDeltaAlgorithm() {
-        return timestampDeltaAlgorithm;
-    }
-
-    @Override
-    public void setTimestampDeltaAlgorithm(MapTimestampDeltaAlgorithm timestampDeltaAlgorithm) {
-        // Enforce the algorithm being a Streams algorithm
-        if (timestampDeltaAlgorithm instanceof MapTimestampDeltaStreamsAlgorithm timestampDeltaStreamsAlgorithm) {
-            this.timestampDeltaAlgorithm = timestampDeltaStreamsAlgorithm;
-        } else {
-            throw new IllegalArgumentException("algorithm is not an instance of MapTimestampDeltaStreamsAlgorithm");
-        }
-    }
-
-    @Override
-    public void setMinimumDataAggregationAlgorithm(MapMinimumDataAggregationAlgorithm minimumDataAggregationAlgorithm) {
-        // Enforce the algorithm being a Streams algorithm
-        if (minimumDataAggregationAlgorithm instanceof MapMinimumDataAggregationStreamsAlgorithm streamsAlgorithm) {
-            this.minimumDataAggregationAlgorithm = streamsAlgorithm;
-        } else {
-            throw new IllegalArgumentException("Algorithm is not an instance of MapMinimumDataAggregationStreamsAlgorithm");
-        }
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-
-        if (timestampDeltaAlgorithm == null) {
-            throw new IllegalStateException("MapTimestampDeltaAlgorithm is not set.");
-        }
-    }
-
     public Topology buildTopology() {
 
         var builder = new StreamsBuilder();
 
-        // Create state store for zero count
         var zeroCountStoreBuilder =
                 Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(LATEST_TIMESTAMP_STORE),
                         us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
@@ -100,61 +55,10 @@ public class MapValidationTopology
 
         builder.addStateStore(zeroCountStoreBuilder);
 
-        KStream<RsuIntersectionKey, ProcessedMap<LineString>> processedMapStream = builder
-            .stream(parameters.getInputTopicName(), 
-                Consumed.with(
-                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(), 
-                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.ProcessedMapGeoJson())
-                        .withTimestampExtractor(new TimestampExtractorForBroadcastRate())
-            );
-
-        // timestamp delta plugin after reading processed MAPs
-        timestampDeltaAlgorithm.buildTopology(builder, processedMapStream);
-
-        // Extract validation info for Minimum Data events
-        KStream<RsuIntersectionKey, MapMinimumDataEvent> minDataStream = processedMapStream
-            // Filter out messages that are valid
-            .filter((key, value) -> value.getProperties() != null && !value.getProperties().getCti4501Conformant())
-           
-            // Produce events for the messages that have validation errors
-            .map((key, value) -> {
-                var minDataEvent = new MapMinimumDataEvent();
-                var valMsgList = value.getProperties().getValidationMessages();
-                var timestamp = TimestampExtractorForBroadcastRate.extractTimestamp(value);
-                populateMinDataEvent(key, minDataEvent, valMsgList, parameters.getRollingPeriodSeconds(), 
-                    timestamp);
-                return KeyValue.pair(key, minDataEvent);
-            });
-
-        
-        minDataStream = minDataStream.peek((key, value) -> {
-            var intersectionKey = IntersectionRegion.fromRsuIntersectionKey(key);
-            if (parameters.getDebug(intersectionKey)) {
-                logger.info("MAP Min Data Event for intersection {}", intersectionKey);
-            }
-        });
-
-        // If aggregation is enabled, don't send individual events to the topic
-        // This is a read-only flag, so the subtopology for the unchosen option is not constructed at all
-        if (parameters.isAggregateMinimumDataEvents()) {
-            // Aggregate
-            minimumDataAggregationAlgorithm.buildTopology(builder, minDataStream);
-        } else {
-            // Don't aggregate
-            minDataStream.to(parameters.getMinimumDataTopicName(),
-                    Produced.with(
-                            us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
-                            JsonSerdes.MapMinimumDataEvent(),
-                            new IntersectionIdPartitioner<RsuIntersectionKey, MapMinimumDataEvent>())
-            );
-        }
-
-
-
-
+        KStream<RsuIntersectionKey, ProcessedMap<LineString>> processedMapStream = buildMinimumDataSubtopology(builder);
 
         // Perform count for Broadcast Rate analysis
-        KStream<Windowed<RsuIntersectionKey>, Long> countStream = 
+        KStream<Windowed<RsuIntersectionKey>, Long> countStream =
             processedMapStream
                 .mapValues((value) -> 1) // Map the value to the constant int 1 (key remains the same)
                 .groupByKey(
@@ -183,9 +87,9 @@ public class MapValidationTopology
                 logger.info("Map Count {} {}", windowedKey, value);
             }
         });
-        
 
-        KStream<RsuIntersectionKey, MapBroadcastRateEvent> eventStream = countStream            
+
+        KStream<RsuIntersectionKey, MapBroadcastRateEvent> eventStream = countStream
             .filter((windowedKey, value) -> {
                 if (value != null) {
                     long counts = value.longValue();
@@ -202,7 +106,7 @@ public class MapValidationTopology
                 event.setRoadRegulatorID(windowedKey.key().getRegion());
                 event.setTopicName(parameters.getInputTopicName());
                 ProcessingTimePeriod timePeriod = new ProcessingTimePeriod();
-                
+
                 // Grab the timestamps from the time window
                 timePeriod.setBeginTimestamp(windowedKey.window().startTime().toEpochMilli());
                 timePeriod.setEndTimestamp(windowedKey.window().endTime().toEpochMilli());
@@ -213,22 +117,22 @@ public class MapValidationTopology
                 return KeyValue.pair(windowedKey.key(), event);
             });
 
-        
+
         eventStream = eventStream.peek((key, event) -> {
             var intersectionKey = IntersectionRegion.fromRsuIntersectionKey(key);
             if (parameters.getDebug(intersectionKey)) {
                 logger.info("MAP Broadcast Rate {}, {}", key, event);
             }
         });
-        
+
 
         eventStream.to(parameters.getBroadcastRateTopicName(),
             Produced.with(
-                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(), 
-                JsonSerdes.MapBroadcastRateEvent(), 
+                us.dot.its.jpo.geojsonconverter.serialization.JsonSerdes.RsuIntersectionKey(),
+                JsonSerdes.MapBroadcastRateEvent(),
                 new IntersectionIdPartitioner<RsuIntersectionKey, MapBroadcastRateEvent>())
         );
-        
+
         return builder.build(streamsProperties);
     }
 

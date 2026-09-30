@@ -28,7 +28,6 @@ public abstract class BroadcastRateAssessment extends Assessment {
 
     protected TimestampType timestampType;
 
-
     /**
      * @param percentToPass percent (per 100) of messages without violations required to pass
      */
@@ -64,8 +63,7 @@ public abstract class BroadcastRateAssessment extends Assessment {
     }
 
 
-
-    /** @return true if both pair and duration comparisons pass */
+    /** @return true if overall pass */
     public boolean isPass() {
         return isPairComparisonPass() && isDurationComparisonPass();
     }
