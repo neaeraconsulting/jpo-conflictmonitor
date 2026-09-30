@@ -311,6 +311,12 @@ kafka.topics:
     - name: topic.CmDynamicLaneActivationMetrics
       cleanupPolicy: delete
       retentionMs: 300000
+    - name: topic.CmSpatBroadcastRateNotification
+      cleanupPolicy: compact
+    - name: topic.CmMapBroadcastRateNotification
+      cleanupPolicy: compact
+    - name: topic.CmRtcmBroadcastRateNotification
+      cleanupPolicy: compact
 
 
 # Connection of Travel
@@ -504,9 +510,11 @@ spat.time.change.details:
 
 # SPAT Validation
 spat.validation:
-  algorithm: defaultSpatValidationAlgorithm
+  #algorithm: defaultSpatValidationAlgorithm
+  algorithm: cti4501V2SpatValidationAlgorithm
   inputTopicName: topic.ProcessedSpat
   broadcastRateTopicName: topic.CmSpatBroadcastRateEvents
+  broadcastRateNotificationTopicName: topic.CmSpatBroadcastRateNotification
   minimumDataTopicName: topic.CmSpatMinimumDataEvents
   rollingPeriodSeconds: 10
   outputIntervalSeconds: 5
@@ -515,6 +523,19 @@ spat.validation:
   upperBound: 110
   debug: false
   aggregateMinimumDataEvents: ${ENABLE_AGGREGATE_SPAT_MINIMUM_DATA_EVENTS:false}
+  v2-broadcast-rate-buffer-size-seconds: 5
+  v2-broadcast-rate-buffer-grace-period-ms: 500
+  v2-broadcast-rate-lower-bound-pair-separation-ms: 75
+  v2-broadcast-rate-upper-bound-pair-separation-ms: 125
+  v2-broadcast-rate-lower-bound-duration-per-10-messages-ms: 975
+  v2-broadcast-rate-upper-bound-duration-per-10-messages-ms: 1025
+  v2-broadcast-rate-conformance-percent: 90
+  v2-broadcast-rate-max-outlier-pair-separation-ms: 300
+  v2-broadcast-rate-assessment-window-duration: 1
+  v2-broadcast-rate-assessment-window-duration-units: HOURS
+  v2-broadcast-rate-assessment-window-grace-period-ms: 500
+
+
 
 
 # Intersection Reference Alignment Notification
