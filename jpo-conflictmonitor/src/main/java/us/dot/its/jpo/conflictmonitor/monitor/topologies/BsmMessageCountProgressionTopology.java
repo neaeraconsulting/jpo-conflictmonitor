@@ -18,6 +18,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.bsm_message
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.bsm_message_count_progression.BsmMessageCountProgressionStreamsAlgorithm;
 
+import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmTimestampExtractor;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuLogKey;
 import us.dot.its.jpo.geojsonconverter.pojos.geojson.bsm.ProcessedBsm;
@@ -48,7 +49,8 @@ public class BsmMessageCountProgressionTopology
 
         final String processedBsmStateStore = parameters.getProcessedBsmStateStoreName();
         final String latestBsmStateStore = parameters.getLatestBsmStateStoreName();
-        final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
+        final Duration retentionTime = Duration.ofMillis(
+                (parameters.getBufferTimeMs() * parameters.getBufferGracePeriodMs()) * 2L);
 
         builder.addStateStore(
                 Stores.versionedKeyValueStoreBuilder(
@@ -67,8 +69,9 @@ public class BsmMessageCountProgressionTopology
         );
         KStream<RsuLogKey, ProcessedBsm<Point>> inputStream = builder.stream(parameters.getBsmInputTopicName(),
                 Consumed.with(
-                        JsonSerdes.RsuLogKey(),
-                        JsonSerdes.ProcessedBsm()));
+                            JsonSerdes.RsuLogKey(),
+                            JsonSerdes.ProcessedBsm())
+                        .withTimestampExtractor(new BsmTimestampExtractor()));
 
 
         var eventStream = inputStream
