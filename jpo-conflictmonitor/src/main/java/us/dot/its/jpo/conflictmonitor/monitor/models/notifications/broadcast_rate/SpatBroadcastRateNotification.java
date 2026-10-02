@@ -1,8 +1,10 @@
 package us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate;
 
-import us.dot.its.jpo.conflictmonitor.monitor.models.events.broadcast_rate.SpatBroadcastRateEvent;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import us.dot.its.jpo.conflictmonitor.monitor.models.assessments.broadcast_rate.SpatBroadcastRateAssessment;
 
-public class SpatBroadcastRateNotification extends BroadcastRateNotification<SpatBroadcastRateEvent> {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class SpatBroadcastRateNotification extends BroadcastRateNotification<SpatBroadcastRateAssessment> {
 
     public SpatBroadcastRateNotification() {
         super("SpatBroadcastRateNotification");

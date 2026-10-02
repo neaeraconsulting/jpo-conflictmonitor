@@ -17,6 +17,8 @@ import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.app_health.KafkaStreamsAnomalyNotification;
+import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.MapBroadcastRateNotification;
+import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.broadcast_rate.SpatBroadcastRateNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.MapTimestampDeltaNotification;
 import us.dot.its.jpo.conflictmonitor.monitor.models.notifications.timestamp_delta.SpatTimestampDeltaNotification;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
@@ -52,7 +54,9 @@ import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
         @JsonSubTypes.Type(value = SignalStateConflictNotificationAggregation.class, name = "SignalStateConflictNotificationAggregation"),
         @JsonSubTypes.Type(value = TimeChangeDetailsNotificationAggregation.class, name = "TimeChangeDetailsNotificationAggregation"),
         @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentNotification.class, name = "RevocableEnabledLaneAlignmentNotification"),
-        @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentNotificationAggregation.class, name = "RevocableEnabledLaneAlignmentNotificationAggregation")
+        @JsonSubTypes.Type(value = RevocableEnabledLaneAlignmentNotificationAggregation.class, name = "RevocableEnabledLaneAlignmentNotificationAggregation"),
+        @JsonSubTypes.Type(value = SpatBroadcastRateNotification.class, name = "SpatBroadcastRateNotification"),
+        @JsonSubTypes.Type(value = MapBroadcastRateNotification.class, name = "MapBroadcastRateNotification")
 })
 @Getter
 @Setter
