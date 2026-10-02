@@ -6,6 +6,8 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import us.dot.its.jpo.conflictmonitor.monitor.metrics.KafkaStreamsMetricsBinder;
 
 
 import java.util.Properties;
@@ -40,6 +42,9 @@ public abstract class BaseStreamsTopology<TParams> {
     protected KafkaStreams.StateListener stateListener;
     protected StreamsUncaughtExceptionHandler exceptionHandler;
 
+    @Autowired(required = false)
+    private KafkaStreamsMetricsBinder kafkaStreamsMetricsBinder;
+
 
     public void start() {
         validate();
@@ -49,6 +54,9 @@ public abstract class BaseStreamsTopology<TParams> {
         if (exceptionHandler != null) streams.setUncaughtExceptionHandler(exceptionHandler);
         if (stateListener != null) streams.setStateListener(stateListener);
         streams.start();
+        if (kafkaStreamsMetricsBinder != null) {
+            kafkaStreamsMetricsBinder.bind(this.getClass().getSimpleName(), streamsProperties, streams);
+        }
         getLogger().info("Started {}.", this.getClass().getSimpleName());
     }
 
@@ -81,6 +89,9 @@ public abstract class BaseStreamsTopology<TParams> {
 
     public void stop() {
         getLogger().info("Stopping {}.", this.getClass().getSimpleName());
+        if (kafkaStreamsMetricsBinder != null) {
+            kafkaStreamsMetricsBinder.unbind(this.getClass().getSimpleName(), streamsProperties);
+        }
         if (streams != null) {
             streams.close();
             streams.cleanUp();

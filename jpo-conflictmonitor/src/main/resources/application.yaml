@@ -5,6 +5,38 @@ artifactId: ^project.artifactId^
 version: ^project.version^
 server.port: 8082
 
+# Spring Boot Actuator / Micrometer
+# Preferred scrape URL: /health/prometheus (AppHealthMonitor; Prometheus text format)
+# /actuator/prometheus is intercepted by PrometheusScrapeFilter (also text format)
+# Debug: /health/prometheus-debug
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,threaddump,heapdump
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    # Built-in OpenMetrics negotiation returns HTTP 500; use filter + /health/prometheus instead
+    prometheus:
+      enabled: false
+  metrics:
+    tags:
+      application: conflictmonitor
+    enable:
+      jvm: true
+      process: true
+      system: true
+      kafka: false
+  prometheus:
+    metrics:
+      export:
+        properties:
+          io.prometheus.exporter.exemplarsOnAllMetricTypes: "false"
+spring.autoconfigure.exclude: org.springframework.boot.actuate.autoconfigure.metrics.KafkaMetricsAutoConfiguration
+
 # Kafka properties
 spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 spring.kafka.producer.properties.max-request.size: 2097152
