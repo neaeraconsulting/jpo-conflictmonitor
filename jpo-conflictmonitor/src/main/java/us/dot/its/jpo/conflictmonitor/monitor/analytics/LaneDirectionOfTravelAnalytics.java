@@ -110,15 +110,13 @@ public class LaneDirectionOfTravelAnalytics implements LaneDirectionOfTravelAlgo
                     Optional<Double> optHeading = BsmUtils.getHeading(bsm);
                     if (optHeading.isPresent()) {
                         headings.add(optHeading.get());
-                    } else {
-                        headings.add(null);
                     }
                     offsetDistances.add(distance);
                     times.add(BsmTimestampExtractor.getBsmTimestamp(bsm));
                     
                 }
 
-                double medianHeading = MathFunctions.getMedian(headings);
+                double medianHeading = MathFunctions.getMedianHeading(headings);
                 double medianDistance = MathFunctions.getMedian(offsetDistances);
                 long medianTimestamp = MathFunctions.getMedianTimestamp(times);
 

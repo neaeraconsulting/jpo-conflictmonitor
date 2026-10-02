@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.dot.its.jpo.conflictmonitor.monitor.models.EventAssessment;
 import us.dot.its.jpo.conflictmonitor.monitor.models.events.LaneDirectionOfTravelEvent;
+import us.dot.its.jpo.conflictmonitor.monitor.utils.CircleMath;
 import us.dot.its.jpo.conflictmonitor.monitor.utils.MathFunctions;
 import us.dot.its.jpo.geojsonconverter.DateJsonMapper;
 
@@ -127,7 +128,7 @@ public class LaneDirectionOfTravelAggregator {
                 double expectedHeading = 0;
                 for(LaneDirectionOfTravelEvent event: groups.getValue()){
                     expectedHeading = event.getExpectedHeading();
-                    if(Math.abs(event.getMedianVehicleHeading() - expectedHeading) > tolerance){
+                    if(CircleMath.getAngularDistanceDegrees(event.getMedianVehicleHeading(), expectedHeading) > tolerance){
                         outOfTolerance +=1;
                     }else{
                         inTolerance +=1;
@@ -140,10 +141,10 @@ public class LaneDirectionOfTravelAggregator {
 
                 group.setInToleranceEvents(inTolerance);
                 group.setOutOfToleranceEvents(outOfTolerance);
-                group.setMedianInToleranceHeading(MathFunctions.getMedian(inToleranceHeadings));
+                group.setMedianInToleranceHeading(MathFunctions.getMedianHeading(inToleranceHeadings));
                 group.setMedianInToleranceCenterlineDistance(MathFunctions.getMedian(inToleranceDistances));
                 group.setMedianCenterlineDistance(MathFunctions.getMedian(distances));
-                group.setMedianHeading(MathFunctions.getMedian(headings));
+                group.setMedianHeading(MathFunctions.getMedianHeading(headings));
                 group.setTolerance(tolerance);
                 group.setExpectedHeading(expectedHeading);
                 group.setDistanceFromCenterlineTolerance(distanceTolerance);
