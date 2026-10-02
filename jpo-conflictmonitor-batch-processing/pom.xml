@@ -36,7 +36,7 @@
         <dependency>
             <groupId>usdot.jpo.ode</groupId>
             <artifactId>jpo-geojsonconverter</artifactId>
-            <version>3.3.0</version>
+            <version>3.4.0-alpha4</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

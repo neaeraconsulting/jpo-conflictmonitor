@@ -13,7 +13,10 @@ public class SpatTimestampExtractor implements TimestampExtractor {
     public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
         ProcessedSpat spat = (ProcessedSpat) record.value();
         if (spat != null) {
-            return getSpatTimestamp(spat);
+            long timestamp = getSpatTimestamp(spat);
+            if (timestamp != -1) {
+                return timestamp;
+            }
         }
 
         return partitionTime;

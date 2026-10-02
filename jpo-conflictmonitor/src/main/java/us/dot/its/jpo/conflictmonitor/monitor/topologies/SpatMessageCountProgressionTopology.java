@@ -16,6 +16,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_messag
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.aggregation.spat_message_count_progression.SpatMessageCountProgressionAggregationStreamsAlgorithm;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.spat_message_count_progression.SpatMessageCountProgressionStreamsAlgorithm;
+import us.dot.its.jpo.conflictmonitor.monitor.models.spat.SpatTimestampExtractor;
 import us.dot.its.jpo.geojsonconverter.partitioner.IntersectionIdPartitioner;
 import us.dot.its.jpo.geojsonconverter.partitioner.RsuIntersectionKey;
 import us.dot.its.jpo.geojsonconverter.pojos.spat.ProcessedSpat;
@@ -45,7 +46,8 @@ public class SpatMessageCountProgressionTopology
 
         final String processedSpatStateStore = parameters.getProcessedSpatStateStoreName();
         final String latestSpatStateStore = parameters.getLatestSpatStateStoreName();
-        final Duration retentionTime = Duration.ofMillis(parameters.getBufferTimeMs());
+        final Duration retentionTime = Duration.ofMillis(
+                (parameters.getBufferTimeMs() + parameters.getBufferGracePeriodMs()) * 2L);
 
         builder.addStateStore(
                 Stores.versionedKeyValueStoreBuilder(
@@ -63,8 +65,10 @@ public class SpatMessageCountProgressionTopology
                 )
         );
 
-        KStream<RsuIntersectionKey, ProcessedSpat> inputStream = builder.stream(parameters.getSpatInputTopicName(),
-                Consumed.with(JsonSerdes.RsuIntersectionKey(), JsonSerdes.ProcessedSpat()));
+        KStream<RsuIntersectionKey, ProcessedSpat> inputStream =
+                builder.stream(parameters.getSpatInputTopicName(),
+                    Consumed.with(JsonSerdes.RsuIntersectionKey(), JsonSerdes.ProcessedSpat())
+                            .withTimestampExtractor(new SpatTimestampExtractor()));
 
 
         var eventStream = inputStream
