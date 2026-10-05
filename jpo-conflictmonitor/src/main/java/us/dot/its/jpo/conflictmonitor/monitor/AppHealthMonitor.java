@@ -39,6 +39,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.AlgorithmParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.StreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.config.ConfigParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.health.TopologyGraph;
+import us.dot.its.jpo.conflictmonitor.monitor.metrics.StreamsThreadMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.DefaultConfigMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfigMap;
@@ -232,53 +233,13 @@ public class AppHealthMonitor {
             }
             summary.setState(streams.state());
 
-            double processRatioSum = 0.0;
-            int processRatioCount = 0;
-            double processLatencyAvgSum = 0.0;
-            int processLatencyCount = 0;
-            double processLatencyMax = 0.0;
-            double pollRatioSum = 0.0;
-            int pollRatioCount = 0;
-            double recordsProcessedRateSum = 0.0;
-
-            var metrics = streams.metrics();
-            for (Map.Entry<MetricName, ? extends org.apache.kafka.common.Metric> metricEntry : metrics.entrySet()) {
-                MetricName metricName = metricEntry.getKey();
-                Object value = metricEntry.getValue().metricValue();
-                if (!(value instanceof Number number)) {
-                    continue;
-                }
-                double numeric = number.doubleValue();
-                String group = metricName.group();
-                String metric = metricName.name();
-
-                if ("stream-thread-metrics".equals(group)) {
-                    switch (metric) {
-                        case "process-ratio" -> {
-                            processRatioSum += numeric;
-                            processRatioCount++;
-                        }
-                        case "process-latency-avg" -> {
-                            processLatencyAvgSum += numeric;
-                            processLatencyCount++;
-                        }
-                        case "process-latency-max" -> processLatencyMax = Math.max(processLatencyMax, numeric);
-                        case "poll-ratio" -> {
-                            pollRatioSum += numeric;
-                            pollRatioCount++;
-                        }
-                        case "process-rate" -> recordsProcessedRateSum += numeric;
-                        default -> { }
-                    }
-                }
-            }
-
-            summary.setAvgProcessRatio(processRatioCount > 0 ? processRatioSum / processRatioCount : 0.0);
-            summary.setAvgProcessLatencyMs(processLatencyCount > 0 ? processLatencyAvgSum / processLatencyCount : 0.0);
-            summary.setMaxProcessLatencyMs(processLatencyMax);
-            summary.setAvgPollRatio(pollRatioCount > 0 ? pollRatioSum / pollRatioCount : 0.0);
-            summary.setProcessRate(recordsProcessedRateSum);
-            summary.setThreadCount(processRatioCount);
+            var metrics = StreamsThreadMetrics.from(streams.metrics());
+            summary.setAvgProcessRatio(metrics.processRatio());
+            summary.setAvgProcessLatencyMs(metrics.processLatencyAvgMs());
+            summary.setMaxProcessLatencyMs(metrics.processLatencyMaxMs());
+            summary.setAvgPollRatio(metrics.pollRatio());
+            summary.setProcessRate(metrics.processRate());
+            summary.setThreadCount(metrics.threadCount());
             summaries.add(summary);
         }
 

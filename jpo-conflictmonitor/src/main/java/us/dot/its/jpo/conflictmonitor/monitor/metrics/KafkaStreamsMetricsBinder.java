@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class KafkaStreamsMetricsBinder {
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaStreamsMetricsBinder.class);
-    private static final String THREAD_GROUP = "stream-thread-metrics";
 
     private final MeterRegistry meterRegistry;
     private final ConcurrentHashMap<String, TopologyMetricSample> samples = new ConcurrentHashMap<>();
@@ -126,15 +125,6 @@ public class KafkaStreamsMetricsBinder {
             return;
         }
 
-        double processRatioSum = 0;
-        int processRatioCount = 0;
-        double processLatencyAvgSum = 0;
-        int processLatencyCount = 0;
-        double processLatencyMax = 0;
-        double pollRatioSum = 0;
-        int pollRatioCount = 0;
-        double processRateSum = 0;
-
         Map<MetricName, ? extends Metric> metrics;
         try {
             metrics = streams.metrics();
@@ -143,40 +133,12 @@ public class KafkaStreamsMetricsBinder {
             return;
         }
 
-        for (Map.Entry<MetricName, ? extends Metric> entry : metrics.entrySet()) {
-            MetricName name = entry.getKey();
-            if (!THREAD_GROUP.equals(name.group())) {
-                continue;
-            }
-            Object value = entry.getValue().metricValue();
-            if (!(value instanceof Number number)) {
-                continue;
-            }
-            double numeric = number.doubleValue();
-            switch (name.name()) {
-                case "process-ratio" -> {
-                    processRatioSum += numeric;
-                    processRatioCount++;
-                }
-                case "process-latency-avg" -> {
-                    processLatencyAvgSum += numeric;
-                    processLatencyCount++;
-                }
-                case "process-latency-max" -> processLatencyMax = Math.max(processLatencyMax, numeric);
-                case "poll-ratio" -> {
-                    pollRatioSum += numeric;
-                    pollRatioCount++;
-                }
-                case "process-rate" -> processRateSum += numeric;
-                default -> { }
-            }
-        }
-
-        sample.processRatio = processRatioCount > 0 ? processRatioSum / processRatioCount : 0;
-        sample.processLatencyAvgMs = processLatencyCount > 0 ? processLatencyAvgSum / processLatencyCount : 0;
-        sample.processLatencyMaxMs = processLatencyMax;
-        sample.pollRatio = pollRatioCount > 0 ? pollRatioSum / pollRatioCount : 0;
-        sample.processRate = processRateSum;
+        var aggregate = StreamsThreadMetrics.from(metrics);
+        sample.processRatio = aggregate.processRatio();
+        sample.processLatencyAvgMs = aggregate.processLatencyAvgMs();
+        sample.processLatencyMaxMs = aggregate.processLatencyMaxMs();
+        sample.pollRatio = aggregate.pollRatio();
+        sample.processRate = aggregate.processRate();
     }
 
     private static final class TopologyMetricSample {
