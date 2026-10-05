@@ -21,11 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Publishes a small, Prometheus-safe set of per-topology Kafka Streams compute gauges.
- * <p>
- * Avoids {@link io.micrometer.core.instrument.binder.kafka.KafkaStreamsMetrics}, which binds
- * every Kafka metric and frequently registers the same meter name with different tag keys
- * across multiple Streams apps — causing {@code /actuator/prometheus} to return HTTP 500.
+ * Publishes selected Kafka Streams thread metrics as per-topology compute gauges.
+ * Aggregates thread ratios and latencies and sums processing rates for each topology.
  */
 @Component
 public class KafkaStreamsMetricsBinder {

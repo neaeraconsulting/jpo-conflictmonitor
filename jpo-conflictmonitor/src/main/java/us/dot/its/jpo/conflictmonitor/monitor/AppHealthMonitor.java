@@ -6,9 +6,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.streams.KafkaStreams;
@@ -93,79 +90,6 @@ public class AppHealthMonitor {
     @Autowired ConfigTopology configTopology;
     @Autowired MapIndex mapIndex;
     @Autowired IntersectionEventTopology intersectionEventTopology;
-    @Autowired MeterRegistry meterRegistry;
-    @Autowired(required = false) PrometheusMeterRegistry prometheusMeterRegistry;
-
-    /**
-     * Prometheus text scrape on the proven /health controller.
-     * Prefer this over /actuator/prometheus: curl localhost:8082/health/prometheus
-     */
-    @GetMapping(value = "/prometheus", produces = "text/plain;version=0.0.4;charset=utf-8")
-    public ResponseEntity<String> prometheusText() {
-        PrometheusMeterRegistry prometheus = resolvePrometheusRegistry();
-        if (prometheus == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .body("No PrometheusMeterRegistry available; type=" + meterRegistry.getClass().getName());
-        }
-        try {
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("text/plain;version=0.0.4;charset=utf-8"))
-                    .body(prometheus.scrape());
-        } catch (Exception e) {
-            logger.error("Prometheus text scrape failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .body(e.getClass().getName() + ": " + e.getMessage());
-        }
-    }
-
-    /**
-     * Debug scrape formats. Use when diagnosing scrape failures.
-     */
-    @GetMapping(value = "/prometheus-debug", produces = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity<String> prometheusDebug() {
-        PrometheusMeterRegistry prometheus = resolvePrometheusRegistry();
-        if (prometheus == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .body("No PrometheusMeterRegistry available; type=" + meterRegistry.getClass().getName());
-        }
-        StringBuilder out = new StringBuilder();
-        try {
-            String body = prometheus.scrape();
-            out.append("prometheus text scrape OK, chars=").append(body.length()).append('\n');
-            out.append(body, 0, Math.min(body.length(), 2000)).append("\n\n");
-        } catch (Exception e) {
-            out.append("prometheus text scrape FAILED: ")
-                    .append(e.getClass().getName()).append(": ").append(e.getMessage()).append('\n');
-        }
-        try {
-            String openMetrics = prometheus.scrape("application/openmetrics-text; version=1.0.0; charset=utf-8");
-            out.append("openmetrics scrape OK, chars=").append(openMetrics.length()).append('\n');
-        } catch (Exception e) {
-            out.append("openmetrics scrape FAILED: ")
-                    .append(e.getClass().getName()).append(": ").append(e.getMessage()).append('\n');
-        }
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(out.toString());
-    }
-
-    private PrometheusMeterRegistry resolvePrometheusRegistry() {
-        if (prometheusMeterRegistry != null) {
-            return prometheusMeterRegistry;
-        }
-        if (meterRegistry instanceof PrometheusMeterRegistry prometheus) {
-            return prometheus;
-        }
-        if (meterRegistry instanceof CompositeMeterRegistry composite) {
-            for (MeterRegistry child : composite.getRegistries()) {
-                if (child instanceof PrometheusMeterRegistry prometheus) {
-                    return prometheus;
-                }
-            }
-        }
-        return null;
-    }
 
     /**
      * Returns a list of configuration and algorithm parameter objects.
@@ -200,7 +124,6 @@ public class AppHealthMonitor {
                 "properties",
                 "streams",
                 "streams/cpu",
-                "prometheus",
                 "spatial-indexes",
                 "spat-window-store",
                 "bsm-window-store",
