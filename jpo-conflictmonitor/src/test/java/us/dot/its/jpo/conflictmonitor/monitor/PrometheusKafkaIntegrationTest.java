@@ -1,10 +1,14 @@
 package us.dot.its.jpo.conflictmonitor.monitor;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -66,7 +70,10 @@ public class PrometheusKafkaIntegrationTest {
         KafkaStreams first = new KafkaStreams(topology, firstProperties);
         KafkaStreams second = new KafkaStreams(topology, secondProperties);
         KafkaStreams restarted = null;
-        try {
+        try (Admin admin = Admin.create(Map.of(
+                AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, broker.getBrokersAsString(),
+                AdminClientConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000,
+                AdminClientConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, 5000))) {
             startAndBind(first, firstProperties, "FirstTopology");
             startAndBind(second, secondProperties, "SecondTopology");
             kafkaTemplate.send("metrics-input", "key", "value").get(30, TimeUnit.SECONDS);
@@ -80,7 +87,11 @@ public class PrometheusKafkaIntegrationTest {
             }
 
             binder.unbind("FirstTopology", firstProperties);
-            first.close(Duration.ofSeconds(30));
+            assertTrue("First topology must finish closing before restart", first.close(Duration.ofSeconds(30)));
+            await().alias("First topology leaves its consumer group before restart")
+                    .atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                            assertTrue(admin.describeConsumerGroups(List.of("metrics-first"))
+                                    .all().get(5, TimeUnit.SECONDS).get("metrics-first").members().isEmpty()));
             assertEquals(0.0, processRate("FirstTopology", "metrics-first"), 0.0);
             assertStockScrapes();
 
@@ -120,7 +131,8 @@ public class PrometheusKafkaIntegrationTest {
 
     private void startAndBind(KafkaStreams streams, Properties properties, String topologyName) {
         streams.start();
-        await().atMost(Duration.ofSeconds(45)).until(() -> streams.state() == KafkaStreams.State.RUNNING);
+        await().alias(topologyName + " reaches RUNNING")
+                .atMost(Duration.ofSeconds(45)).until(() -> streams.state() == KafkaStreams.State.RUNNING);
         binder.bind(topologyName, properties, streams);
     }
 
@@ -139,6 +151,9 @@ public class PrometheusKafkaIntegrationTest {
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, broker.getBrokersAsString());
         properties.put(StreamsConfig.STATE_DIR_CONFIG, stateDirectory.getRoot().getAbsolutePath());
         properties.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 1);
+        // Streams retains group membership on close by default. This fixture needs an immediate
+        // rebalance on restart instead of waiting for the old member's 45-second session timeout.
+        properties.put(StreamsConfig.mainConsumerPrefix("internal.leave.group.on.close"), true);
         return properties;
     }
 

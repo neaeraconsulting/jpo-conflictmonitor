@@ -45,6 +45,34 @@ public class KafkaStreamsMetricsBinderTest {
     }
 
     @Test
+    public void restartingOneApplicationPreservesAnotherApplicationsGauges() {
+        Properties firstProperties = new Properties();
+        firstProperties.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "first");
+        Properties secondProperties = new Properties();
+        secondProperties.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "second");
+        binder.bind("Topology", firstProperties, streamsWithRate(10.0));
+        binder.bind("Topology", secondProperties, streamsWithRate(20.0));
+        var firstGauge = registry.get("cm.streams.process.rate")
+                .tags("topology", "Topology", "application_id", "first").gauge();
+        var secondGauge = registry.get("cm.streams.process.rate")
+                .tags("topology", "Topology", "application_id", "second").gauge();
+
+        binder.unbind("Topology", firstProperties);
+        assertEquals(0.0, firstGauge.value(), 0.0);
+        assertEquals(20.0, secondGauge.value(), 0.0);
+        binder.bind("Topology", firstProperties, streamsWithRate(30.0));
+        ReflectionTestUtils.invokeMethod(binder, "refreshAll");
+
+        assertEquals(30.0, firstGauge.value(), 0.0);
+        assertEquals(20.0, secondGauge.value(), 0.0);
+        assertSame(firstGauge, registry.get("cm.streams.process.rate")
+                .tags("topology", "Topology", "application_id", "first").gauge());
+        assertSame(secondGauge, registry.get("cm.streams.process.rate")
+                .tags("topology", "Topology", "application_id", "second").gauge());
+        assertEquals(10, registry.getMeters().size());
+    }
+
+    @Test
     public void missingInputsDoNotRegisterMetersAndApplicationIdDefaultsToTopology() {
         binder.bind("Topology", new Properties(), null);
         binder.bind("Topology", null, mock(KafkaStreams.class));
