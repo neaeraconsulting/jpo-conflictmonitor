@@ -5,6 +5,28 @@ artifactId: ^project.artifactId^
 version: ^project.version^
 server.port: 8082
 
+# Spring Boot Actuator / Micrometer
+# Scrape URL: /actuator/prometheus (stock Actuator endpoint)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,threaddump,heapdump
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: conflictmonitor
+    enable:
+      jvm: true
+      process: true
+      system: true
+
 # Kafka properties
 spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 spring.kafka.producer.properties.max-request.size: 2097152
@@ -810,5 +832,4 @@ metrics:
     algorithm: defaultDynamicLaneActivationMetricsAlgorithm
     debug: true
     output-metric-topic: topic.CmDynamicLaneActivationMetrics
-
 

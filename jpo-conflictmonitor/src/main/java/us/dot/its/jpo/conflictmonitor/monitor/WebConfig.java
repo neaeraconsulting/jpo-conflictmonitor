@@ -20,7 +20,7 @@ import java.util.List;
 public class WebConfig implements WebMvcConfigurer {
 
     @Override
-    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         JavaTimeModule module = new JavaTimeModule();
         module.addDeserializer(IntersectionConfig.class, new GenericJsonStringDeserializer<IntersectionConfig<?>>(IntersectionConfig.class));
         ObjectMapper mapper = new ObjectMapper();
@@ -28,6 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        // Preserve the default byte-array and resource converters used by Actuator.
         converters.addFirst(new MappingJackson2HttpMessageConverter(mapper));
         converters.addFirst(new StringHttpMessageConverter());  // Allow text/plain responses
     }
