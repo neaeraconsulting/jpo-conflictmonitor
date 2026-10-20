@@ -4,15 +4,12 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import jakarta.annotation.PreDestroy;
-import org.apache.kafka.common.Metric;
-import org.apache.kafka.common.MetricName;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -109,12 +106,7 @@ public class KafkaStreamsMetricsBinder {
 
     private void refreshAll() {
         for (TopologyMetricSample sample : samples.values()) {
-            try {
-                refresh(sample);
-            } catch (Exception e) {
-                logger.debug("Failed refreshing streams metrics for {}: {}",
-                        sample.topologyName, e.getMessage());
-            }
+            refresh(sample);
         }
     }
 
@@ -125,15 +117,19 @@ public class KafkaStreamsMetricsBinder {
             return;
         }
 
-        Map<MetricName, ? extends Metric> metrics;
+        // Kafka reports unavailable metrics with unchecked exceptions (e.g. IllegalStateException
+        // once streams are closing). Catch them here: an exception escaping to the scheduler
+        // would silently cancel all future refreshes.
+        StreamsThreadMetrics aggregate;
         try {
-            metrics = streams.metrics();
-        } catch (Exception e) {
+            aggregate = StreamsThreadMetrics.from(streams.metrics());
+        } catch (RuntimeException e) {
+            logger.debug("Failed refreshing streams metrics for {}: {}",
+                    sample.topologyName, e.getMessage());
             sample.reset();
             return;
         }
 
-        var aggregate = StreamsThreadMetrics.from(metrics);
         sample.processRatio = aggregate.processRatio();
         sample.processLatencyAvgMs = aggregate.processLatencyAvgMs();
         sample.processLatencyMaxMs = aggregate.processLatencyMaxMs();

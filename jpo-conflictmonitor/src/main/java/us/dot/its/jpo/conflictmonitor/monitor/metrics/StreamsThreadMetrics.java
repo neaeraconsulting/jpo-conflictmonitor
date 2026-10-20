@@ -42,6 +42,7 @@ public record StreamsThreadMetrics(double processRatio, double processLatencyAvg
                     pollSum += numeric;
                     pollCount++;
                 }
+                // Summed, not averaged: topology throughput is the total across threads.
                 case "process-rate" -> rateSum += numeric;
                 default -> { /* Other thread metrics do not contribute to compute summaries. */ }
             }

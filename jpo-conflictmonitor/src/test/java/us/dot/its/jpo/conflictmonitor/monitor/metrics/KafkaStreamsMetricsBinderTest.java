@@ -106,6 +106,8 @@ public class KafkaStreamsMetricsBinderTest {
         doReturn(metricsWithRate(7.0)).when(healthy).metrics();
         ReflectionTestUtils.invokeMethod(binder, "refreshAll");
         assertEquals(7.0, rate("Topology"), 0.0);
+        assertEquals(0.0, registry.get("cm.streams.process.rate")
+                .tags("topology", "Failed").gauge().value(), 0.0);
     }
 
     private double rate(String applicationId) {
