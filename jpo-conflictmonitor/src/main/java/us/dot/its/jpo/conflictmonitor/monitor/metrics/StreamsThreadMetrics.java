@@ -28,6 +28,10 @@ public record StreamsThreadMetrics(double processRatio, double processLatencyAvg
                 continue;
             }
             double numeric = number.doubleValue();
+            // Kafka's Avg/Max stats are NaN for threads with no samples (e.g. idle threads).
+            if (!Double.isFinite(numeric)) {
+                continue;
+            }
             switch (name.name()) {
                 case "process-ratio" -> {
                     ratioSum += numeric;
