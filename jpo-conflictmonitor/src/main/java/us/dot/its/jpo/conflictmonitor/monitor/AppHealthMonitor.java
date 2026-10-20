@@ -39,6 +39,7 @@ import us.dot.its.jpo.conflictmonitor.monitor.algorithms.AlgorithmParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.StreamsTopology;
 import us.dot.its.jpo.conflictmonitor.monitor.algorithms.config.ConfigParameters;
 import us.dot.its.jpo.conflictmonitor.monitor.health.TopologyGraph;
+import us.dot.its.jpo.conflictmonitor.monitor.metrics.StreamsThreadMetrics;
 import us.dot.its.jpo.conflictmonitor.monitor.models.bsm.BsmIntersectionIdKey;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.DefaultConfigMap;
 import us.dot.its.jpo.conflictmonitor.monitor.models.config.IntersectionConfigMap;
@@ -123,6 +124,7 @@ public class AppHealthMonitor {
                 "topics",
                 "properties",
                 "streams",
+                "streams/cpu",
                 "spatial-indexes",
                 "spat-window-store",
                 "bsm-window-store",
@@ -207,6 +209,42 @@ public class AppHealthMonitor {
         }
 
         return getResponse(propMap);
+    }
+
+    /**
+     * Ranks Kafka Streams topologies by compute indicators (process-ratio and process-latency).
+     *
+     * @return response entity with topologies sorted by average process-ratio descending
+     */
+    @GetMapping(value = "/streams/cpu")
+    public @ResponseBody ResponseEntity<List<StreamsCpuSummary>> streamsCpuSummary() {
+        var streamsMap = getKafkaStreamsMap();
+        List<StreamsCpuSummary> summaries = new ArrayList<>();
+
+        for (Map.Entry<String, KafkaStreams> entry : streamsMap.entrySet()) {
+            String name = entry.getKey();
+            KafkaStreams streams = entry.getValue();
+            StreamsCpuSummary summary = new StreamsCpuSummary();
+            summary.setName(name);
+            if (streams == null) {
+                summary.setState(null);
+                summaries.add(summary);
+                continue;
+            }
+            summary.setState(streams.state());
+
+            var metrics = StreamsThreadMetrics.from(streams.metrics());
+            summary.setAvgProcessRatio(metrics.processRatio());
+            summary.setAvgProcessLatencyMs(metrics.processLatencyAvgMs());
+            summary.setMaxProcessLatencyMs(metrics.processLatencyMaxMs());
+            summary.setAvgPollRatio(metrics.pollRatio());
+            summary.setProcessRate(metrics.processRate());
+            summary.setThreadCount(metrics.threadCount());
+            summaries.add(summary);
+        }
+
+        summaries.sort((a, b) -> Double.compare(b.getAvgProcessRatio(), a.getAvgProcessRatio()));
+        return getResponse(summaries);
     }
 
     /**
@@ -544,6 +582,22 @@ public class AppHealthMonitor {
     public class StreamsInfo {
         State state;
         String detailsUrl;      
+    }
+
+    /**
+     * Per-topology compute summary derived from Kafka Streams thread metrics.
+     */
+    @Getter
+    @Setter
+    public static class StreamsCpuSummary {
+        String name;
+        State state;
+        double avgProcessRatio;
+        double avgProcessLatencyMs;
+        double maxProcessLatencyMs;
+        double avgPollRatio;
+        double processRate;
+        int threadCount;
     }
 
     /** Map of metric group names to MetricsGroup objects. */
